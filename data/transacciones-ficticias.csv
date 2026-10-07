@@ -1,0 +1,10 @@
+folio,fecha,descripcion,importe_mxn,fuente
+CF-101,2026-09-02,Cobro factura ficticia INV-101,3500.00,banco
+CF-102,2026-09-03,Abono cliente ficticio AR-204,2450.00,banco
+CF-103,2026-09-04,Comision bancaria simulada,-87.00,banco
+CF-104,2026-09-05,Compra de papeleria caso simulado,-620.00,banco
+CF-105,2026-09-06,Servicio digital caso simulado,-420.00,banco
+CF-106,2026-09-02,Cobro factura ficticia INV-101,3500.00,libro
+CF-107,2026-09-03,Abono cliente ficticio AR-204,2450.00,libro
+CF-108,2026-09-05,Compra de papeleria caso simulado,-620.00,libro
+CF-109,2026-09-06,Servicio digital caso simulado,-420.00,libro
