@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateDifference, evaluateChoice, scoreRubric } from "../src/logic.js";
+import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "../src/logic.js";
 import { PROMPT_RUBRIC, exercises } from "../src/exercises.js";
 
 test("la rúbrica reconoce un prompt contable con contexto, tarea, formato y verificación", () => {
@@ -36,4 +36,16 @@ test("cada práctica ofrece una pista y una respuesta modelo o explicación", ()
     assert.ok(exercise.hint, `${exercise.id} necesita una pista`);
     assert.ok(exercise.solution || exercise.explanation, `${exercise.id} necesita solución o explicación`);
   }
+});
+
+test("la práctica avanza por intento, pista, ejemplo y comparación", () => {
+  assert.equal(getGuidedStage({ attempted: false, hintSeen: false, solutionSeen: false }), "attempt");
+  assert.equal(getGuidedStage({ attempted: true, hintSeen: false, solutionSeen: false }), "hint");
+  assert.equal(getGuidedStage({ attempted: true, hintSeen: true, solutionSeen: false }), "example");
+  assert.equal(getGuidedStage({ attempted: true, hintSeen: true, solutionSeen: true }), "compare");
+});
+
+test("una pista o solución sin intento no adelanta la etapa", () => {
+  assert.equal(getGuidedStage({ attempted: false, hintSeen: true, solutionSeen: true }), "attempt");
+  assert.equal(getGuidedStage({ attempted: true, hintSeen: false, solutionSeen: true }), "hint");
 });

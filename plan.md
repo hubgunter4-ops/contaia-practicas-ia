@@ -72,7 +72,7 @@ Añadir `courseModules` en `src/course.js`, con 10 módulos semanales de 4 horas
 
 ### Fase 2 — Guiar las prácticas por etapas
 
-En `src/logic.js`, exponer `getGuidedStage({ attempted, hintSeen })`, que devuelve `"attempt"`, `"hint"`, `"example"` o `"compare"` según el intento; en `src/main.js`, habilitar pista después del primer intento y ejemplo después de consultar la pista, conservar el texto únicamente en memoria y, al abrir el ejemplo, mostrar el borrador o selección del alumno junto al modelo, escapando ambos valores. Mantener los seis criterios de rúbrica del prompt visibles. Añadir pruebas de transiciones y entradas vacías, y ejecutar `npm test`. Commit: `feat: guide practice through hints and examples`.
+En `src/logic.js`, exponer `getGuidedStage({ attempted, hintSeen, solutionSeen })`, que devuelve `"attempt"`, `"hint"`, `"example"` o `"compare"` según el intento, la consulta de la pista y la apertura de la solución; en `src/main.js`, habilitar la pista después de un intento válido y la solución después de consultar la pista, conservar el texto únicamente en memoria y, al abrir el ejemplo, mostrar el borrador o selección del alumno junto al modelo, escapando ambos valores. Mantener los seis criterios de rúbrica del prompt visibles. Añadir pruebas de transiciones y entradas vacías, y ejecutar `npm test`. Commit: `feat: guide practice through hints and examples`.
 
 ### Fase 3 — Guardar progreso local y exportar portafolio
 

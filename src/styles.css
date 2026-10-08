@@ -408,3 +408,22 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .course-stat-row > div { padding: 8px 6px; }
   .course-stat-row span { font-size: 9px; }
 }
+
+
+/* Secuencia de práctica y comparación */
+.guided-progress { display: flex; align-items: center; gap: 0; margin: 14px 0 2px; padding: 0; overflow-x: auto; list-style: none; }
+.guided-progress-step { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 90px; padding: 8px 9px; border-bottom: 2px solid #ded6c8; color: #8a8174; font-size: 11px; white-space: nowrap; }
+.guided-progress-step > span { width: 19px; height: 19px; display: grid; flex: none; place-items: center; border: 1px solid #d0c6b6; border-radius: 50%; color: #8c806f; font: 9px var(--mono); }
+.guided-progress-step.is-complete { border-color: #a7bcae; color: #547562; }
+.guided-progress-step.is-complete > span { border-color: #80a38c; background: #e6f0ea; color: #397a63; }
+.guided-progress-step.is-current { border-color: var(--wine); color: var(--wine); font-weight: 600; }
+.guided-progress-step.is-current > span { border-color: var(--wine); background: var(--wine); color: #fffaf3; }
+.comparison-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.comparison-column { min-width: 0; padding: 11px 12px; border: 1px solid var(--line); background: #fffaf2; }
+.comparison-column.is-model { border-color: #d7c29e; background: #f5eddd; }
+.comparison-column h3 { margin: 0 0 7px; color: #7a6b56; font: 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.comparison-answer { margin: 0; color: #4c453e; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .guided-progress-step { min-width: 76px; gap: 5px; padding-inline: 5px; font-size: 9px; }
+  .comparison-panel { grid-template-columns: 1fr; }
+}

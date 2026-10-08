@@ -17,7 +17,7 @@ La [aplicación interactiva](https://8328-i143dgisqzurgn5srq8gm-85c68042.us3.man
 - **México:** escenarios educativos sobre ISR, RESICO y privacidad en nómina.
 - **Datos de ejemplo:** archivo CSV inventado, descargable desde el menú de la página.
 
-Las prácticas ofrecen pistas, soluciones modelo y retroalimentación en el navegador. El sitio no llama a un modelo externo, no solicita cuentas y no guarda respuestas: el progreso existe solo durante la sesión actual y se reinicia al actualizar la página.
+Las prácticas siguen una secuencia de intento, pista, ejemplo y comparación con retroalimentación en el navegador. El sitio no llama a un modelo externo, no solicita cuentas y no guarda respuestas: el progreso existe solo durante la sesión actual y se reinicia al actualizar la página.
 
 ## Alcance y confidencialidad
 

@@ -1,11 +1,12 @@
 import { categories, exercises } from "./exercises.js";
-import { calculateDifference, evaluateChoice, scoreRubric } from "./logic.js";
+import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
 import { COURSE, courseModules } from "./course.js";
 
 const app = document.querySelector("#app");
 const state = {
   section: "course",
   current: "home",
+  attempted: new Set(),
   completed: new Set(),
   revealed: new Set(),
   hints: new Set(),
@@ -140,24 +141,38 @@ function renderFeedback(exercise) {
   return `<div class="feedback-box ${style}" role="status" aria-live="polite"><div class="feedback-title"><span>${feedback.correct ? "✓" : feedback.status === "missing" ? "i" : "↻"}</span><strong>${escapeHtml(feedback.title)}</strong>${feedback.scoreText ? `<b>${escapeHtml(feedback.scoreText)}</b>` : ""}</div><p>${escapeHtml(feedback.message)}</p>${checklist}${feedback.explanation ? `<div class="explanation"><b>Por qué</b><p>${escapeHtml(feedback.explanation)}</p></div>` : ""}</div>`;
 }
 
+function renderGuidedProgress(stage) {
+  const steps = ["Intento", "Pista", "Ejemplo", "Comparación"];
+  const index = ["attempt", "hint", "example", "compare"].indexOf(stage);
+  return `<ol class="guided-progress" aria-label="Etapas de esta práctica">${steps.map((label, stepIndex) => `<li class="guided-progress-step ${stepIndex < index ? "is-complete" : ""} ${stepIndex === index ? "is-current" : ""}" ${stepIndex === index ? 'aria-current="step"' : ""}><span>${stepIndex + 1}</span>${label}</li>`).join("")}</ol>`;
+}
+
 function renderExercise(exercise) {
   const isWritten = exercise.kind === "prompt" || exercise.kind === "written";
   const feedback = renderFeedback(exercise);
+  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
   const showHint = state.hints.has(exercise.id);
   const showSolution = state.revealed.has(exercise.id);
+  const stageProgress = renderGuidedProgress(stage);
   const scenario = exercise.scenario ? `<div class="case-box"><span class="case-stamp">CASO FICTICIO</span><p>${escapeHtml(exercise.scenario)}</p></div>` : "";
   const tables = exercise.kind === "reconciliation" ? `<div class="ledger-grid">${renderTable("01 · EXTRACTO DE BANCO", exercise.bank)}${renderTable("02 · LIBRO AUXILIAR", exercise.ledger)}</div>` : "";
   const form = isWritten ? renderWritten(exercise) : renderChoices(exercise);
   const modelSolution = exercise.solution ?? exercise.explanation ?? "Revisa los datos del caso y contrasta tu razonamiento con la explicación del ejercicio.";
-  const solution = showSolution ? `<div class="solution-box"><div class="solution-heading"><span>RESPUESTA MODELO</span><span>Revisa el razonamiento, no solo el resultado</span></div><p>${escapeHtml(modelSolution)}</p></div>` : "";
+  const selectedChoice = exercise.choices?.find((choice) => choice.id === state.selections.get(exercise.id));
+  const attemptText = isWritten ? (state.answers.get(exercise.id) ?? "").trim() : selectedChoice?.label ?? "";
+  const solution = showSolution ? `<div class="comparison-panel" role="group" aria-label="Comparación entre tu intento y la respuesta modelo"><section class="comparison-column"><h3>Tu intento</h3><p class="comparison-answer">${escapeHtml(attemptText || "Sin respuesta escrita.")}</p></section><section class="comparison-column is-model"><h3>Modelo para contrastar</h3><p class="comparison-answer">${escapeHtml(modelSolution)}</p></section></div>` : "";
   const hint = showHint ? `<div class="hint-box"><span aria-hidden="true">↳</span><p><b>Pista:</b> ${escapeHtml(exercise.hint)}</p></div>` : "";
   const previousIndex = exercises.findIndex((item) => item.id === exercise.id);
   const nextExercise = exercises[previousIndex + 1];
   return `<main id="contenido" class="content exercise-content" tabindex="-1">
     <div class="exercise-topline"><button class="back-link" type="button" data-nav="home">← Volver al recorrido</button><span class="exercise-count">PRÁCTICA ${String(previousIndex + 1).padStart(2, "0")} <i>/</i> ${String(exercises.length).padStart(2, "0")}</span></div>
     <div class="exercise-heading"><div class="exercise-number">${String(previousIndex + 1).padStart(2, "0")}</div><div><p class="eyebrow">${escapeHtml(exercise.category)} · ${exercise.time}</p><h1>${escapeHtml(exercise.title)}</h1><p class="exercise-intro">${escapeHtml(exercise.intro)}</p></div><span class="case-tag">PRÁCTICA</span></div>
-    ${scenario}${tables}
-    <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions"><button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button><button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${showHint ? "disabled" : ""}>${showHint ? "Pista consultada" : "Pedir una pista"}</button><button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${showSolution ? "disabled" : ""}>${showSolution ? "Solución visible" : "Ver solución modelo"}</button></div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
+    ${scenario}${tables}${stageProgress}
+    <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions">
+      <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
+      <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
+      <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
+    </div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
     <footer class="exercise-footer"><span>${state.completed.has(exercise.id) ? '<b class="completed-mark">✓</b> Práctica completada en esta sesión' : "Tu respuesta se queda en este navegador durante la sesión"}</span>${nextExercise ? `<button type="button" class="next-link" data-nav="${nextExercise.id}">Siguiente práctica <span>→</span></button>` : `<button type="button" class="next-link" data-nav="home">Terminar recorrido <span>→</span></button>`}</footer>
     <p class="disclaimer-inline">Material educativo con datos ficticios. No constituye asesoría profesional, contable o fiscal.</p>
   </main>`;
@@ -176,6 +191,7 @@ function checkAnswer(exercise) {
     if (!answer.trim()) {
       state.feedback.set(exercise.id, { status: "missing", title: "Aún no hay respuesta", message: "Escribe un borrador breve y después comprueba sus elementos." });
     } else {
+      state.attempted.add(exercise.id);
       const threshold = Math.ceil(result.total * 0.6);
       const correct = result.score >= threshold;
       if (correct) state.completed.add(exercise.id);
@@ -188,7 +204,9 @@ function checkAnswer(exercise) {
       });
     }
   } else {
-    const result = evaluateChoice(state.selections.get(exercise.id), exercise);
+    const selected = state.selections.get(exercise.id);
+    const result = evaluateChoice(selected, exercise);
+    if (selected) state.attempted.add(exercise.id);
     if (result.correct) state.completed.add(exercise.id);
     state.feedback.set(exercise.id, {
       status: result.status,
@@ -224,6 +242,9 @@ app.addEventListener("click", (event) => {
   if (!action) return;
   const exercise = exercises.find((item) => item.id === action.dataset.id);
   if (!exercise) return;
+  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
+  if (action.dataset.action === "hint" && stage !== "hint") return;
+  if (action.dataset.action === "solution" && stage !== "example") return;
   if (action.dataset.action === "check") checkAnswer(exercise);
   if (action.dataset.action === "hint") state.hints.add(exercise.id);
   if (action.dataset.action === "solution") state.revealed.add(exercise.id);

@@ -27,3 +27,11 @@ export function calculateDifference(debits, credits) {
   const difference = Number(debits) - Number(credits);
   return Number.isFinite(difference) ? Math.round((difference + Number.EPSILON) * 100) / 100 : null;
 }
+
+
+export function getGuidedStage({ attempted = false, hintSeen = false, solutionSeen = false } = {}) {
+  if (!attempted) return "attempt";
+  if (hintSeen && solutionSeen) return "compare";
+  if (hintSeen) return "example";
+  return "hint";
+}

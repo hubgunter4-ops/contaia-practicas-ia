@@ -14,7 +14,7 @@
 - [x] Mantener pistas, retroalimentación y soluciones modelo locales con datos ficticios, sin llamadas a servicios externos de IA.
 - [x] Presentar el contenido fiscal como educativo y no como asesoría, y recomendar verificación en fuentes oficiales y consulta profesional.
 - [x] **Ruta curricular visible:** mostrar una primera sección “Curso completo” con los 10 módulos, objetivos, duración y vínculo con las prácticas; la página de laboratorio actual será la sección 2.
-- [ ] **Práctica progresiva:** en cada ejercicio ofrecer la secuencia intento → pista → ejemplo/solución → comparación con la respuesta del participante. En la práctica de prompts, mostrar y evaluar sus seis criterios de calidad.
+- [x] **Práctica progresiva:** en cada ejercicio ofrecer la secuencia intento → pista → ejemplo/solución → comparación con la respuesta del participante. En la práctica de prompts, mostrar y evaluar sus seis criterios de calidad.
 - [ ] **Progreso y portafolio local:** permitir marcar módulos y ejercicios completados y descargar un resumen de evidencias; guardar únicamente el progreso en este navegador, nunca respuestas escritas o selecciones; no requerir cuenta.
 - [ ] **Diagnóstico y cierre:** incluir una evaluación breve al inicio y otra al final para evidenciar aprendizaje, junto con una rúbrica sencilla para docentes.
 - [ ] **Lista de revisión responsable:** antes de terminar cada ejercicio, recordar comprobar datos y fuentes, identificar lo que falta y no presentar una anomalía como conclusión; conservar casos ficticios y avisos de confidencialidad.
