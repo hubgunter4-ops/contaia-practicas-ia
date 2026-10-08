@@ -11,11 +11,13 @@ const guide = (opening, steps, checkpoint, deliverable) => ({ opening, steps, ch
 export const courseModules = [
   {
     id: "modulo-01", week: 1, hours: 4,
-    title: "Fundamentos de IA y criterio profesional",
-    focus: "Diferenciar automatización, modelos predictivos e IA generativa; reconocer errores, incertidumbre y necesidad de supervisión.",
-    outcome: "Elaborar un mapa de tareas: qué puede apoyar una herramienta, qué debe verificarse y qué no conviene automatizar.",
+    title: "Qué es la IA y qué es un prompt",
+    focus: "Entender, con ejemplos sencillos, qué es la IA generativa, qué es un prompt y por qué una respuesta necesita revisión profesional.",
+    outcome: "Explicar con sus propias palabras qué es un prompt y distinguir una instrucción clara de una petición ambigua.",
     exerciseIds: ["prompt"], materialPath: "/docs/curso/modulo-01/README.md",
-    guide: guide("Antes de pensar en una herramienta, delimita la decisión contable y el riesgo de equivocarte.", ["Separa tarea, datos y decisión final.", "Clasifica qué puede proponer la IA y qué debe revisar una persona.", "Escribe un límite verificable para el uso de IA."], "¿Qué parte de tu proceso seguiría necesitando evidencia humana?", "Mapa de tareas con apoyo, revisión y no automatización."),
+    guide: guide("Antes de diseñar un prompt, Nora te explica qué significa pedir algo a una IA y qué puede salir mal.", ["Conoce la diferencia entre IA generativa, automatización y una respuesta humana.", "Aprende que un prompt es la instrucción que orienta la respuesta.", "Prueba una petición simple y señala qué dato o resultado habría que revisar."], "¿Puedes explicar qué le estás pidiendo a la IA, con qué datos y cómo comprobarías su respuesta?", "Explicación breve de ‘prompt’ y comparación entre una petición ambigua y una instrucción clara."),
+    teachFirst: { why: "La IA no decide por ti: genera una propuesta a partir de una instrucción; el prompt es justamente esa instrucción.", concepts: [["IA generativa", "produce texto o propuestas nuevas a partir de patrones; puede equivocarse."], ["Prompt", "instrucción o petición que le das a una herramienta de IA."], ["Respuesta", "propuesta que debes leer, contrastar y revisar; no es una verdad automática."],], example: "Ejemplo: ‘ayúdame con contabilidad’ es un prompt muy amplio; ‘explica esta diferencia usando solo estos datos ficticios’ orienta mejor la respuesta." },
+    toolkit: [{ name: "NotebookLM", role: "Aprender con fuentes", activity: "Carga una guía ficticia y pregunta: ‘¿qué es un prompt y qué partes tiene?’.", guardrail: "Usa solo documentos educativos o ficticios.", url: "https://notebooklm.google/?hl=es" }, { name: "Claude", role: "Explicar en lenguaje sencillo", activity: "Pide una explicación para una persona que nunca ha usado IA y compárala con tu definición.", guardrail: "No subas datos reales ni aceptes la explicación sin revisarla.", url: "https://claude.ai/" }],
   },
   {
     id: "modulo-02", week: 2, hours: 4,
@@ -24,6 +26,8 @@ export const courseModules = [
     outcome: "Entregar una plantilla de prompt y una versión revisada con criterios visibles.",
     exerciseIds: ["prompt"], materialPath: "/docs/curso/modulo-02/README.md",
     guide: guide("Un prompt útil funciona como una hoja de trabajo: define el alcance antes de pedir una respuesta.", ["Especifica rol, contexto y datos ficticios permitidos.", "Pide una salida concreta que otra persona pueda revisar.", "Añade límites, dudas y una comprobación final."], "¿Tu instrucción permite distinguir hechos, supuestos y datos faltantes?", "Plantilla de prompt contable y una iteración mejorada."),
+    teachFirst: { why: "Una instrucción clara reduce ambigüedad y hace que la respuesta sea revisable.", concepts: [["Prompt", "instrucción que orienta una respuesta de IA."], ["Contexto", "datos y propósito necesarios para entender la tarea."], ["Restricción", "límite que evita inventar, exceder el alcance o exponer datos."],], example: "Ejemplo: no es igual pedir ‘analiza esto’ que pedir ‘compara estos movimientos ficticios y devuelve una tabla con dudas’." },
+    toolkit: [{ name: "Claude", role: "Construir instrucciones", activity: "Pide tres versiones de un prompt contable y evalúalas con la rúbrica del módulo.", guardrail: "La salida es un borrador; verifica contexto, límites y formato.", url: "https://claude.ai/" }, { name: "NotebookLM", role: "Anclar conceptos", activity: "Consulta las fuentes del módulo y pide que señale qué afirmaciones están respaldadas.", guardrail: "Comprueba que la fuente sea pertinente y vigente.", url: "https://notebooklm.google/?hl=es" }],
   },
   {
     id: "modulo-03", week: 3, hours: 4,
@@ -32,6 +36,8 @@ export const courseModules = [
     outcome: "Completar una matriz de selección de herramienta y una lista de control de privacidad.",
     exerciseIds: ["nomina"], materialPath: null,
     guide: guide("La primera decisión no es qué herramienta usar, sino qué datos nunca debes compartir.", ["Identifica datos personales, confidenciales y ficticios.", "Define el propósito, permisos y retención necesarios.", "Redacta una regla de minimización y una ruta de escalamiento."], "¿Podrías explicar por qué cada campo es necesario para la tarea?", "Matriz de herramienta y checklist de privacidad antes de compartir."),
+    teachFirst: { why: "La herramienta adecuada no compensa compartir datos que no son necesarios o seguros.", concepts: [["Dato personal", "información que identifica o puede identificar a una persona."], ["Minimización", "compartir solo lo indispensable para la tarea."], ["Permiso", "autoridad y configuración que determinan qué puede hacer una herramienta."],], example: "Ejemplo: para practicar nómina se usan campos ficticios; no se necesitan nombres, CURP ni cuentas reales." },
+    toolkit: [{ name: "NotebookLM", role: "Ordenar políticas", activity: "Construye un cuaderno con políticas ficticias y pregunta qué datos deben protegerse.", guardrail: "Nunca uses expedientes reales de clientes o empleados.", url: "https://notebooklm.google/?hl=es" }, { name: "n8n", role: "Diseñar controles", activity: "Dibuja un flujo ficticio que detenga datos sensibles y solicite aprobación humana.", guardrail: "Prueba con datos simulados y revisa permisos antes de conectar servicios.", url: "https://n8n.io/" }],
   },
   {
     id: "modulo-04", week: 4, hours: 4,
@@ -40,6 +46,8 @@ export const courseModules = [
     outcome: "Preparar un conjunto de práctica ordenado y un mapa de categorías con reglas y excepciones.",
     exerciseIds: ["clasificacion"], materialPath: null,
     guide: guide("La IA clasifica mejor cuando los datos tienen estructura y las excepciones están a la vista.", ["Revisa campos, formatos, duplicados y valores faltantes.", "Define categorías con una regla observable.", "Aparta casos ambiguos: no fuerces una clasificación."], "¿Qué dato te haría cambiar de categoría o pedir una revisión?", "Conjunto ordenado, mapa de categorías y lista de excepciones."),
+    teachFirst: { why: "Una clasificación confiable empieza por datos legibles y reglas que otra persona pueda repetir.", concepts: [["Campo", "columna con un significado definido, como fecha o importe."], ["Categoría", "grupo asignado con una regla observable."], ["Excepción", "caso ambiguo que se aparta para revisión humana."],], example: "Ejemplo: si un concepto no permite saber si es gasto o activo, se marca como excepción en vez de adivinar." },
+    toolkit: [{ name: "n8n", role: "Preparar datos", activity: "Crea un flujo de prueba que valide columnas, formatos y excepciones de un CSV ficticio.", guardrail: "No automatices el descarte de filas ambiguas.", url: "https://n8n.io/" }, { name: "Claude", role: "Proponer categorías", activity: "Pide reglas de clasificación y casos límite para revisarlos manualmente.", guardrail: "Separa propuesta, regla y decisión final.", url: "https://claude.ai/" }],
   },
   {
     id: "modulo-05", week: 5, hours: 4,
@@ -48,6 +56,8 @@ export const courseModules = [
     outcome: "Documentar una conciliación y un procedimiento con entradas, revisión, autorización y registro.",
     exerciseIds: ["conciliacion"], materialPath: null,
     guide: guide("Conciliar no es buscar una cifra parecida: es explicar cada diferencia con evidencia y responsable.", ["Alinea fechas, conceptos e importes de ambas fuentes.", "Separa coincidencias, pendientes y posibles comisiones.", "Diseña revisión, autorización y registro de ajustes."], "¿Puedes señalar qué falta registrar sin convertir una hipótesis en hecho?", "Conciliación documentada y procedimiento con controles."),
+    teachFirst: { why: "Una conciliación explica diferencias entre dos fuentes; no solo busca coincidencias.", concepts: [["Coincidencia", "movimiento que coincide por criterios definidos."], ["Partida pendiente", "diferencia que todavía requiere registro o evidencia."], ["Control", "punto de revisión, autorización o trazabilidad del ajuste."],], example: "Ejemplo: una comisión bancaria puede explicar una diferencia, pero debe confirmarse y registrarse con evidencia." },
+    toolkit: [{ name: "n8n", role: "Orquestar conciliaciones", activity: "Modela un flujo que compare dos fuentes ficticias y envíe pendientes a revisión.", guardrail: "Incluye aprobación humana antes de registrar un ajuste.", url: "https://n8n.io/" }, { name: "Claude", role: "Explicar diferencias", activity: "Solicita hipótesis etiquetadas como hipótesis, no como conclusiones.", guardrail: "Confirma cada diferencia contra la evidencia original.", url: "https://claude.ai/" }],
   },
   {
     id: "modulo-06", week: 6, hours: 4,
@@ -56,6 +66,8 @@ export const courseModules = [
     outcome: "Crear una hoja de revisión con diferencia, hipótesis permitidas y verificaciones siguientes.",
     exerciseIds: ["balanza"], materialPath: null,
     guide: guide("Primero comprueba la aritmética; después formula hipótesis y nunca al revés.", ["Verifica sumas, signo, periodo y unidades.", "Describe la variación sin atribuirle una causa no demostrada.", "Anota la evidencia que resolvería cada hipótesis."], "¿Qué cálculo puedes confirmar y qué explicación sigue abierta?", "Hoja de revisión con diferencia, hipótesis y próximas verificaciones."),
+    teachFirst: { why: "Los números se interpretan después de comprobar el cálculo y el periodo al que pertenecen.", concepts: [["Diferencia", "resultado de comparar dos valores o totales."], ["Variación", "cambio observado entre periodos o saldos."], ["Hipótesis", "explicación provisional que todavía necesita evidencia."],], example: "Ejemplo: una variación no prueba por sí sola que exista un error; primero se revisan sumas, signo y periodo." },
+    toolkit: [{ name: "Claude", role: "Explicar variaciones", activity: "Pide una explicación en dos columnas: cálculo observado y causas que aún deben investigarse.", guardrail: "No permitas que invente cifras o periodos.", url: "https://claude.ai/" }, { name: "n8n", role: "Comprobar reglas", activity: "Diseña validaciones simples para sumas, signos y campos faltantes.", guardrail: "Las validaciones no sustituyen la interpretación profesional.", url: "https://n8n.io/" }],
   },
   {
     id: "modulo-07", week: 7, hours: 4,
@@ -64,6 +76,8 @@ export const courseModules = [
     outcome: "Entregar un reporte ejecutivo de una página respaldado por los datos ficticios.",
     exerciseIds: ["reporte"], materialPath: null,
     guide: guide("Un reporte ejecutivo no dice todo: dice lo necesario, muestra el respaldo y deja claro qué falta.", ["Abre con el hallazgo y su impacto observable.", "Separa hechos, hipótesis y limitaciones.", "Cierra con una acción, responsable y fecha de revisión."], "¿Qué frase de tu reporte cambiaría si faltara una fuente?", "Reporte de una página con hechos, límites y próximos pasos."),
+    teachFirst: { why: "Comunicar bien es distinguir lo que los datos muestran de lo que todavía se debe investigar.", concepts: [["Hecho", "afirmación respaldada directamente por los datos disponibles."], ["Hipótesis", "interpretación posible, todavía no confirmada."], ["Próximo paso", "acción concreta para reducir la incertidumbre."],], example: "Ejemplo: ‘el saldo bajó’ es un hecho; ‘bajó por un cobro duplicado’ es una hipótesis hasta revisar evidencia." },
+    toolkit: [{ name: "NotebookLM", role: "Preparar un briefing", activity: "Reúne datos ficticios y fuentes del módulo para pedir un esquema con citas o referencias.", guardrail: "Distingue lo que está en las fuentes de lo que es interpretación.", url: "https://notebooklm.google/?hl=es" }, { name: "Claude", role: "Redactar con claridad", activity: "Convierte el esquema en un reporte de una página con hechos, límites y próximos pasos.", guardrail: "Revisa tono, cifras y destinatario antes de compartir.", url: "https://claude.ai/" }],
   },
   {
     id: "modulo-08", week: 8, hours: 4,
@@ -72,6 +86,8 @@ export const courseModules = [
     outcome: "Documentar una anomalía con evidencia pendiente, riesgo y siguiente paso.",
     exerciseIds: ["analisis"], materialPath: null,
     guide: guide("Una anomalía es una señal de revisión, no una sentencia. Nora te ayudará a mantener esa diferencia.", ["Describe el patrón observado y su frecuencia.", "Estima el riesgo sin afirmar intención ni fraude.", "Pide evidencia, asigna un siguiente paso y conserva trazabilidad."], "¿Qué observaste directamente y qué estás suponiendo?", "Ficha de anomalía con evidencia pendiente, riesgo y acción."),
+    teachFirst: { why: "Una anomalía activa una revisión; no autoriza a acusar fraude ni a concluir una causa.", concepts: [["Señal", "patrón que se aparta de lo esperado."], ["Riesgo", "posible impacto si la situación no se aclara."], ["Evidencia", "registro o fuente que permite confirmar o descartar una hipótesis."],], example: "Ejemplo: un importe inusual pide revisar la factura y el contexto; no demuestra intención indebida." },
+    toolkit: [{ name: "n8n", role: "Escalar excepciones", activity: "Diseña un flujo que etiquete una anomalía y cree una tarea de revisión, sin acusar fraude.", guardrail: "No conectes notificaciones reales durante la práctica.", url: "https://n8n.io/" }, { name: "Claude", role: "Generar hipótesis", activity: "Pide hipótesis alternativas y la evidencia necesaria para cada una.", guardrail: "Una hipótesis no es un hallazgo confirmado.", url: "https://claude.ai/" }],
   },
   {
     id: "modulo-09", week: 9, hours: 4,
@@ -80,6 +96,8 @@ export const courseModules = [
     outcome: "Completar una hoja de verificación de fuentes, faltantes y límites de la respuesta.",
     exerciseIds: ["isr", "resico", "nomina"], materialPath: null,
     guide: guide("En temas fiscales, una respuesta prudente comienza declarando el periodo, régimen y datos que faltan.", ["Define el supuesto fiscal y la fecha de vigencia.", "Contrasta fuentes oficiales y registra la versión consultada.", "Señala límites y deriva a revisión profesional cuando corresponda."], "¿Qué dato o fuente faltante impide orientar de forma responsable?", "Hoja de fuentes, datos faltantes, límites y derivación."),
+    teachFirst: { why: "Una orientación fiscal responsable depende del periodo, régimen, fuente vigente y datos concretos.", concepts: [["Periodo", "fecha o ejercicio al que aplica la regla consultada."], ["Régimen", "situación fiscal que cambia obligaciones y condiciones."], ["Fuente oficial", "publicación vigente que debe contrastarse y registrarse."],], example: "Ejemplo: la misma pregunta puede requerir una respuesta distinta si cambia el ejercicio o el régimen." },
+    toolkit: [{ name: "NotebookLM", role: "Consultar fuentes", activity: "Carga únicamente publicaciones fiscales ficticias o fuentes oficiales seleccionadas y pregunta por diferencias de periodo.", guardrail: "Verifica vigencia, jurisdicción y régimen; no obtengas una conclusión automática.", url: "https://notebooklm.google/?hl=es" }, { name: "n8n", role: "Encaminar revisión", activity: "Modela un flujo que detenga respuestas fiscales incompletas y las derive a revisión.", guardrail: "No automatices declaraciones, cálculos ni envíos oficiales.", url: "https://n8n.io/" }],
   },
   {
     id: "modulo-10", week: 10, hours: 4,
@@ -88,5 +106,7 @@ export const courseModules = [
     outcome: "Presentar un flujo de trabajo documentado y un resumen ejecutivo sobre un caso totalmente ficticio.",
     exerciseIds: ["prompt", "clasificacion", "conciliacion", "balanza", "reporte", "analisis", "isr", "resico", "nomina"], materialPath: null,
     guide: guide("El proyecto integrador une criterio, datos, controles y comunicación en un flujo que otra persona pueda auditar.", ["Define entradas, salida esperada y puntos de control.", "Asigna revisión humana, métricas y criterios de escalamiento.", "Prueba el flujo con un caso ficticio y documenta sus límites."], "¿Qué ocurre cuando la IA no tiene evidencia suficiente o propone algo inesperado?", "Flujo gobernado, resumen ejecutivo y registro de decisiones."),
+    teachFirst: { why: "Un asistente confiable necesita límites, revisión humana y una forma de demostrar qué ocurrió.", concepts: [["Entrada", "dato o documento permitido que inicia el flujo."], ["Salida", "resultado esperado con formato y criterios definidos."], ["Gobernanza", "reglas de revisión, métricas, permisos y escalamiento."],], example: "Ejemplo: si faltan datos, el flujo debe detenerse y pedir revisión, no completar silenciosamente." },
+    toolkit: [{ name: "NotebookLM", role: "Consolidar conocimiento", activity: "Crea el cuaderno del proyecto con fuentes, decisiones y límites del caso ficticio.", guardrail: "Mantén trazabilidad de fuentes y no incluyas datos reales.", url: "https://notebooklm.google/?hl=es" }, { name: "Claude", role: "Revisar entregables", activity: "Pide una revisión contra la rúbrica: entradas, salidas, controles y escalamiento.", guardrail: "La revisión de Claude no reemplaza la aprobación del equipo.", url: "https://claude.ai/" }, { name: "n8n", role: "Prototipar el flujo", activity: "Construye un prototipo con datos ficticios, aprobación humana y registro de ejecuciones.", guardrail: "No conectes sistemas productivos ni credenciales reales.", url: "https://n8n.io/" }],
   },
 ];

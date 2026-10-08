@@ -182,8 +182,13 @@ function renderModuleGuide(module) {
   const moduleGuide = module.guide;
   if (!moduleGuide) return "";
   const steps = moduleGuide.steps.map((step, index) => `<li><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(step)}</li>`).join("");
+  const foundation = module.teachFirst;
+  const concepts = foundation?.concepts?.map(([term, meaning]) => `<li><b>${escapeHtml(term)}</b><span>${escapeHtml(meaning)}</span></li>`).join("") || "";
+  const tools = module.toolkit?.map((tool) => `<article class="module-tool-card"><div class="module-tool-top"><a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(tool.name)} ↗</a><span>${escapeHtml(tool.role)}</span></div><p><b>Actividad:</b> ${escapeHtml(tool.activity)}</p><p class="module-tool-guardrail"><b>Límite:</b> ${escapeHtml(tool.guardrail)}</p></article>`).join("") || "";
   return `<aside class="module-nora-guide" data-testid="module-nora-${escapeHtml(module.id)}" aria-label="Guía de Nora para ${escapeHtml(module.title)}">
     <div class="module-nora-heading"><div class="module-nora-avatar" aria-hidden="true">N</div><div><p class="module-nora-kicker">NORA · GUÍA DEL MÓDULO</p><strong>Te acompaño a verificar, no a adivinar.</strong></div></div>
+    ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul><p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
+    ${tools ? `<div class="module-toolkit" data-testid="module-toolkit-${escapeHtml(module.id)}"><div class="module-toolkit-heading"><b>Herramientas para practicar</b><span>Opcionales · siempre con datos ficticios</span></div><div class="module-tool-grid">${tools}</div></div>` : ""}
     <p class="module-nora-opening">${escapeHtml(moduleGuide.opening)}</p>
     <div class="module-nora-grid"><div><b>Ruta en 3 pasos</b><ol>${steps}</ol></div><div class="module-nora-check"><b>Pregunta de control</b><p>${escapeHtml(moduleGuide.checkpoint)}</p><b>Evidencia de salida</b><p>${escapeHtml(moduleGuide.deliverable)}</p></div></div>
   </aside>`;

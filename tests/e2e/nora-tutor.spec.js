@@ -19,6 +19,13 @@ test.describe("Panel de Nora", () => {
 
     await expect(guides).toHaveCount(10);
     await expect(guides.first()).toContainText("NORA · GUÍA DEL MÓDULO");
+    await expect(guides.first()).toContainText("Aprende primero");
+    await expect(guides.first()).toContainText("Prompt");
+    await expect(guides.first()).toContainText("Ejemplo sencillo");
+    await expect(guides.first()).toContainText("Herramientas para practicar");
+    await expect(guides.first()).toContainText("NotebookLM");
+    await expect(guides.first()).toContainText("Claude");
+    await expect(guides.first()).toContainText("datos ficticios");
     await expect(guides.first()).toContainText("Ruta en 3 pasos");
     await expect(guides.first()).toContainText("Pregunta de control");
     await expect(guides.first()).toContainText("Evidencia de salida");

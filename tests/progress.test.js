@@ -45,7 +45,7 @@ test("el portafolio incluye estados e IDs válidos, pero excluye texto y selecci
     selections: { isr: "opcion-privada" },
   }, courseModules, exercises, "2026-10-07T12:00:00.000Z");
 
-  assert.match(markdown, /\[x\] Módulo 1: Fundamentos de IA y criterio profesional/);
+  assert.match(markdown, /\[x\] Módulo 1: Qué es la IA y qué es un prompt/);
   assert.match(markdown, /\[x\] Redacta un prompt contable útil/);
   assert.match(markdown, /1 de 10 módulos/);
   assert.doesNotMatch(markdown, new RegExp(privateText));
