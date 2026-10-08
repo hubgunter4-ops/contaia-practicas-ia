@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createStudyItems, sanitizeStudyNote, searchStudyItems } from "../src/study-db.js";
+import { KNOWLEDGE_ITEMS } from "../src/knowledge-data.js";
 
 const catalog = {
   modules: [{ id: "modulo-01", week: 1, title: "Qué es la IA", focus: "Fundamentos de IA", outcome: "Explicar un prompt", guide: { opening: "Aprende primero." } }],
@@ -33,4 +34,16 @@ test("depura notas vacías, limita longitud y valida el elemento de origen", () 
   assert.equal(note.content.length, 2000);
   assert.equal(note.updatedAt, 123);
   assert.equal(note.id, "note:module:modulo-01");
+});
+
+test("integra conocimiento externo con procedencia y sin instrucciones activas", () => {
+  assert.equal(KNOWLEDGE_ITEMS.length, 956);
+  assert.equal(KNOWLEDGE_ITEMS.filter((item) => item.id.includes("llm-eval-contable")).length, 50);
+  assert.equal(KNOWLEDGE_ITEMS.filter((item) => item.id.includes("ai-prompt-database")).length, 3);
+  assert.equal(KNOWLEDGE_ITEMS.filter((item) => item.id.includes("contaduria-mx")).length, 903);
+  assert.ok(KNOWLEDGE_ITEMS.every((item) => item.kind === "knowledge" && item.source?.license && item.destination?.url.startsWith("https://")));
+  assert.ok(KNOWLEDGE_ITEMS.every((item) => !/ignore\s+(all|previous)|system\s+message|javascript\s*:|<\s*script/i.test(`${item.title} ${item.summary} ${item.body}`)));
+  const items = createStudyItems({ knowledge: KNOWLEDGE_ITEMS });
+  assert.equal(items.length, KNOWLEDGE_ITEMS.length);
+  assert.equal(searchStudyItems(items, "México", "knowledge").length, 903);
 });
