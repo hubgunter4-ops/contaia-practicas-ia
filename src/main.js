@@ -1,9 +1,9 @@
 import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
-import { COURSE, courseModules } from "./course.js";
+import { COURSE, courseModules, courseSessionFlow } from "./course.js";
 import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
-import { toTutorContext } from "./tutor/context.js";
-import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
+import { buildVideoBrief, NOTEBOOKLM_URL, resolveCourseVideo, SYNTHESIA_URL } from "./course-videos.js";
+import { loadTutorConfig, requestTutorReply } from "./tutor/api.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
@@ -20,7 +20,12 @@ const state = {
   answers: new Map(),
   selections: new Map(),
   feedback: new Map(),
-  tutor: { exerciseId: null, messages: [], collapsed: true, voiceEnabled: false, avatarState: "idle" },
+  tutor: {
+    messages: [{ role: "assistant", text: "Hola, soy Nora. Te acompañaré desde los primeros conceptos hasta el proyecto final. ¿Qué te gustaría entender hoy?" }],
+    collapsed: true, voiceEnabled: false, avatarState: "idle", providers: [], defaultProvider: "", provider: "",
+    configState: "loading", configError: "", pending: false, abortController: null,
+  },
+  activeModuleId: "modulo-01",
   onboardingLevel: "",
   onboardingDraft: "",
   demoModuleId: null,
@@ -109,54 +114,126 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[character]));
 
-function resetTutor(exerciseId = null) {
+function resetTutor() {
+  state.tutor.abortController?.abort();
   tutorSpeaker.stop();
-  state.tutor = { exerciseId, messages: [], collapsed: true, voiceEnabled: false, avatarState: "idle" };
+  state.tutor.pending = false;
+  state.tutor.avatarState = "idle";
 }
 
 function tutorAvatarLabel() {
   return { thinking: "Nora está pensando.", explaining: "Nora está explicando.", celebrating: "Nora celebra el avance." }[state.tutor.avatarState] || "Nora está lista para ayudarte.";
 }
 
+function getTutorContext() {
+  const moduleId = state.activeModuleId || courseModules[0].id;
+  const module = courseModules.find((item) => item.id === moduleId) ?? courseModules[0];
+  if (state.section === "lab" && state.current !== "home") {
+    const exercise = exercises.find((item) => item.id === state.current);
+    if (exercise) {
+      const linkedModule = courseModules.find((item) => item.exerciseIds.includes(exercise.id));
+      return {
+        section: "lab", exerciseId: exercise.id, moduleId: linkedModule?.id,
+        stage: getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) }),
+      };
+    }
+  }
+  return { section: state.section === "study" ? "study" : "course", moduleId: module.id };
+}
+
+function assetPath(filename) {
+  return new URL(`../assets/nora/${filename}`, import.meta.url).href;
+}
+
+function refreshTutorPanel() {
+  const panel = app.querySelector('[data-testid="nora-panel"]');
+  if (!panel) return;
+  const template = document.createElement("template");
+  template.innerHTML = renderTutorPanel(getTutorContext()).trim();
+  panel.replaceWith(template.content.firstElementChild);
+}
+
 const tutorSpeaker = createSpeechSpeaker({
   onStateChange: (voiceState) => {
     if (voiceState === "speaking") state.tutor.avatarState = "explaining";
     else if (state.tutor.avatarState === "explaining") state.tutor.avatarState = "idle";
-    if (state.section === "lab" && state.current === state.tutor.exerciseId) render();
+    refreshTutorPanel();
   },
 });
 
-function renderTutorPanel(exercise) {
-  const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}" data-testid="nora-message"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTOR LOCAL" : "TÚ"}</span><p>${escapeHtml(message.text)}</p></div>`).join("");
-  const bodyId = `tutor-panel-${escapeHtml(exercise.id)}`;
-  return `<section class="tutor-panel" data-testid="nora-panel" aria-labelledby="tutor-heading">
+function renderTutorPanel(context) {
+  const provider = state.tutor.providers.find(({ id }) => id === state.tutor.provider);
+  const status = state.tutor.pending ? "Nora está pensando…"
+    : state.tutor.configState === "loading" ? "Conectando con la tutora…"
+      : state.tutor.configError ? "Revisa la conexión de Nora"
+        : provider ? `Tutora IA activa · ${provider.label}` : "IA sin configurar en el servidor";
+  const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}" data-testid="nora-message"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTORA IA" : "TÚ"}</span><p ${message.streaming ? 'data-tutor-stream="true"' : ""}>${escapeHtml(message.text || (message.streaming ? "Nora está pensando…" : ""))}</p></div>`).join("");
+  const bodyId = "tutor-panel-body";
+  const providerPicker = state.tutor.providers.length > 1 ? `<label class="tutor-provider-label" for="tutor-provider">Modelo <select id="tutor-provider" data-tutor-provider>${state.tutor.providers.map((item) => `<option value="${escapeHtml(item.id)}" ${state.tutor.provider === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</select></label>` : "";
+  return `<section class="tutor-panel ${state.tutor.collapsed ? "is-collapsed" : "is-open"}" data-testid="nora-panel" aria-labelledby="tutor-heading" data-tutor-context="${escapeHtml(context.section)}">
     <header class="tutor-header">
-      <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><span aria-hidden="true">N</span></div><div><p class="tutor-kicker">APOYO PEDAGÓGICO</p><h2 id="tutor-heading">Nora · Tutor local</h2><span class="tutor-status"><i aria-hidden="true"></i> Respuestas preparadas, sin conexión externa</span></div></div>
-      <div class="tutor-controls"><button class="tutor-control" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Activar voz"}</button><button class="tutor-control" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Abrir tutor" : "Cerrar tutor"}</button></div>
+      <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><img src="${escapeHtml(assetPath(`nora-${state.tutor.avatarState}.webp`))}" alt="" width="600" height="800" fetchpriority="low"/></div><div><p class="tutor-kicker">TUTORA DEL RECORRIDO</p><h2 id="tutor-heading">Nora</h2><span class="tutor-status" data-testid="nora-status"><i aria-hidden="true"></i>${escapeHtml(status)}</span></div></div>
+      <div class="tutor-controls">${providerPicker}<button class="tutor-control tutor-voice" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Voz"}</button><button class="tutor-control tutor-toggle" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-label="${state.tutor.collapsed ? "Abrir conversación con Nora" : "Cerrar conversación con Nora"}" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Hablar con Nora" : "Cerrar"}</button></div>
     </header>
     <div id="${bodyId}" class="tutor-body" ${state.tutor.collapsed ? "hidden" : ""}>
-      <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages || `<div class="tutor-empty"><b>Empieza con una pregunta breve.</b><span>Prueba “Dame una pista” o “¿Cuál es el siguiente paso?”.</span></div>`}</div>
+      <div class="tutor-context-note">${context.section === "lab" ? "Práctica activa" : context.section === "study" ? "Base de estudio · tus notas no se comparten" : "Curso completo · aprendizaje paso a paso"}</div>
+      <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages}</div>
+      ${state.tutor.configError ? `<p class="tutor-error" role="status">${escapeHtml(state.tutor.configError)}</p>` : ""}
       <form class="tutor-form" data-testid="nora-form" data-tutor-form>
-        <label class="sr-only" for="tutor-input">Pregunta al tutor local</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="500" autocomplete="off" placeholder="Escribe una duda sobre este ejercicio…"/><button class="button button-primary" type="submit">Enviar <span aria-hidden="true">→</span></button>
+        <label class="sr-only" for="tutor-input">Pregunta a Nora, tu tutora IA</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="2000" autocomplete="off" placeholder="Escribe una pregunta sobre el curso…" ${state.tutor.pending || !provider ? "disabled" : ""}/><button class="button button-primary" type="submit" ${state.tutor.pending || !provider ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button>
       </form>
-      <p class="tutor-disclaimer">El tutor usa solo las ayudas del ejercicio ficticio. No compartas información real, personal o confidencial.</p>
+      ${state.tutor.pending ? '<button type="button" class="tutor-stop" data-action="tutor-cancel">Detener respuesta</button>' : ""}
+      <p class="tutor-disclaimer">Las preguntas se procesan por el proveedor de IA configurado. No compartas datos reales, personales ni confidenciales. El progreso, tus notas y el portafolio no se envían; este chat no se guarda.</p>
     </div>
   </section>`;
 }
 
-function sendLocalTutorMessage(text) {
-  const exercise = exercises.find((item) => item.id === state.current);
-  if (!exercise || !text.trim() || state.tutor.exerciseId !== exercise.id) return;
-  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
-  const context = toTutorContext(exercise, stage);
-  const intent = detectLocalIntent(text);
-  const reply = getLocalTutorReply({ intent, context });
-  state.tutor.messages.push({ role: "user", text: text.trim() }, { role: "assistant", text: reply });
+async function sendTutorMessage(text) {
+  const question = text.trim();
+  if (!question || state.tutor.pending) return;
+  if (!state.tutor.providers.length) {
+    state.tutor.configError = "Configura un proveedor y su modelo en el servidor Vercel para habilitar las respuestas de Nora.";
+    state.tutor.collapsed = false;
+    refreshTutorPanel();
+    return;
+  }
+  const history = state.tutor.messages.slice(-8).map(({ role, text: content }) => ({ role, content }));
+  const assistantMessage = { role: "assistant", text: "", streaming: true };
+  state.tutor.messages.push({ role: "user", text: question }, assistantMessage);
+  state.tutor.messages = state.tutor.messages.slice(-20);
+  state.tutor.pending = true;
   state.tutor.collapsed = false;
-  state.tutor.avatarState = intent === "hint" ? "thinking" : "explaining";
-  render();
-  if (state.tutor.voiceEnabled) tutorSpeaker.say(reply);
-  document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+  state.tutor.avatarState = "thinking";
+  state.tutor.abortController = new AbortController();
+  refreshTutorPanel();
+  try {
+    const reply = await requestTutorReply({
+      message: question,
+      context: getTutorContext(),
+      history,
+      provider: state.tutor.provider || state.tutor.defaultProvider,
+      signal: state.tutor.abortController.signal,
+      onToken: (token) => {
+        assistantMessage.text += token;
+        const streamed = app.querySelector("[data-tutor-stream]");
+        if (streamed) streamed.textContent = assistantMessage.text;
+      },
+    });
+    assistantMessage.streaming = false;
+    state.tutor.avatarState = /\b(listo|completaste|correcto|muy bien)\b/i.test(reply) ? "celebrating" : "explaining";
+    if (state.tutor.voiceEnabled) tutorSpeaker.say(reply);
+  } catch (error) {
+    state.tutor.messages.pop();
+    assistantMessage.streaming = false;
+    assistantMessage.text = error.name === "AbortError" ? "Respuesta detenida. Puedes continuar cuando quieras." : "No pude obtener respuesta de la tutora. Revisa la conexión o vuelve a intentarlo.";
+    state.tutor.configError = error.name === "AbortError" ? "" : error.message;
+    state.tutor.avatarState = "idle";
+  } finally {
+    state.tutor.pending = false;
+    state.tutor.abortController = null;
+    refreshTutorPanel();
+    app.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+  }
 }
 
 function logoMark() {
@@ -238,10 +315,72 @@ function renderHome() {
   </main>`;
 }
 
+function renderModuleSessionFlow(module) {
+  const guide = module.guide;
+  const descriptions = [
+    escapeHtml(guide.opening),
+    escapeHtml(`${module.teachFirst?.why || "Presenta el concepto central."} ${module.demonstration?.why || "Observa qué cambia entre el antes y el después."}`),
+    `<strong>Ruta en 3 pasos</strong><ol class="module-session-checklist">${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`,
+    `<strong>Pregunta de control</strong><p>${escapeHtml(guide.checkpoint)}</p>`,
+    `<strong>Evidencia de salida</strong><p>${escapeHtml(guide.deliverable)}</p>`,
+  ];
+  const sessions = courseSessionFlow.map((stage, index) => `<li class="module-session-step"><div class="module-session-meta"><span>FASE ${String(index + 1).padStart(2, "0")}</span><b>${stage.minutes} min</b></div><h4>${escapeHtml(stage.title)}</h4><div class="module-session-description">${descriptions[index]}</div></li>`).join("");
+  const documents = module.context?.documents?.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>Repasa las notas y materiales del módulo.</li>";
+  return `<section class="module-session-flow" data-testid="module-session-flow-${escapeHtml(module.id)}" aria-label="Secuencia de la clase ${escapeHtml(module.title)}"><div class="module-session-flow-heading"><div><p class="eyebrow">SESIÓN GUIADA · 3 HORAS</p><h3>Así trabajaremos esta clase</h3></div><span class="count-pill">En este orden</span></div><ol class="module-session-steps">${sessions}</ol><aside class="module-independent-work"><span>+60 min</span><div><b>Práctica independiente</b><p>Continúa con el producto de la semana usando un caso simulado. Material recomendado:</p><ul>${documents}</ul></div></aside></section>`;
+}
+
+function renderVideoCard({ kind, id, module, exercise = null }) {
+  const video = resolveCourseVideo(kind, id);
+  const cardId = `${kind}-${id}`;
+  const title = kind === "module" ? `Explicación del módulo: ${module.title}` : `Apoyo para la práctica: ${exercise?.title || "actividad"}`;
+  const player = video
+    ? `<div class="course-video-player"><iframe src="${escapeHtml(video.embedUrl)}" title="${escapeHtml(video.title)}" loading="lazy" allow="encrypted-media; fullscreen" allowfullscreen></iframe></div><p class="course-video-reviewed">Video publicado y revisado${video.duration ? ` · ${escapeHtml(video.duration)}` : ""}. El reproductor y la reproducción se cargan desde Synthesia.</p>`
+    : `<div class="course-video-pending"><span aria-hidden="true">▶</span><div><b>Video en preparación</b><p>NotebookLM puede preparar el guion desde las fuentes del módulo; Synthesia produce el video narrado. La explicación aparecerá aquí después de revisarla y publicarla.</p></div></div>`;
+  return `<section class="course-video-card" data-testid="course-video-${escapeHtml(cardId)}" aria-label="${escapeHtml(title)}">
+    <div class="course-video-heading"><div><p class="eyebrow">VIDEO EXPLICATIVO</p><h4>${escapeHtml(title)}</h4></div><span class="course-video-pipeline">NOTEBOOKLM → SYNTHESIA</span></div>
+    ${player}
+    <div class="course-video-actions"><button type="button" class="button button-quiet" data-action="copy-video-brief" data-video-kind="${escapeHtml(kind)}" data-video-id="${escapeHtml(id)}">Copiar briefing para NotebookLM</button><a class="course-video-service-link" href="${NOTEBOOKLM_URL}" target="_blank" rel="noopener noreferrer">Abrir NotebookLM ↗</a><a class="course-video-service-link" href="${SYNTHESIA_URL}" target="_blank" rel="noopener noreferrer">Abrir Synthesia ↗</a></div>
+    <p class="course-video-brief-status" data-video-brief-status="${escapeHtml(cardId)}" role="status" aria-live="polite"></p>
+  </section>`;
+}
+
+async function copyVideoBrief(kind, id) {
+  const module = kind === "module"
+    ? courseModules.find((item) => item.id === id)
+    : courseModules.find((item) => item.exerciseIds.includes(id));
+  const exercise = kind === "exercise" ? exercises.find((item) => item.id === id) : null;
+  if (!module || (kind === "exercise" && !exercise)) return;
+  const statusKey = `${kind}-${id}`;
+  const status = [...app.querySelectorAll("[data-video-brief-status]")].find((item) => item.dataset.videoBriefStatus === statusKey);
+  try {
+    const brief = buildVideoBrief({ module, exercise });
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(brief);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = brief;
+      textarea.setAttribute("aria-hidden", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      let copied = false;
+      try {
+        textarea.select();
+        copied = document.execCommand("copy");
+      } finally {
+        textarea.remove();
+      }
+      if (!copied) throw new Error("Clipboard no disponible");
+    }
+    if (status) status.textContent = "Briefing copiado. Revísalo con las fuentes del módulo antes de producir el video.";
+  } catch {
+    if (status) status.textContent = "No se pudo copiar. Abre NotebookLM y vuelve a intentarlo desde un navegador con permiso para usar el portapapeles.";
+  }
+}
+
 function renderModuleGuide(module) {
   const moduleGuide = module.guide;
   if (!moduleGuide) return "";
-  const steps = moduleGuide.steps.map((step, index) => `<li><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(step)}</li>`).join("");
   const foundation = module.teachFirst;
   const concepts = foundation?.concepts?.map(([term, meaning]) => `<li><button type="button" class="glossary-term" data-glossary-module="${escapeHtml(module.id)}" data-glossary-term="${escapeHtml(term)}">${escapeHtml(term)} <span aria-hidden="true">?</span></button><span>${escapeHtml(meaning)}</span></li>`).join("") || "";
   const tools = module.toolkit?.map((tool) => `<article class="module-tool-card"><div class="module-tool-top"><a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(tool.name)} ↗</a><span>${escapeHtml(tool.role)}</span></div><p><b>Actividad:</b> ${escapeHtml(tool.activity)}</p><p class="module-tool-guardrail"><b>Límite:</b> ${escapeHtml(tool.guardrail)}</p></article>`).join("") || "";
@@ -253,12 +392,12 @@ function renderModuleGuide(module) {
   const contextFields = context?.mustContain?.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "";
   return `<aside class="module-nora-guide" data-testid="module-nora-${escapeHtml(module.id)}" aria-label="Guía de Nora para ${escapeHtml(module.title)}">
     <div class="module-nora-heading"><div class="module-nora-avatar" aria-hidden="true">N</div><div><p class="module-nora-kicker">NORA · GUÍA DEL MÓDULO</p><strong>Te acompaño a verificar, no a adivinar.</strong></div></div>
+    <p class="module-nora-opening">${escapeHtml(moduleGuide.opening)}</p>
+    ${renderModuleSessionFlow(module)}
     ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul>${activeDefinition ? `<div class="glossary-definition" role="status"><b>Glosario · ${escapeHtml(activeDefinition.term)}</b><span>${escapeHtml(activeDefinition.definition)}</span><em><strong>Ejemplo:</strong> ${escapeHtml(activeDefinition.example)}</em><em><strong>Comprueba:</strong> ${escapeHtml(activeDefinition.check)}</em></div>` : ""}<p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
     ${demo ? `<div class="module-demo-wrap"><button type="button" class="module-demo-button" data-action="module-demo" data-module-demo="${escapeHtml(module.id)}" aria-expanded="${isDemoOpen}">${isDemoOpen ? "Ocultar demostración" : "Nora demuestra: antes y después"} <span aria-hidden="true">${isDemoOpen ? "↑" : "→"}</span></button>${isDemoOpen ? `<div class="module-demo" data-testid="module-demo-${escapeHtml(module.id)}"><div><b>Antes</b><p>${escapeHtml(demo.before)}</p></div><div><b>Después</b><p>${escapeHtml(demo.after)}</p></div><p><strong>Qué observar:</strong> ${escapeHtml(demo.why)}</p></div>` : ""}</div>` : ""}
-    ${context ? `<div class="module-context" data-testid="module-context-${escapeHtml(module.id)}"><div class="module-context-heading"><b>Contexto que puedes aportar</b><span>No se sube a ContaIA</span></div><div class="module-context-grid"><div><b>Documento o material</b><ul>${contextDocuments}</ul></div><div><b>Debe contener</b><ul>${contextFields}</ul></div></div><p><b>Formato sugerido:</b> ${escapeHtml(context.format)}</p><p class="module-context-protect"><b>Antes de usarlo:</b> ${escapeHtml(context.protect)}</p></div>` : ""}
+    ${context ? `<div class="module-context" data-testid="module-context-${escapeHtml(module.id)}"><div class="module-context-heading"><b>Contexto que puedes aportar</b><span>Solo usa datos ficticios; la IA no recibe tus notas locales</span></div><div class="module-context-grid"><div><b>Documento o material</b><ul>${contextDocuments}</ul></div><div><b>Debe contener</b><ul>${contextFields}</ul></div></div><p><b>Formato sugerido:</b> ${escapeHtml(context.format)}</p><p class="module-context-protect"><b>Antes de usarlo:</b> ${escapeHtml(context.protect)}</p></div>` : ""}
     ${tools ? `<div class="module-toolkit" data-testid="module-toolkit-${escapeHtml(module.id)}"><div class="module-toolkit-heading"><b>Herramientas para practicar</b><span>Opcionales · siempre con datos ficticios</span></div><div class="module-tool-grid">${tools}</div></div>` : ""}
-    <p class="module-nora-opening">${escapeHtml(moduleGuide.opening)}</p>
-    <div class="module-nora-grid"><div><b>Ruta en 3 pasos</b><ol>${steps}</ol></div><div class="module-nora-check"><b>Pregunta de control</b><p>${escapeHtml(moduleGuide.checkpoint)}</p><b>Evidencia de salida</b><p>${escapeHtml(moduleGuide.deliverable)}</p></div></div>
   </aside>`;
 }
 
@@ -328,22 +467,22 @@ function renderCourse() {
     const material = module.materialPath
       ? `<a class="course-material-link" href="${escapeHtml(module.materialPath)}" download>Descargar materiales del módulo <span aria-hidden="true">↓</span></a>`
       : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
-    const isOpen = state.openCourseModuleId ? state.openCourseModuleId === module.id : index === 0;
-    return `<details class="course-module-card" ${isOpen ? "open" : ""}>
+    const isOpen = state.openCourseModuleId === "__none__" ? false : state.openCourseModuleId ? state.openCourseModuleId === module.id : index === 0;
+    return `<details class="course-module-card" data-course-module="${escapeHtml(module.id)}" ${isOpen ? "open" : ""}>
       <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
-      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
+      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}${renderVideoCard({ kind: "module", id: module.id, module })}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
     </details>`;
   }).join("");
 
   return `<main id="contenido" class="content course-content" tabindex="-1">
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
+    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido paso a paso: Nora te acompaña desde los fundamentos hasta el proyecto integrador. Cada semana combina una clase guiada, práctica ficticia y revisión.</p><div class="course-hero-actions"><button class="button button-primary" type="button" data-action="tutor-open">Comenzar con Nora <span aria-hidden="true">→</span></button><details class="course-more-actions"><summary>Más herramientas</summary><div><a class="text-link" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Plan de trabajo ↓</a><button type="button" class="text-link" data-action="download-portfolio">Descargar portafolio ↓</button><button type="button" class="text-link" data-section="lab">Ir al laboratorio →</button></div></details></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     ${renderOnboarding()}
-    ${renderGlossaryIndex()}
-    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
     <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
     <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
     <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
+    ${renderGlossaryIndex()}
     <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
   </main>`;
 }
@@ -380,6 +519,7 @@ function renderGuidedProgress(stage) {
 
 function renderExercise(exercise) {
   const isWritten = exercise.kind === "prompt" || exercise.kind === "written";
+  const linkedModule = courseModules.find((module) => module.exerciseIds.includes(exercise.id)) ?? courseModules[0];
   const feedback = renderFeedback(exercise);
   const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
   const showHint = state.hints.has(exercise.id);
@@ -398,13 +538,12 @@ function renderExercise(exercise) {
   return `<main id="contenido" class="content exercise-content" tabindex="-1">
     <div class="exercise-topline"><button class="back-link" type="button" data-nav="home">← Volver al recorrido</button><span class="exercise-count">PRÁCTICA ${String(previousIndex + 1).padStart(2, "0")} <i>/</i> ${String(exercises.length).padStart(2, "0")}</span></div>
     <div class="exercise-heading"><div class="exercise-number">${String(previousIndex + 1).padStart(2, "0")}</div><div><p class="eyebrow">${escapeHtml(exercise.category)} · ${exercise.time}</p><h1>${escapeHtml(exercise.title)}</h1><p class="exercise-intro">${escapeHtml(exercise.intro)}</p></div><span class="case-tag">PRÁCTICA</span></div>
-    ${scenario}${tables}${stageProgress}
+    ${scenario}${tables}${stageProgress}${renderVideoCard({ kind: "exercise", id: exercise.id, module: linkedModule, exercise })}
     <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions">
       <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
       <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
       <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
     </div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
-    ${renderTutorPanel(exercise)}
     <footer class="exercise-footer"><span>${state.completed.has(exercise.id) ? '<b class="completed-mark">✓</b> Práctica completada en esta sesión' : "Tu respuesta se queda en este navegador durante la sesión"}</span>${nextExercise ? `<button type="button" class="next-link" data-nav="${nextExercise.id}">Siguiente práctica <span>→</span></button>` : `<button type="button" class="next-link" data-nav="home">Terminar recorrido <span>→</span></button>`}</footer>
     <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se conserva el estado de finalización; la respuesta escrita o seleccionada no se guarda.")}</p>
     <p class="disclaimer-inline">Material educativo con datos ficticios. No constituye asesoría profesional, contable o fiscal.</p>
@@ -414,7 +553,22 @@ function renderExercise(exercise) {
 function render() {
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = state.section === "course" ? renderCourse() : state.section === "study" ? renderStudy() : exercise ? renderExercise(exercise) : renderHome();
-  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div></div>`;
+  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div>${renderTutorPanel(getTutorContext())}</div>`;
+}
+
+async function initializeTutorConfig() {
+  try {
+    const config = await loadTutorConfig();
+    state.tutor.providers = config.providers;
+    state.tutor.defaultProvider = config.defaultProvider;
+    state.tutor.provider = config.defaultProvider;
+    state.tutor.configState = "ready";
+    state.tutor.configError = config.providers.length ? "" : "El backend está conectado, pero falta configurar un proveedor y modelo IA en Vercel.";
+  } catch {
+    state.tutor.configState = "error";
+    state.tutor.configError = "No se pudo conectar con el backend de Nora. Publica las funciones /api/tutor en Vercel o configura su URL en tutor-config.js.";
+  }
+  refreshTutorPanel();
 }
 
 function checkAnswer(exercise) {
@@ -449,6 +603,7 @@ function checkAnswer(exercise) {
       explanation: result.correct ? exercise.explanation : "",
     });
   }
+  state.tutor.avatarState = state.completed.has(exercise.id) ? "celebrating" : "explaining";
   persistProgress();
   render();
 }
@@ -481,7 +636,11 @@ app.addEventListener("click", (event) => {
     const moduleId = moduleToggle.dataset.moduleToggle;
     if (!courseModules.some((module) => module.id === moduleId)) return;
     if (state.completedModules.has(moduleId)) state.completedModules.delete(moduleId);
-    else state.completedModules.add(moduleId);
+    else {
+      state.completedModules.add(moduleId);
+      state.activeModuleId = moduleId;
+      state.tutor.avatarState = "celebrating";
+    }
     persistProgress();
     render();
     return;
@@ -492,6 +651,7 @@ app.addEventListener("click", (event) => {
     if (state.section !== "lab" || state.current !== destination) resetTutor(destination);
     state.section = "lab";
     state.current = destination;
+    state.tutor.collapsed = true;
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -522,9 +682,11 @@ app.addEventListener("click", (event) => {
       resetTutor(destination.exerciseId);
       state.section = "lab";
       state.current = destination.exerciseId;
+      state.tutor.collapsed = true;
     } else {
       state.section = "course";
       state.openCourseModuleId = destination.moduleId ?? null;
+      if (destination.moduleId) state.activeModuleId = destination.moduleId;
       if (destination.glossaryTerm) {
         state.glossaryOpen = true;
         state.glossary = { moduleId: "global", term: destination.glossaryTerm };
@@ -537,10 +699,25 @@ app.addEventListener("click", (event) => {
   }
   const action = event.target.closest("[data-action]");
   if (!action) return;
+  if (action.dataset.action === "copy-video-brief") {
+    const { videoKind, videoId } = action.dataset;
+    if (["module", "exercise"].includes(videoKind) && videoId) copyVideoBrief(videoKind, videoId);
+    return;
+  }
+  if (action.dataset.action === "tutor-open") {
+    state.tutor.collapsed = false;
+    render();
+    document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    return;
+  }
   if (action.dataset.action === "tutor-toggle") {
     state.tutor.collapsed = !state.tutor.collapsed;
     render();
     if (!state.tutor.collapsed) document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "tutor-cancel") {
+    state.tutor.abortController?.abort();
     return;
   }
   if (action.dataset.action === "tutor-voice") {
@@ -626,8 +803,16 @@ app.addEventListener("submit", (event) => {
   const text = input?.value ?? "";
   if (!text.trim()) return;
   input.value = "";
-  sendLocalTutorMessage(text);
+  sendTutorMessage(text);
 });
+
+app.addEventListener("toggle", (event) => {
+  const moduleCard = event.target.closest?.("details[data-course-module]");
+  if (!moduleCard) return;
+  state.activeModuleId = moduleCard.dataset.courseModule;
+  state.openCourseModuleId = moduleCard.open ? moduleCard.dataset.courseModule : "__none__";
+  refreshTutorPanel();
+}, true);
 
 app.addEventListener("input", (event) => {
   if (event.target.matches("[data-study-search]")) {
@@ -651,6 +836,11 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[data-tutor-provider]")) {
+    state.tutor.provider = state.tutor.providers.some(({ id }) => id === event.target.value) ? event.target.value : state.tutor.defaultProvider;
+    refreshTutorPanel();
+    return;
+  }
   if (event.target.matches("[data-study-filter]")) {
     state.studyKind = event.target.value;
     state.studyVisibleCount = 60;
@@ -675,4 +865,5 @@ app.addEventListener("change", (event) => {
 });
 
 render();
+initializeTutorConfig();
 initializeStudyDatabase();

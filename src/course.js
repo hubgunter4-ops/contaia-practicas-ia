@@ -6,6 +6,14 @@ export const COURSE = {
   independentHoursPerWeek: 1,
 };
 
+export const courseSessionFlow = Object.freeze([
+  Object.freeze({ minutes: 15, title: "Activación y objetivo", description: "Conecta con lo que ya sabes, presenta la pregunta guía y acuerda qué aprenderás hoy." }),
+  Object.freeze({ minutes: 35, title: "Concepto y demostración", description: "Aprende los fundamentos y observa un ejemplo antes de resolverlo por tu cuenta." }),
+  Object.freeze({ minutes: 80, title: "Práctica guiada", description: "Resuelve un caso ficticio por etapas; Nora ofrece orientación sin sustituir tu criterio." }),
+  Object.freeze({ minutes: 40, title: "Revisión y reflexión", description: "Contrasta el resultado con evidencia, identifica límites y explica qué cambiarías." }),
+  Object.freeze({ minutes: 10, title: "Cierre y evidencia", description: "Resume lo aprendido y registra el producto o siguiente paso de la sesión." }),
+]);
+
 const guide = (opening, steps, checkpoint, deliverable) => ({ opening, steps, checkpoint, deliverable });
 
 export const courseModules = [

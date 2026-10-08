@@ -1,6 +1,27 @@
 import { test, expect } from "@playwright/test";
 
-async function openFirstExercise(page) {
+async function mockTutor(page, replies = ["Empieza por revisar el contexto del caso y formula una pregunta concreta."]) {
+  const requests = [];
+  let responseIndex = 0;
+  await page.route("**/api/tutor/config", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ providers: [{ id: "openai", label: "OpenAI", model: "test-model" }], defaultProvider: "openai" }),
+  }));
+  await page.route("**/api/tutor/stream", async (route) => {
+    requests.push(route.request().postDataJSON());
+    const reply = replies[Math.min(responseIndex++, replies.length - 1)];
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream; charset=utf-8",
+      body: `event: token\ndata: ${JSON.stringify({ text: reply })}\n\nevent: done\ndata: {}\n\n`,
+    });
+  });
+  return requests;
+}
+
+async function openFirstExercise(page, replies) {
+  const requests = await mockTutor(page, replies);
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -10,6 +31,8 @@ async function openFirstExercise(page) {
     .first()
     .click();
   await expect(page.getByTestId("nora-panel")).toBeVisible();
+  await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
+  return requests;
 }
 
 test.describe("Panel de Nora", () => {
@@ -31,7 +54,7 @@ test.describe("Panel de Nora", () => {
     await expect(guides.first()).toContainText("Evidencia de salida");
     await expect(guides.first()).toContainText("Contexto que puedes aportar");
     await expect(guides.first()).toContainText("Debe contener");
-    await expect(guides.first()).toContainText("No se sube a ContaIA");
+    await expect(guides.first()).toContainText("tus notas locales");
   });
 
   test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {
@@ -67,28 +90,32 @@ test.describe("Panel de Nora", () => {
     await expect(selected).toContainText("Comprueba:");
   });
 
-  test("calcula una ruta adaptativa y permite completar el proyecto integrador", async ({ page }) => {
+  test("Nora acompaña hasta el proyecto integrador del módulo 10", async ({ page }) => {
+    const requests = await mockTutor(page, ["Para tu proyecto, define primero entradas, validaciones y puntos de revisión humana."]);
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    const phase5 = page.getByTestId("phase5");
-    const initial = page.getByTestId("initial-diagnostic-form");
-    await initial.locator("input[name='initial-prompt'][value='a']").check();
-    await initial.locator("input[name='initial-evidence'][value='b']").check();
-    await initial.locator("input[name='initial-privacy'][value='c']").check();
-    await initial.locator("input[name='initial-fiscal'][value='b']").check();
-    await initial.getByRole("button", { name: /calcular mi ruta/i }).click();
-    await expect(page.getByTestId("initial-diagnostic-result")).toContainText("Ruta de proyecto integrador");
-
-    await phase5.getByRole("button", { name: /abrir diagnóstico final/i }).click();
-    await expect(page.getByTestId("final-diagnostic-form")).toBeVisible();
-    await phase5.locator("[data-project-stage='context']").click();
-    await expect(page.getByTestId("integrator-project")).toContainText("1/5");
-    await page.getByTestId("remote-ai-gate").locator("summary").click();
-    await expect(page.getByTestId("remote-ai-gate")).toContainText("No activa ninguna conexión");
+    const finalModule = page.locator("details[data-course-module='modulo-10']");
+    await finalModule.locator("summary").click();
+    await expect(finalModule).toContainText("Asistentes, gobernanza y proyecto integrador");
+    await expect(finalModule).toContainText("Evidencia de salida");
+    await expect(finalModule).toContainText("Práctica independiente");
+    await page.getByTestId("nora-toggle").click();
+    await page.getByTestId("nora-input").fill("Repasemos el proyecto final");
+    await page.getByTestId("nora-input").press("Enter");
+    await expect(page.getByTestId("nora-log")).toContainText("puntos de revisión humana");
+    expect(requests[0].context).toMatchObject({ section: "course", moduleId: "modulo-10" });
   });
 
-  test("aparece cerrado y puede abrirse", async ({ page }) => {
+  test("está disponible desde el curso y puede abrirse", async ({ page }) => {
+    await mockTutor(page);
+    await page.goto("/");
+    await expect(page.getByTestId("nora-panel")).toBeVisible();
+    await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
+    await page.getByRole("button", { name: /laboratorio práctico/i }).click();
+    await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
+    await expect(page.getByTestId("nora-panel")).toBeVisible();
+  });
+
+  test("aparece cerrada y puede abrirse", async ({ page }) => {
     await openFirstExercise(page);
 
     const toggle = page.getByTestId("nora-toggle");
@@ -101,69 +128,82 @@ test.describe("Panel de Nora", () => {
 
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await expect(body).toBeVisible();
-    await expect(page.getByTestId("nora-log")).toContainText("Empieza con una pregunta breve");
+    await expect(page.getByTestId("nora-log")).toContainText("Hola, soy Nora");
   });
 
-  test("responde una solicitud de pista localmente", async ({ page }) => {
-    await openFirstExercise(page);
+  test("responde una pregunta mediante el backend IA, no con texto local", async ({ page }) => {
+    const requests = await openFirstExercise(page, ["Revisa qué información da el caso y qué necesitas averiguar primero."]);
     await page.getByTestId("nora-toggle").click();
 
-    await page.getByTestId("nora-input").fill("Dame una pista");
+    await page.getByTestId("nora-input").fill("¿Cómo empiezo?");
     await page.getByTestId("nora-input").press("Enter");
 
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
-    await expect(page.getByTestId("nora-log")).toContainText("Dame una pista");
-    await expect(page.getByTestId("nora-message")).toHaveCount(2);
+    await expect(page.getByTestId("nora-log")).toContainText("Revisa qué información da el caso");
+    await expect(page.getByTestId("nora-log")).toContainText("¿Cómo empiezo?");
+    await expect(page.getByTestId("nora-message")).toHaveCount(3);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].context).toMatchObject({ section: "lab", exerciseId: "prompt" });
   });
 
-  test("no realiza llamadas a proveedores ni a una API de tutor", async ({ page }) => {
-    const forbiddenRequests = [];
+  test("usa el endpoint del backend y nunca llama al proveedor desde el navegador", async ({ page }) => {
+    const directProviderRequests = [];
     page.on("request", (request) => {
       const url = request.url();
-      if (/openai\.com|anthropic\.com|\/api\/tutor/i.test(url)) forbiddenRequests.push(url);
+      if (/openai\.com|anthropic\.com/i.test(url)) directProviderRequests.push(url);
     });
 
-    await openFirstExercise(page);
+    const requests = await openFirstExercise(page, ["Nora te guía desde el servidor."]);
     await page.getByTestId("nora-toggle").click();
-    await page.getByTestId("nora-input").fill("Dame una pista");
+    await page.getByTestId("nora-input").fill("Necesito orientación");
     await page.getByTestId("nora-form").getByRole("button", { name: /enviar/i }).click();
 
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
-    expect(forbiddenRequests).toEqual([]);
+    await expect(page.getByTestId("nora-log")).toContainText("Nora te guía desde el servidor");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].provider).toBe("openai");
+    expect(directProviderRequests).toEqual([]);
   });
 
-  test("limpia el historial al cambiar de ejercicio", async ({ page }) => {
-    await openFirstExercise(page);
+  test("conserva el hilo y cambia el contexto al avanzar de práctica", async ({ page }) => {
+    const requests = await openFirstExercise(page, ["Primera orientación.", "Segunda orientación."]);
     await page.getByTestId("nora-toggle").click();
-    await page.getByTestId("nora-input").fill("Dame una pista");
+    await page.getByTestId("nora-input").fill("Pregunta del módulo uno");
     await page.getByTestId("nora-input").press("Enter");
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
+    await expect(page.getByTestId("nora-log")).toContainText("Primera orientación.");
 
+    await page.getByTestId("nora-toggle").click();
     await page.getByRole("button", { name: /siguiente práctica/i }).click();
 
     await expect(page.getByTestId("nora-panel")).toBeVisible();
-    await expect(page.getByTestId("nora-log")).not.toContainText("Incluye contexto");
-    await expect(page.getByTestId("nora-log")).toContainText("Empieza con una pregunta breve");
+    await expect(page.getByTestId("nora-log")).toContainText("Pregunta del módulo uno");
+    await expect(page.getByTestId("nora-log")).toContainText("Primera orientación.");
+    await page.getByTestId("nora-toggle").click();
+    await page.getByTestId("nora-input").fill("Siguiente duda");
+    await page.getByTestId("nora-input").press("Enter");
+    await expect(page.getByTestId("nora-log")).toContainText("Segunda orientación.");
+    expect(requests[1].context.exerciseId).toBe("clasificacion");
+    expect(requests[1].history.some((turn) => turn.content.includes("Primera orientación."))).toBe(true);
   });
 
   test("conserva el historial al volver a renderizar el mismo ejercicio", async ({ page }) => {
-    await openFirstExercise(page);
+    await openFirstExercise(page, ["Orientación que permanece."]);
     await page.getByTestId("nora-toggle").click();
     await page.getByTestId("nora-input").fill("Dame una pista");
     await page.getByTestId("nora-input").press("Enter");
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
+    await expect(page.getByTestId("nora-log")).toContainText("Orientación que permanece.");
 
+    await page.getByTestId("nora-toggle").click();
     await page.getByRole("button", { name: /comprobar mi respuesta/i }).click();
 
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
+    await page.getByTestId("nora-toggle").click();
+    await expect(page.getByTestId("nora-log")).toContainText("Orientación que permanece.");
   });
 
   test("no persiste el historial del tutor después de recargar", async ({ page }) => {
-    await openFirstExercise(page);
+    await openFirstExercise(page, ["Respuesta efímera del tutor."]);
     await page.getByTestId("nora-toggle").click();
     await page.getByTestId("nora-input").fill("Dame una pista");
     await page.getByTestId("nora-input").press("Enter");
-    await expect(page.getByTestId("nora-log")).toContainText("Incluye contexto");
+    await expect(page.getByTestId("nora-log")).toContainText("Respuesta efímera del tutor.");
 
     const storageKeys = await page.evaluate(() => Object.keys(localStorage));
     expect(storageKeys.some((key) => /tutor|nora|chat/i.test(key))).toBe(false);
@@ -173,8 +213,8 @@ test.describe("Panel de Nora", () => {
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await page.getByTestId("nora-toggle").click();
 
-    await expect(page.getByTestId("nora-log")).not.toContainText("Incluye contexto");
-    await expect(page.getByTestId("nora-log")).toContainText("Empieza con una pregunta breve");
+    await expect(page.getByTestId("nora-log")).not.toContainText("Respuesta efímera del tutor.");
+    await expect(page.getByTestId("nora-log")).toContainText("Hola, soy Nora");
   });
 
   test("mantiene atributos accesibles en el panel", async ({ page }) => {
@@ -213,19 +253,19 @@ test.describe("Panel de Nora", () => {
       });
     });
 
-    await openFirstExercise(page);
+    await openFirstExercise(page, ["Explicación oral desde el backend."]);
+    await page.getByTestId("nora-toggle").click();
     const voiceButton = page.getByTestId("nora-voice");
     await expect(voiceButton).toHaveAttribute("aria-pressed", "false");
 
     await voiceButton.click();
     await expect(page.getByTestId("nora-voice")).toHaveAttribute("aria-pressed", "true");
 
-    await page.getByTestId("nora-toggle").click();
     await page.getByTestId("nora-input").fill("Dame una pista");
     await page.getByTestId("nora-input").press("Enter");
 
     await expect.poll(() => page.evaluate(() => window.__noraSpeech)).toContainEqual(
-      expect.stringContaining("Incluye contexto")
+      expect.stringContaining("Explicación oral desde el backend")
     );
   });
 });

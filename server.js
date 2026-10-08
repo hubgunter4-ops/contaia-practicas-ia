@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { handleTutorConfig, handleTutorStream } from "./src/tutor/server.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const allowedRoot = path.resolve(root);
@@ -11,11 +12,26 @@ const mime = {
   ".csv": "text/csv; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".md": "text/markdown; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".webp": "image/webp",
   ".mp4": "video/mp4",
 };
+
+async function loadDotEnv() {
+  try {
+    const contents = await readFile(path.join(root, ".env"), "utf8");
+    for (const line of contents.split(/\r?\n/)) {
+      const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (!match || match[1] in process.env || match[2].startsWith("#")) continue;
+      let value = match[2].trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
+      process.env[match[1]] = value;
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 
 function resolvePublicPath(pathname) {
   let decoded;
@@ -27,6 +43,8 @@ function resolvePublicPath(pathname) {
   let relative;
   if (decoded === "/") relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
+  else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";
+  else if (decoded.startsWith("/assets/")) relative = `public${decoded}`;
   else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);
   else if (decoded.startsWith("/docs/curso/") && path.extname(decoded) === ".md") {
     const courseRoot = path.resolve(root, "docs/curso");
@@ -51,6 +69,8 @@ function resolvePublicPath(pathname) {
 
 const server = createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  if (pathname === "/api/tutor/config") return handleTutorConfig(request, response);
+  if (pathname === "/api/tutor/stream") return handleTutorStream(request, response);
   const filePath = resolvePublicPath(pathname);
   if (!filePath || !["GET", "HEAD"].includes(request.method ?? "GET")) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff" });
@@ -114,6 +134,7 @@ const server = createServer(async (request, response) => {
 });
 
 const port = Number(process.env.PORT ?? 3000);
+await loadDotEnv();
 server.listen(port, "0.0.0.0", () => {
   console.log(`Laboratorio ContaIA listo en http://localhost:${port}`);
 });
