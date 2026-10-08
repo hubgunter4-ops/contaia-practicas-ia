@@ -48,3 +48,11 @@
 - [x] Añadir comandos `test:e2e` y `test:e2e:headed`.
 - [x] Crear workflow de GitHub Actions para ejecutar unit tests y E2E en cada Pull Request.
 - [x] Conservar informes, trazas, capturas y videos como artefactos cuando corresponda.
+
+## Sección 5: Nora como guía de los módulos
+
+- [x] Cada uno de los 10 módulos tiene una apertura contextual específica.
+- [x] Cada módulo presenta una ruta de trabajo en exactamente tres pasos.
+- [x] Cada módulo incluye una pregunta de control para separar hechos, supuestos y evidencia faltante.
+- [x] Cada módulo define una evidencia de salida concreta.
+- [x] La guía aparece dentro de la tarjeta curricular, antes de la práctica vinculada y con diseño responsive.

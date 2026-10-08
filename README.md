@@ -77,6 +77,8 @@ El código fuente está en el [repositorio privado de GitHub](https://github.com
 
 La vista de cada práctica incluye un panel plegable **Nora · Tutor local**. El panel utiliza el escenario, la consigna, las pistas y la etapa pedagógica del ejercicio para ofrecer ayudas preparadas en español: pista, reformulación, siguiente paso y explicación después de la comparación autorizada.
 
+La ruta del curso también incluye una guía de Nora dentro de cada uno de sus diez módulos. Cada guía presenta una apertura contextual, una ruta de tres pasos, una pregunta de control y la evidencia de salida esperada. Así, Nora acompaña el aprendizaje desde el plan del curso antes de llevar a la persona a la práctica ficticia vinculada.
+
 El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
 
 La voz opcional usa `SpeechSynthesis` del navegador, está apagada por defecto, se activa mediante un clic explícito y puede cancelarse. Si el navegador no ofrece Web Speech API, el control queda deshabilitado. Los estados del tutor, el panel, el foco y la región de mensajes están preparados para teclado, lector de pantalla, móvil y `prefers-reduced-motion`.

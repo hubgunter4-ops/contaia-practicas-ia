@@ -178,6 +178,17 @@ function renderHome() {
   </main>`;
 }
 
+function renderModuleGuide(module) {
+  const moduleGuide = module.guide;
+  if (!moduleGuide) return "";
+  const steps = moduleGuide.steps.map((step, index) => `<li><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(step)}</li>`).join("");
+  return `<aside class="module-nora-guide" data-testid="module-nora-${escapeHtml(module.id)}" aria-label="Guía de Nora para ${escapeHtml(module.title)}">
+    <div class="module-nora-heading"><div class="module-nora-avatar" aria-hidden="true">N</div><div><p class="module-nora-kicker">NORA · GUÍA DEL MÓDULO</p><strong>Te acompaño a verificar, no a adivinar.</strong></div></div>
+    <p class="module-nora-opening">${escapeHtml(moduleGuide.opening)}</p>
+    <div class="module-nora-grid"><div><b>Ruta en 3 pasos</b><ol>${steps}</ol></div><div class="module-nora-check"><b>Pregunta de control</b><p>${escapeHtml(moduleGuide.checkpoint)}</p><b>Evidencia de salida</b><p>${escapeHtml(moduleGuide.deliverable)}</p></div></div>
+  </aside>`;
+}
+
 function renderCourse() {
   const moduleMarkup = courseModules.map((module, index) => {
     const linkedExercises = module.exerciseIds.map((id) => exercises.find((exercise) => exercise.id === id)).filter(Boolean);
@@ -188,7 +199,7 @@ function renderCourse() {
       : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
     return `<details class="course-module-card" ${index === 0 ? "open" : ""}>
       <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
-      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p><div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
+      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
     </details>`;
   }).join("");
 

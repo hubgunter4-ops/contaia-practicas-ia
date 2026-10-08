@@ -373,6 +373,19 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .course-material-pending { color: #8a8174; font-size: 11px; font-style: italic; }
 .course-disclaimer { margin: 18px 0 0; padding: 12px 15px; border: 1px solid #e3d4b6; background: #f4ead6; color: #685a49; font-size: 12px; line-height: 1.45; }
 .course-disclaimer strong { color: #4e3b29; }
+.module-nora-guide { margin: 16px 0 14px; padding: 14px 16px; border: 1px solid #d8c7aa; border-left: 3px solid var(--wine); background: #f8f0e3; }
+.module-nora-heading { display: flex; align-items: center; gap: 9px; }
+.module-nora-avatar { width: 29px; height: 29px; display: grid; place-items: center; border: 1px solid var(--wine); border-radius: 50%; background: var(--gold-pale); color: var(--wine); font: 11px var(--mono); }
+.module-nora-kicker { margin: 0 0 2px; color: #8a7257; font: 8px var(--mono); letter-spacing: .08em; }
+.module-nora-heading strong { color: var(--wine-dark); font-size: 13px; font-weight: 600; }
+.module-nora-opening { max-width: 730px; margin: 11px 0 12px; color: #5f5549; font-size: 13px; line-height: 1.45; }
+.module-nora-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; }
+.module-nora-grid > div > b, .module-nora-check > b { display: block; margin-bottom: 6px; color: #7d6d58; font: 8px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.module-nora-grid ol { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.module-nora-grid li { display: flex; gap: 8px; color: #5c544b; font-size: 12px; line-height: 1.35; }
+.module-nora-grid li span { flex: none; color: var(--wine); font: 9px var(--mono); }
+.module-nora-check { padding-left: 14px; border-left: 1px solid #ddcdb4; }
+.module-nora-check p { margin: 0 0 10px; color: #5b5147; font-size: 12px; line-height: 1.4; }
 @media (max-width: 1000px) {
   .course-hero { padding: 28px; }
   .course-hero-stamp { width: 125px; height: 125px; }
@@ -398,6 +411,8 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .course-module-card summary { gap: 9px; padding-inline: 4px; }
   .course-module-heading strong { font-size: 14px; }
   .course-module-body { padding-left: 47px; padding-right: 9px; }
+  .module-nora-grid { grid-template-columns: 1fr; gap: 12px; }
+  .module-nora-check { padding: 10px 0 0; border-top: 1px solid #ddcdb4; border-left: 0; }
 }
 @media (max-width: 400px) {
   .course-hero { display: block; }

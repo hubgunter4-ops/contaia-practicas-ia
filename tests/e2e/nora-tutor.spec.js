@@ -13,6 +13,17 @@ async function openFirstExercise(page) {
 }
 
 test.describe("Panel de Nora", () => {
+  test("presenta una guía específica para cada uno de los diez módulos", async ({ page }) => {
+    await page.goto("/");
+    const guides = page.locator("[data-testid^='module-nora-']");
+
+    await expect(guides).toHaveCount(10);
+    await expect(guides.first()).toContainText("NORA · GUÍA DEL MÓDULO");
+    await expect(guides.first()).toContainText("Ruta en 3 pasos");
+    await expect(guides.first()).toContainText("Pregunta de control");
+    await expect(guides.first()).toContainText("Evidencia de salida");
+  });
+
   test("aparece cerrado y puede abrirse", async ({ page }) => {
     await openFirstExercise(page);
 
