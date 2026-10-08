@@ -348,6 +348,57 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .glossary-index-selected { display: grid; gap: 4px; margin: 0 15px 14px; padding: 10px 12px; border-left: 2px solid var(--gold); background: #f4ead9; color: #65584b; font-size: 11px; line-height: 1.35; }
 .glossary-index-selected b { color: var(--wine-dark); font-size: 13px; }
 .glossary-index-selected p { margin: 0; }
+.phase5 { margin: 0 0 25px; }
+.phase5-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; margin-bottom: 12px; padding: 18px 20px; border-left: 3px solid var(--gold); background: #eee7db; }
+.phase5-heading h2 { margin: 0 0 6px; color: var(--wine-dark); font-size: 24px; line-height: 1.12; }
+.phase5-heading p:not(.eyebrow) { max-width: 720px; margin: 0; color: #675c50; font-size: 13px; line-height: 1.45; }
+.phase5-badge { flex: none; padding: 7px 9px; border: 1px solid #c9b594; color: var(--wine); font: 8px var(--mono); line-height: 1.45; text-align: center; }
+.phase5-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.phase5-card, .phase5-project { padding: 15px; border: 1px solid #ddd1bd; background: rgba(255,252,246,.7); }
+.phase5-card h3, .phase5-project h3 { margin: 2px 0 9px; color: var(--wine-dark); font-size: 18px; }
+.phase5-card-kicker { color: #8a7257; font: 8px var(--mono); letter-spacing: .08em; }
+.phase5-diagnostic-form > p, .phase5-locked p { margin: 0 0 10px; color: #756858; font-size: 11px; line-height: 1.4; }
+.phase5-diagnostic-form { display: grid; gap: 9px; }
+.phase5-diagnostic-form fieldset { display: grid; gap: 4px; margin: 0; padding: 8px 9px; border: 1px solid #e6dccb; background: #fcf8f0; }
+.phase5-diagnostic-form legend { padding: 0 3px; color: #5b4e40; font-size: 11px; font-weight: 600; line-height: 1.3; }
+.phase5-diagnostic-form label { display: flex; gap: 6px; color: #6c5e50; font-size: 11px; line-height: 1.3; cursor: pointer; }
+.phase5-diagnostic-form input { flex: none; accent-color: var(--wine); }
+.phase5-diagnostic-form .button { justify-self: start; }
+.phase5-result { display: grid; gap: 8px; }
+.phase5-result > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #806b51; font: 9px var(--mono); text-transform: uppercase; }
+.phase5-result > div:first-child strong { color: var(--wine); font-size: 14px; }
+.phase5-result > p { margin: 0; color: #66594c; font-size: 12px; line-height: 1.4; }
+.diagnostic-delta { padding: 6px 8px; border-left: 2px solid #91aa8f; background: #f0f6ed; color: #557158 !important; font-size: 11px !important; }
+.adaptive-route { padding: 9px 10px; border-left: 2px solid var(--gold); background: #f4ead9; color: #66584a; }
+.adaptive-route b { color: var(--wine-dark); font-size: 12px; }
+.adaptive-route p { margin: 3px 0 5px; font-size: 11px; line-height: 1.35; }
+.adaptive-route ul { display: grid; gap: 2px; margin: 0; padding-left: 16px; font-size: 11px; }
+.phase5-locked { padding: 10px; border: 1px dashed #d6c4a6; background: #fcf8f0; }
+.phase5-project { grid-column: 1 / -1; margin-top: 12px; }
+.phase5-project-top { display: flex; justify-content: space-between; gap: 16px; }
+.phase5-project-top > strong { flex: none; color: var(--wine); font: 22px var(--mono); }
+.phase5-project-top p { margin: 0 0 12px; color: #756858; font-size: 12px; line-height: 1.4; }
+.project-stage-list { display: grid; gap: 7px; }
+.project-stage { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: start; padding: 9px; border: 1px solid #e4d9c8; background: #fcf8f0; }
+.project-stage.is-complete { border-color: #a9c0aa; background: #f2f7ef; }
+.project-stage-number { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #c9b28e; color: var(--wine); font: 9px var(--mono); }
+.project-stage h4 { margin: 1px 0 3px; color: #514638; font-size: 12px; }
+.project-stage p { margin: 0 0 3px; color: #6b5d4e; font-size: 11px; line-height: 1.35; }
+.project-stage small { color: #8b7965; font-size: 10px; }
+.project-stage-toggle { align-self: center; padding: 6px 8px; border: 1px solid #cdbda4; background: transparent; color: var(--wine); font: 9px var(--mono); cursor: pointer; }
+.project-stage.is-complete .project-stage-toggle { border-color: #7e9b83; color: #54725b; }
+.remote-ai-gate { grid-column: 1 / -1; margin-top: 12px; border: 1px solid #d5c6ad; background: #f7f1e6; }
+.remote-ai-gate summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--wine); cursor: pointer; list-style: none; }
+.remote-ai-gate summary::-webkit-details-marker { display: none; }
+.remote-ai-gate summary > span:first-child { display: grid; gap: 3px; }
+.remote-ai-gate summary b { color: #8a7257; font: 8px var(--mono); letter-spacing: .08em; }
+.remote-ai-gate summary strong { color: var(--wine-dark); font-size: 13px; }
+.remote-ai-gate summary > span:last-child { font: 18px var(--mono); }
+.remote-ai-gate > div { padding: 0 14px 13px; color: #675a4d; font-size: 11px; line-height: 1.4; }
+.remote-ai-gate > div > p { margin: 0 0 8px; }
+.remote-ai-gate ol { display: grid; gap: 4px; margin: 0 0 9px; padding-left: 18px; }
+.remote-ai-gate-status { padding: 8px 10px; border-left: 2px solid #a7b9a2; background: #eef5ec; }
+.remote-ai-gate-status b { color: #4c6b50; }
 .course-hero { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 28px; min-height: 280px; padding: 32px 38px; overflow: hidden; background: var(--wine); color: #fff9f0; }
 .course-hero::after { position: absolute; top: -80px; right: 22%; width: 1px; height: 440px; content: ""; transform: rotate(31deg); background: rgba(255,255,255,.1); }
 .course-hero-copy { position: relative; z-index: 1; max-width: 700px; }
@@ -470,6 +521,12 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .onboarding-card h2 { font-size: 20px; }
   .onboarding-complete { align-items: flex-start; flex-wrap: wrap; }
   .onboarding-complete p { flex-basis: calc(100% - 28px); }
+  .phase5-heading { display: grid; gap: 10px; padding: 15px; }
+  .phase5-grid { grid-template-columns: 1fr; }
+  .phase5-project { grid-column: auto; }
+  .remote-ai-gate { grid-column: auto; }
+  .project-stage { grid-template-columns: 30px 1fr; }
+  .project-stage-toggle { grid-column: 2; justify-self: start; }
   .glossary-index-grid { grid-template-columns: 1fr; }
   .course-hero { min-height: auto; align-items: start; padding: 23px 20px; }
   .course-hero h1 { font-size: clamp(30px, 8vw, 42px); }

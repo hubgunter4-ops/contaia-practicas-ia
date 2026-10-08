@@ -7,6 +7,7 @@ import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
+import { DIAGNOSTIC_QUESTIONS, PROJECT_STAGES, REMOTE_AI_GATE, getAdaptiveRoute, scoreDiagnostic } from "./phase5.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -34,6 +35,7 @@ const state = {
   studyDraftNote: "",
   studyDbWarning: "",
   openCourseModuleId: null,
+  phase5: { initialAnswers: {}, initialResult: null, finalAnswers: {}, finalResult: null, finalOpen: false, projectCompleted: new Set() },
 };
 
 let progressStorage = null;
@@ -46,6 +48,14 @@ try {
   state.onboardingLevel = progressStorage?.getItem("contaia.onboarding.v1") || "";
   state.onboardingDraft = state.onboardingLevel;
 } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
+try {
+  const phase5Saved = JSON.parse(progressStorage?.getItem("contaia.phase5.v1") || "null");
+  if (phase5Saved && typeof phase5Saved === "object") {
+    state.phase5.initialResult = Number.isFinite(phase5Saved.initialScore) ? { score: phase5Saved.initialScore, total: DIAGNOSTIC_QUESTIONS.length, percentage: Math.round((phase5Saved.initialScore / DIAGNOSTIC_QUESTIONS.length) * 100) } : null;
+    state.phase5.finalResult = Number.isFinite(phase5Saved.finalScore) ? { score: phase5Saved.finalScore, total: DIAGNOSTIC_QUESTIONS.length, percentage: Math.round((phase5Saved.finalScore / DIAGNOSTIC_QUESTIONS.length) * 100) } : null;
+    state.phase5.projectCompleted = new Set(Array.isArray(phase5Saved.completedStages) ? phase5Saved.completedStages.filter((id) => PROJECT_STAGES.some((stage) => stage.id === id)) : []);
+  }
+} catch { /* Los resultados de Fase 5 se pueden repetir sin almacenamiento. */ }
 
 function persistProgress() {
   const saved = saveProgress({
@@ -88,6 +98,16 @@ async function downloadStudyDatabase() {
   link.download = `base-estudio-contaia-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function persistPhase5Summary() {
+  try {
+    progressStorage?.setItem("contaia.phase5.v1", JSON.stringify({
+      initialScore: state.phase5.initialResult?.score,
+      finalScore: state.phase5.finalResult?.score,
+      completedStages: [...state.phase5.projectCompleted],
+    }));
+  } catch { /* El diagnóstico sigue funcionando solo en memoria. */ }
 }
 
 function downloadPortfolio() {
@@ -315,6 +335,22 @@ function renderStudy() {
     <p class="progress-storage-note" role="status">${escapeHtml(state.studyDbWarning || "La base incluye el catálogo del curso y tus notas privadas locales; no sincroniza con cuentas ni servicios externos.")}</p>
   </main>`;
 }
+function renderDiagnosticForm(kind, result) {
+  const isInitial = kind === "initial";
+  if (result) {
+    const route = isInitial ? getAdaptiveRoute(result) : null;
+    const delta = !isInitial && state.phase5.initialResult ? result.score - state.phase5.initialResult.score : null;
+    return `<div class="phase5-result" data-testid="${kind}-diagnostic-result"><div><b>${isInitial ? "Resultado inicial" : "Resultado final"}</b><strong>${result.score}/${result.total} · ${result.percentage}%</strong></div><p>${isInitial ? route.message : "Compara este resultado con tu diagnóstico inicial y revisa qué conceptos puedes seguir practicando."}</p>${delta !== null ? `<p class="diagnostic-delta"><b>Variación respecto al inicio:</b> ${delta > 0 ? "+" : ""}${delta} aciertos.</p>` : ""}${route ? `<div class="adaptive-route"><b>${escapeHtml(route.title)}</b><p>${escapeHtml(route.message)}</p><ul>${route.modules.map((id) => { const module = courseModules.find((item) => item.id === id); return module ? `<li>${escapeHtml(module.title)}</li>` : ""; }).join("")}</ul></div>` : ""}<button type="button" class="text-link" data-action="phase5-reset-diagnostic" data-diagnostic-kind="${kind}">Repetir diagnóstico</button></div>`;
+  }
+  const answers = isInitial ? state.phase5.initialAnswers : state.phase5.finalAnswers;
+  return `<form class="phase5-diagnostic-form" data-phase5-form="${kind}" data-testid="${kind}-diagnostic-form"><p>${isInitial ? "Responde para que Nora sugiera un punto de partida. No es una calificación." : "Responde de nuevo al cerrar el recorrido. Solo se conserva el resultado agregado, no tus selecciones."}</p>${DIAGNOSTIC_QUESTIONS.map((question, index) => `<fieldset><legend>${String(index + 1).padStart(2, "0")} · ${escapeHtml(question.question)}</legend>${question.options.map((option) => `<label><input type="radio" name="${kind}-${question.id}" value="${option.id}" ${answers[question.id] === option.id ? "checked" : ""}/> ${escapeHtml(option.label)}</label>`).join("")}</fieldset>`).join("")}<button type="submit" class="button button-primary">${isInitial ? "Calcular mi ruta" : "Calcular resultado final"} <span aria-hidden="true">→</span></button></form>`;
+}
+
+function renderPhase5() {
+  const completed = state.phase5.projectCompleted.size;
+  const finalBlock = state.phase5.finalOpen || state.phase5.finalResult ? renderDiagnosticForm("final", state.phase5.finalResult) : `<div class="phase5-locked"><p>Disponible cuando quieras cerrar el recorrido. No necesitas enviar documentos ni respuestas fuera de este navegador.</p><button type="button" class="button button-secondary" data-action="phase5-open-final">Abrir diagnóstico final</button></div>`;
+  return `<section class="phase5" data-testid="phase5"><div class="phase5-heading"><div><p class="eyebrow">FASE 5 · CIERRE Y TRANSFERENCIA</p><h2>Convierte la práctica en criterio propio.</h2><p>Esta fase compara tu punto de partida con tu avance, te propone una ruta y reúne un proyecto integrador ficticio.</p></div><span class="phase5-badge">LOCAL-FIRST<br/>SIN ENVÍO DE RESPUESTAS</span></div><div class="phase5-grid"><article class="phase5-card"><div class="phase5-card-kicker">01 · DIAGNÓSTICO</div><h3>Tu punto de partida</h3>${renderDiagnosticForm("initial", state.phase5.initialResult)}</article><article class="phase5-card"><div class="phase5-card-kicker">02 · CIERRE</div><h3>Diagnóstico final</h3>${finalBlock}</article></div><article class="phase5-project" data-testid="integrator-project"><div class="phase5-project-top"><div><div class="phase5-card-kicker">03 · PROYECTO INTEGRADOR</div><h3>Del documento ficticio a un flujo verificable</h3><p>Completa las etapas en orden. Cada una produce una evidencia que puedes revisar o descargar por separado.</p></div><strong>${completed}/${PROJECT_STAGES.length}</strong></div><div class="project-stage-list">${PROJECT_STAGES.map((stage) => { const done = state.phase5.projectCompleted.has(stage.id); return `<article class="project-stage ${done ? "is-complete" : ""}"><div class="project-stage-number">${stage.number}</div><div><h4>${escapeHtml(stage.title)}</h4><p>${escapeHtml(stage.task)}</p><small><b>Evidencia:</b> ${escapeHtml(stage.evidence)}</small></div><button type="button" class="project-stage-toggle" data-project-stage="${stage.id}" aria-pressed="${done}">${done ? "Completada ✓" : "Marcar lista"}</button></article>`; }).join("")}</div></article><details class="remote-ai-gate" data-testid="remote-ai-gate"><summary><span><b>PUERTA DE DECISIÓN</b><strong>Antes de conectar una IA remota</strong></span><span aria-hidden="true">＋</span></summary><div><p>ContaIA permanece local. Esta puerta explica qué tendría que entenderse y aprobarse antes de enviar cualquier texto a un proveedor externo. No activa ninguna conexión.</p><ol>${REMOTE_AI_GATE.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol><p class="remote-ai-gate-status"><b>Estado actual:</b> desactivada. Nora local continúa siendo la única asistencia disponible.</p></div></details></section>`;
+}
 
 function renderCourse() {
   const moduleMarkup = courseModules.map((module, index) => {
@@ -335,9 +371,10 @@ function renderCourse() {
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
     ${renderOnboarding()}
     ${renderGlossaryIndex()}
+    ${renderPhase5()}
     <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
-    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador módulos, prácticas, etapas y resultados agregados; nunca tus respuestas, selecciones ni documentos.")}</p>
     <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
     <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
     <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
@@ -472,6 +509,15 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
+  const projectStage = event.target.closest("[data-project-stage]");
+  if (projectStage) {
+    const stageId = projectStage.dataset.projectStage;
+    if (state.phase5.projectCompleted.has(stageId)) state.phase5.projectCompleted.delete(stageId);
+    else state.phase5.projectCompleted.add(stageId);
+    persistPhase5Summary();
+    render();
+    return;
+  }
   const moduleToggle = event.target.closest("[data-module-toggle]");
   if (moduleToggle) {
     const moduleId = moduleToggle.dataset.moduleToggle;
@@ -564,6 +610,21 @@ app.addEventListener("click", (event) => {
     }).catch(() => { state.studyDbWarning = "No se pudo eliminar la nota local."; render(); });
     return;
   }
+  if (action.dataset.action === "phase5-open-final") {
+    state.phase5.finalOpen = true;
+    render();
+    document.querySelector("[data-testid='final-diagnostic-form']")?.querySelector("input")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "phase5-reset-diagnostic") {
+    const kind = action.dataset.diagnosticKind === "final" ? "final" : "initial";
+    state.phase5[`${kind}Result`] = null;
+    state.phase5[`${kind}Answers`] = {};
+    if (kind === "final") state.phase5.finalOpen = true;
+    persistPhase5Summary();
+    render();
+    return;
+  }
   if (action.dataset.action === "complete-onboarding") {
     if (!state.onboardingDraft) return;
     persistOnboarding();
@@ -599,6 +660,19 @@ app.addEventListener("submit", (event) => {
       render();
       document.querySelector("#study-note")?.focus({ preventScroll: true });
     }).catch(() => { state.studyDbWarning = "Escribe una nota breve para guardarla en la base local."; render(); });
+    return;
+  }
+  const phase5Form = event.target.closest("[data-phase5-form]");
+  if (phase5Form) {
+    event.preventDefault();
+    const kind = phase5Form.dataset.phase5Form === "final" ? "final" : "initial";
+    const answers = Object.fromEntries(DIAGNOSTIC_QUESTIONS.map((question) => [question.id, phase5Form.querySelector(`input[name='${kind}-${question.id}']:checked`)?.value || ""]));
+    state.phase5[`${kind}Answers`] = answers;
+    state.phase5[`${kind}Result`] = scoreDiagnostic(answers);
+    if (kind === "final") state.phase5.finalOpen = false;
+    persistPhase5Summary();
+    render();
+    document.querySelector(`[data-testid='${kind}-diagnostic-result']`)?.focus({ preventScroll: true });
     return;
   }
   const form = event.target.closest("[data-tutor-form]");

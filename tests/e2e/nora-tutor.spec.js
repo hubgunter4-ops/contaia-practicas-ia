@@ -67,6 +67,27 @@ test.describe("Panel de Nora", () => {
     await expect(selected).toContainText("Comprueba:");
   });
 
+  test("calcula una ruta adaptativa y permite completar el proyecto integrador", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    const phase5 = page.getByTestId("phase5");
+    const initial = page.getByTestId("initial-diagnostic-form");
+    await initial.locator("input[name='initial-prompt'][value='a']").check();
+    await initial.locator("input[name='initial-evidence'][value='b']").check();
+    await initial.locator("input[name='initial-privacy'][value='c']").check();
+    await initial.locator("input[name='initial-fiscal'][value='b']").check();
+    await initial.getByRole("button", { name: /calcular mi ruta/i }).click();
+    await expect(page.getByTestId("initial-diagnostic-result")).toContainText("Ruta de proyecto integrador");
+
+    await phase5.getByRole("button", { name: /abrir diagnóstico final/i }).click();
+    await expect(page.getByTestId("final-diagnostic-form")).toBeVisible();
+    await phase5.locator("[data-project-stage='context']").click();
+    await expect(page.getByTestId("integrator-project")).toContainText("1/5");
+    await page.getByTestId("remote-ai-gate").locator("summary").click();
+    await expect(page.getByTestId("remote-ai-gate")).toContainText("No activa ninguna conexión");
+  });
+
   test("aparece cerrado y puede abrirse", async ({ page }) => {
     await openFirstExercise(page);
 
