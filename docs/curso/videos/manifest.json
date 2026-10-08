@@ -1,0 +1,20 @@
+{
+  "series": "ContaIA · diez mini clases guiadas",
+  "aspect_ratio": "16:9",
+  "resolution": "1280x720",
+  "language": "es-MX",
+  "voice": "Rasalgethi (informative)",
+  "audio": "Narración sintética con subtítulos incrustados; clips visuales generados sin audio y apoyos gráficos originales.",
+  "modules": [
+    {"id":"01","title":"Fundamentos de IA y criterio profesional","file":"modulo-01.mp4","duration_seconds":37.4,"size_bytes":2276509,"generated_motion_background":true},
+    {"id":"02","title":"Diseño de instrucciones contables","file":"modulo-02.mp4","duration_seconds":40.4,"size_bytes":1870387,"generated_motion_background":true},
+    {"id":"03","title":"Herramientas, privacidad y uso seguro","file":"modulo-03.mp4","duration_seconds":39.57,"size_bytes":1848016,"generated_motion_background":true},
+    {"id":"04","title":"Preparación de datos y clasificación","file":"modulo-04.mp4","duration_seconds":38.64,"size_bytes":2084203,"generated_motion_background":true},
+    {"id":"05","title":"Conciliación y automatización contable","file":"modulo-05.mp4","duration_seconds":35.87,"size_bytes":1813636,"generated_motion_background":true},
+    {"id":"06","title":"Balanzas, indicadores y análisis financiero","file":"modulo-06.mp4","duration_seconds":37.36,"size_bytes":1683182,"generated_motion_background":true},
+    {"id":"07","title":"Reportes ejecutivos y visualización","file":"modulo-07.mp4","duration_seconds":37.77,"size_bytes":933116,"generated_motion_background":false},
+    {"id":"08","title":"Auditoría, cumplimiento y anomalías","file":"modulo-08.mp4","duration_seconds":37.13,"size_bytes":2412606,"generated_motion_background":true},
+    {"id":"09","title":"Investigación fiscal responsable en México","file":"modulo-09.mp4","duration_seconds":37.24,"size_bytes":2417254,"generated_motion_background":true},
+    {"id":"10","title":"Integración, gobernanza y proyecto final","file":"modulo-10.mp4","duration_seconds":35.32,"size_bytes":1625733,"generated_motion_background":true}
+  ]
+}

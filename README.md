@@ -6,6 +6,7 @@ Proyecto en español que reúne una propuesta de curso completo de IA para conta
 
 Consulta el [plan integral de 40 horas](docs/curso/plan-trabajo-curso-ia-contaduria.md): 10 módulos semanales, resultados de aprendizaje, actividades, evidencias, evaluación, proyecto integrador y correspondencia con cada práctica del laboratorio.
 El [paquete didáctico detallado del Módulo 2](docs/curso/modulo-02/README.md) desarrolla la semana de diseño de instrucciones; el [índice de materiales por módulo](docs/curso/README.md) reúne los paquetes disponibles.
+La [serie de diez videos explicativos](docs/curso/videos/README.md) ofrece una mini clase guiada complementaria para cada módulo.
 
 ## Sección 2: laboratorio práctico
 
