@@ -9,7 +9,7 @@ El [paquete didáctico detallado del Módulo 2](docs/curso/modulo-02/README.md) 
 
 ## Sección 2: laboratorio práctico
 
-La [aplicación interactiva](https://8328-i143dgisqzurgn5srq8gm-85c68042.us3.manus.computer/) ya construida contiene nueve ejercicios originales inspirados en temas generales de cursos de Alegra Academy, Edutin y ContadorMx; no reproduce materiales propietarios ni sustituye esos cursos.[^1][^2][^3]
+La [aplicación interactiva](https://8328-i143dgisqzurgn5srq8gm-85c68042.us3.manus.computer/) presenta las dos secciones en pestañas: **01 · Curso completo**, con los diez módulos y enlaces a los materiales disponibles, y **02 · Laboratorio práctico**, con nueve ejercicios originales inspirados en temas generales de cursos de Alegra Academy, Edutin y ContadorMx. No reproduce materiales propietarios ni sustituye esos cursos.[^1][^2][^3]
 
 - **Prompts contables:** borrador libre con rúbrica visible, comprobación local y respuesta modelo.
 - **Operación contable:** clasificación de una compra, conciliación de movimientos bancarios y lectura de una balanza.

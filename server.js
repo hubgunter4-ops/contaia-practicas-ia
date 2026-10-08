@@ -10,6 +10,7 @@ const mime = {
   ".csv": "text/csv; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
 };
@@ -25,6 +26,13 @@ function resolvePublicPath(pathname) {
   if (decoded === "/") relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
   else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);
+  else if (decoded.startsWith("/docs/curso/") && path.extname(decoded) === ".md") {
+    const courseRoot = path.resolve(root, "docs/curso");
+    const candidate = path.resolve(root, decoded.slice(1));
+    const withinCourse = path.relative(courseRoot, candidate);
+    if (!withinCourse || withinCourse === ".." || withinCourse.startsWith(`..${path.sep}`) || path.isAbsolute(withinCourse)) return null;
+    relative = path.relative(root, candidate);
+  }
   else return null;
 
   const candidate = path.resolve(root, relative);

@@ -1,8 +1,10 @@
 import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, scoreRubric } from "./logic.js";
+import { COURSE, courseModules } from "./course.js";
 
 const app = document.querySelector("#app");
 const state = {
+  section: "course",
   current: "home",
   completed: new Set(),
   revealed: new Set(),
@@ -25,7 +27,7 @@ function sidebar() {
     const items = exercises.filter((exercise) => exercise.category === category);
     if (!items.length) return "";
     return `<section class="nav-group" aria-label="${escapeHtml(category)}"><p class="nav-label">${escapeHtml(category)}</p>${items.map((exercise, index) => `
-      <button class="nav-item ${state.current === exercise.id ? "is-active" : ""}" type="button" data-nav="${exercise.id}" aria-current="${state.current === exercise.id ? "page" : "false"}">
+      <button class="nav-item ${state.section === "lab" && state.current === exercise.id ? "is-active" : ""}" type="button" data-nav="${exercise.id}" aria-current="${state.section === "lab" && state.current === exercise.id ? "page" : "false"}">
         <span class="nav-index">${String(index + 1).padStart(2, "0")}</span><span>${escapeHtml(exercise.title)}</span>${state.completed.has(exercise.id) ? '<span class="nav-done" aria-label="Completado">✓</span>' : ""}
       </button>`).join("")}</section>`;
   }).join("");
@@ -35,7 +37,8 @@ function sidebar() {
       ${logoMark()}<span class="brand-copy"><strong>Laboratorio</strong><b>Conta<span>IA</span></b></span>
     </button>
     <div class="sidebar-divider"></div>
-    <button class="nav-item nav-home ${state.current === "home" ? "is-active" : ""}" type="button" data-nav="home" aria-current="${state.current === "home" ? "page" : "false"}">
+    <p class="nav-label sidebar-section-label">SECCIÓN 02 · LABORATORIO</p>
+    <button class="nav-item nav-home ${state.section === "lab" && state.current === "home" ? "is-active" : ""}" type="button" data-nav="home" aria-current="${state.section === "lab" && state.current === "home" ? "page" : "false"}">
       <span class="home-glyph" aria-hidden="true">⌂</span><span>Panel de práctica</span>
     </button>
     ${groupMarkup}
@@ -48,8 +51,13 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  return `<header class="topbar"><div class="breadcrumb"><span>CUADERNO DE PRÁCTICA</span><i aria-hidden="true">/</i><strong>${state.current === "home" ? "Resumen" : "Ejercicio"}</strong></div>
-    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span><span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span></div>
+  const pageLabel = state.section === "course" ? "Plan del curso" : state.current === "home" ? "Resumen" : "Ejercicio";
+  return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
+    <nav class="section-tabs" aria-label="Secciones principales">
+      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Curso completo</span></button>
+      <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>02</b><span>Laboratorio práctico</span></button>
+    </nav>
+    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
   </header>`;
 }
 
@@ -82,6 +90,29 @@ function renderHome() {
     </section>
     <section class="method-note"><div class="method-label">MÉTODO DE TRABAJO <span>02 / 03</span></div><div><h2>La IA propone.<br/>Tu criterio dispone.</h2><p>Usa las respuestas de una herramienta como borrador. Confirma cálculos, evidencia y reglas aplicables antes de tomar decisiones o compartir conclusiones.</p></div><a href="/data/transacciones-ficticias.csv" download class="text-link">Explorar el conjunto de datos <span>↗</span></a></section>
     <p class="home-footnote">Esta página no envía tus respuestas a servicios externos ni guarda lo que escribas. Al actualizar, el progreso de esta sesión se reinicia.</p>
+  </main>`;
+}
+
+function renderCourse() {
+  const moduleMarkup = courseModules.map((module, index) => {
+    const linkedExercises = module.exerciseIds.map((id) => exercises.find((exercise) => exercise.id === id)).filter(Boolean);
+    const practiceLinks = linkedExercises.map((exercise) => `<button type="button" class="course-practice-link" data-nav="${escapeHtml(exercise.id)}">${escapeHtml(exercise.title)} <span aria-hidden="true">↗</span></button>`).join("");
+    const material = module.materialPath
+      ? `<a class="course-material-link" href="${escapeHtml(module.materialPath)}" download>Descargar materiales del módulo <span aria-hidden="true">↓</span></a>`
+      : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
+    return `<details class="course-module-card" ${index === 0 ? "open" : ""}>
+      <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
+      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p><div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}</div></div>
+    </details>`;
+  }).join("");
+
+  return `<main id="contenido" class="content course-content" tabindex="-1">
+    <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
+    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
+    <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${COURSE.weeks}</b><span>módulos semanales</span></div><div><b>${exercises.length}</b><span>prácticas ficticias</span></div></div>
+    <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
+    <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
+    <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
   </main>`;
 }
 
@@ -133,8 +164,9 @@ function renderExercise(exercise) {
 }
 
 function render() {
-  const exercise = exercises.find((item) => item.id === state.current);
-  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${exercise ? renderExercise(exercise) : renderHome()}</div></div>`;
+  const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
+  const content = state.section === "course" ? renderCourse() : exercise ? renderExercise(exercise) : renderHome();
+  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div></div>`;
 }
 
 function checkAnswer(exercise) {
@@ -170,8 +202,18 @@ function checkAnswer(exercise) {
 }
 
 app.addEventListener("click", (event) => {
+  const section = event.target.closest("[data-section]");
+  if (section) {
+    state.section = section.dataset.section === "lab" ? "lab" : "course";
+    if (state.section === "lab") state.current = "home";
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   const nav = event.target.closest("[data-nav]");
   if (nav) {
+    state.section = "lab";
     state.current = nav.dataset.nav;
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
