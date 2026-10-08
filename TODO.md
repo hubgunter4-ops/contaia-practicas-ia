@@ -21,7 +21,7 @@
 
 ## Restricciones e integración
 
-- No añadir cuentas, almacenamiento remoto, analítica, API de IA, base de datos, proveedores externos ni nuevas dependencias.
+- No añadir cuentas, almacenamiento remoto, analítica, API de IA ni proveedores externos. La base de estudio es local, nativa del navegador y no requiere dependencias nuevas.
 - El progreso del curso se guarda solo en `localStorage`; el portafolio se descarga desde el navegador. El texto de respuestas, selecciones y respuestas de evaluación no se persiste.
 - Si una integración externa adicional pareciera útil, detener ese punto, describirla y pedir autorización antes de proponerla o conectarla. No se prevé ninguna para este alcance.
 - Cerrar cada fase con un commit separado en el repositorio privado canónico; verificar pruebas y Preview antes de continuar. No solicitar publicación del sitio.
@@ -39,6 +39,14 @@
 - [ ] Revisar manualmente las nueve prácticas en Preview antes de fusionar o publicar.
 
 > La integración remota con OpenAI, Anthropic u otro proveedor permanece fuera de alcance y no se implementa en esta rama.
+
+## Sección 6: base de estudio local
+
+- [x] Crear `src/study-db.js` con esquema IndexedDB versionado para fichas de curso y notas privadas.
+- [x] Sembrar 47 fichas: 10 módulos, 9 prácticas y 28 conceptos del glosario, con destinos navegables.
+- [x] Integrar búsqueda por relevancia, filtros por tipo y apertura del contenido de origen desde la pestaña **03 · Base de estudio**.
+- [x] Guardar, editar, eliminar y exportar notas locales de hasta 2,000 caracteres, con fallback en memoria cuando IndexedDB no está disponible.
+- [x] Cubrir catálogo, búsqueda, depuración de notas y validación de identificadores con pruebas unitarias.
 
 ## Sección 4: pruebas E2E y CI
 
