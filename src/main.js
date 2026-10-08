@@ -7,7 +7,7 @@ import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
-import { DIAGNOSTIC_QUESTIONS, PROJECT_STAGES, REMOTE_AI_GATE, getAdaptiveRoute, scoreDiagnostic } from "./phase5.js";
+import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -31,11 +31,11 @@ const state = {
   studyNotes: [],
   studyQuery: "",
   studyKind: "all",
+  studyVisibleCount: 60,
   studySelectedId: "",
   studyDraftNote: "",
   studyDbWarning: "",
   openCourseModuleId: null,
-  phase5: { initialAnswers: {}, initialResult: null, finalAnswers: {}, finalResult: null, finalOpen: false, projectCompleted: new Set() },
 };
 
 let progressStorage = null;
@@ -48,14 +48,6 @@ try {
   state.onboardingLevel = progressStorage?.getItem("contaia.onboarding.v1") || "";
   state.onboardingDraft = state.onboardingLevel;
 } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
-try {
-  const phase5Saved = JSON.parse(progressStorage?.getItem("contaia.phase5.v1") || "null");
-  if (phase5Saved && typeof phase5Saved === "object") {
-    state.phase5.initialResult = Number.isFinite(phase5Saved.initialScore) ? { score: phase5Saved.initialScore, total: DIAGNOSTIC_QUESTIONS.length, percentage: Math.round((phase5Saved.initialScore / DIAGNOSTIC_QUESTIONS.length) * 100) } : null;
-    state.phase5.finalResult = Number.isFinite(phase5Saved.finalScore) ? { score: phase5Saved.finalScore, total: DIAGNOSTIC_QUESTIONS.length, percentage: Math.round((phase5Saved.finalScore / DIAGNOSTIC_QUESTIONS.length) * 100) } : null;
-    state.phase5.projectCompleted = new Set(Array.isArray(phase5Saved.completedStages) ? phase5Saved.completedStages.filter((id) => PROJECT_STAGES.some((stage) => stage.id === id)) : []);
-  }
-} catch { /* Los resultados de Fase 5 se pueden repetir sin almacenamiento. */ }
 
 function persistProgress() {
   const saved = saveProgress({
@@ -73,7 +65,7 @@ function persistOnboarding() {
 
 async function initializeStudyDatabase() {
   try {
-    state.studyDb = await openStudyDatabase({ modules: courseModules, exercises, glossary: GLOSSARY });
+    state.studyDb = await openStudyDatabase({ modules: courseModules, exercises, glossary: GLOSSARY, knowledge: KNOWLEDGE_ITEMS });
     state.studyItems = await state.studyDb.listItems();
     state.studyNotes = await state.studyDb.listNotes();
     state.studyDbWarning = state.studyDb.persistent
@@ -98,16 +90,6 @@ async function downloadStudyDatabase() {
   link.download = `base-estudio-contaia-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function persistPhase5Summary() {
-  try {
-    progressStorage?.setItem("contaia.phase5.v1", JSON.stringify({
-      initialScore: state.phase5.initialResult?.score,
-      finalScore: state.phase5.finalResult?.score,
-      completedStages: [...state.phase5.projectCompleted],
-    }));
-  } catch { /* El diagnóstico sigue funcionando solo en memoria. */ }
 }
 
 function downloadPortfolio() {
@@ -291,7 +273,7 @@ function renderGlossaryIndex() {
   return `<section class="course-glossary" data-testid="glossary-index"><button type="button" class="course-glossary-toggle" data-action="toggle-glossary" aria-expanded="${state.glossaryOpen}"><span><b>GLOSARIO CONTEXTUAL</b><strong>Consulta los términos del recorrido con ejemplos contables.</strong></span><span aria-hidden="true">${state.glossaryOpen ? "−" : "+"}</span></button>${state.glossaryOpen ? `<div class="glossary-index-grid">${entries}</div>${selected ? `<div class="glossary-index-selected" role="status"><b>${escapeHtml(selected.term)}</b><p>${escapeHtml(selected.definition)}</p><span><strong>Ejemplo:</strong> ${escapeHtml(selected.example)}</span><span><strong>Comprueba:</strong> ${escapeHtml(selected.check)}</span></div>` : ""}` : ""}</section>`;
 }
 
-const studyKindLabels = { module: "Módulo", practice: "Práctica", concept: "Concepto" };
+const studyKindLabels = { module: "Módulo", practice: "Práctica", concept: "Concepto", knowledge: "Conocimiento externo" };
 
 function renderStudyResults() {
   if (!state.studyItems.length) {
@@ -301,7 +283,8 @@ function renderStudyResults() {
   if (!results.length) {
     return `<div class="study-empty"><strong>No encontramos coincidencias.</strong><span>Prueba con otra palabra o cambia el tipo de contenido.</span></div>`;
   }
-  return `<div class="study-results-list">${results.map((item) => {
+  const visibleResults = results.slice(0, state.studyVisibleCount);
+  return `<div class="study-results-list">${visibleResults.map((item) => {
     const note = selectedStudyNote(item.id);
     return `<article class="study-result-card ${state.studySelectedId === item.id ? "is-selected" : ""}">
       <div class="study-result-meta"><span>${escapeHtml(studyKindLabels[item.kind] ?? item.kind)}</span>${note ? "<b>Nota guardada</b>" : ""}</div>
@@ -309,7 +292,7 @@ function renderStudyResults() {
       <p>${escapeHtml(item.summary)}</p>
       <div class="study-result-footer"><span>${escapeHtml((item.tags ?? []).slice(0, 3).join(" · "))}</span><button type="button" class="study-note-link" data-study-open="${escapeHtml(item.id)}">${note ? "Editar nota" : "Tomar nota"}</button></div>
     </article>`;
-  }).join("")}</div>`;
+  }).join("")}</div>${visibleResults.length < results.length ? `<button type="button" class="study-load-more" data-action="study-more">Mostrar más (${results.length - visibleResults.length} restantes)</button>` : ""}`;
 }
 
 function renderStudy() {
@@ -319,7 +302,8 @@ function renderStudy() {
     <div class="study-detail-kicker">${escapeHtml(studyKindLabels[selected.kind] ?? "Registro")}</div>
     <h2>${escapeHtml(selected.title)}</h2>
     <p>${escapeHtml(selected.body)}</p>
-    <div class="study-detail-actions">${selected.kind === "module" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver módulo ↗</button>` : selected.kind === "practice" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Abrir práctica ↗</button>` : `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver concepto ↗</button>`}<button type="button" class="button button-quiet" data-action="study-close">Cerrar</button></div>
+    <div class="study-detail-actions">${selected.kind === "module" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver módulo ↗</button>` : selected.kind === "practice" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Abrir práctica ↗</button>` : selected.kind === "knowledge" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Abrir fuente ↗</button>` : `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver concepto ↗</button>`}<button type="button" class="button button-quiet" data-action="study-close">Cerrar</button></div>
+    ${selected.source ? `<div class="study-source"><b>Procedencia</b><span>${escapeHtml(selected.source.name)} · ${escapeHtml(selected.source.license)}</span><small>${escapeHtml(selected.source.jurisdiction)}${selected.source.synthetic ? " · datos sintéticos" : ""}</small></div>` : ""}
     <form class="study-note-form" data-study-note-form>
       <label for="study-note">Nota privada de estudio</label>
       <textarea id="study-note" data-study-note rows="6" maxlength="2000" placeholder="Escribe una idea, duda o ejemplo para repasar…">${escapeHtml(note?.content ?? state.studyDraftNote)}</textarea>
@@ -331,25 +315,9 @@ function renderStudy() {
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 03 · BASE LOCAL DE ESTUDIO</span></div>
     <section class="study-hero"><div><p class="eyebrow">CATÁLOGO PRIVADO · INDEXEDDB</p><h1>Estudia con el contenido<br/><em>en un solo expediente.</em></h1><p>Busca módulos, prácticas y conceptos del curso. Añade notas de repaso sin crear una cuenta y sin subir información a internet.</p></div><div class="study-hero-stamp"><strong>${state.studyItems.length || "—"}</strong><span>FICHAS<br/>DISPONIBLES</span></div></section>
     <div class="study-notice"><span class="notice-icon" aria-hidden="true">i</span><p><strong>Privacidad primero.</strong> La base se guarda en este navegador. No escribas datos reales, personales o confidenciales en tus notas.</p><button type="button" class="text-link" data-action="study-export">Descargar copia JSON <span>↓</span></button></div>
-    <section class="study-layout"><div class="study-browser"><div class="section-heading"><div><p class="eyebrow">BÚSQUEDA</p><h2>Biblioteca del recorrido</h2></div><span class="count-pill">${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados</span></div><div class="study-search-row"><label class="sr-only" for="study-search">Buscar en la base de estudio</label><input id="study-search" data-study-search type="search" value="${escapeHtml(state.studyQuery)}" placeholder="Busca por tema, práctica o concepto…" autocomplete="off"/><select data-study-filter aria-label="Filtrar por tipo"><option value="all" ${state.studyKind === "all" ? "selected" : ""}>Todo el catálogo</option><option value="module" ${state.studyKind === "module" ? "selected" : ""}>Módulos</option><option value="practice" ${state.studyKind === "practice" ? "selected" : ""}>Prácticas</option><option value="concept" ${state.studyKind === "concept" ? "selected" : ""}>Conceptos</option></select></div><div data-study-results>${renderStudyResults()}</div></div>${detail}</section>
+    <section class="study-layout"><div class="study-browser"><div class="section-heading"><div><p class="eyebrow">BÚSQUEDA</p><h2>Biblioteca del recorrido</h2></div><span class="count-pill">${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados</span></div><div class="study-search-row"><label class="sr-only" for="study-search">Buscar en la base de estudio</label><input id="study-search" data-study-search type="search" value="${escapeHtml(state.studyQuery)}" placeholder="Busca por tema, práctica, concepto o fuente…" autocomplete="off"/><select data-study-filter aria-label="Filtrar por tipo"><option value="all" ${state.studyKind === "all" ? "selected" : ""}>Todo el catálogo</option><option value="module" ${state.studyKind === "module" ? "selected" : ""}>Módulos</option><option value="practice" ${state.studyKind === "practice" ? "selected" : ""}>Prácticas</option><option value="concept" ${state.studyKind === "concept" ? "selected" : ""}>Conceptos</option><option value="knowledge" ${state.studyKind === "knowledge" ? "selected" : ""}>Fuentes externas</option></select></div><div data-study-results>${renderStudyResults()}</div></div>${detail}</section>
     <p class="progress-storage-note" role="status">${escapeHtml(state.studyDbWarning || "La base incluye el catálogo del curso y tus notas privadas locales; no sincroniza con cuentas ni servicios externos.")}</p>
   </main>`;
-}
-function renderDiagnosticForm(kind, result) {
-  const isInitial = kind === "initial";
-  if (result) {
-    const route = isInitial ? getAdaptiveRoute(result) : null;
-    const delta = !isInitial && state.phase5.initialResult ? result.score - state.phase5.initialResult.score : null;
-    return `<div class="phase5-result" data-testid="${kind}-diagnostic-result"><div><b>${isInitial ? "Resultado inicial" : "Resultado final"}</b><strong>${result.score}/${result.total} · ${result.percentage}%</strong></div><p>${isInitial ? route.message : "Compara este resultado con tu diagnóstico inicial y revisa qué conceptos puedes seguir practicando."}</p>${delta !== null ? `<p class="diagnostic-delta"><b>Variación respecto al inicio:</b> ${delta > 0 ? "+" : ""}${delta} aciertos.</p>` : ""}${route ? `<div class="adaptive-route"><b>${escapeHtml(route.title)}</b><p>${escapeHtml(route.message)}</p><ul>${route.modules.map((id) => { const module = courseModules.find((item) => item.id === id); return module ? `<li>${escapeHtml(module.title)}</li>` : ""; }).join("")}</ul></div>` : ""}<button type="button" class="text-link" data-action="phase5-reset-diagnostic" data-diagnostic-kind="${kind}">Repetir diagnóstico</button></div>`;
-  }
-  const answers = isInitial ? state.phase5.initialAnswers : state.phase5.finalAnswers;
-  return `<form class="phase5-diagnostic-form" data-phase5-form="${kind}" data-testid="${kind}-diagnostic-form"><p>${isInitial ? "Responde para que Nora sugiera un punto de partida. No es una calificación." : "Responde de nuevo al cerrar el recorrido. Solo se conserva el resultado agregado, no tus selecciones."}</p>${DIAGNOSTIC_QUESTIONS.map((question, index) => `<fieldset><legend>${String(index + 1).padStart(2, "0")} · ${escapeHtml(question.question)}</legend>${question.options.map((option) => `<label><input type="radio" name="${kind}-${question.id}" value="${option.id}" ${answers[question.id] === option.id ? "checked" : ""}/> ${escapeHtml(option.label)}</label>`).join("")}</fieldset>`).join("")}<button type="submit" class="button button-primary">${isInitial ? "Calcular mi ruta" : "Calcular resultado final"} <span aria-hidden="true">→</span></button></form>`;
-}
-
-function renderPhase5() {
-  const completed = state.phase5.projectCompleted.size;
-  const finalBlock = state.phase5.finalOpen || state.phase5.finalResult ? renderDiagnosticForm("final", state.phase5.finalResult) : `<div class="phase5-locked"><p>Disponible cuando quieras cerrar el recorrido. No necesitas enviar documentos ni respuestas fuera de este navegador.</p><button type="button" class="button button-secondary" data-action="phase5-open-final">Abrir diagnóstico final</button></div>`;
-  return `<section class="phase5" data-testid="phase5"><div class="phase5-heading"><div><p class="eyebrow">FASE 5 · CIERRE Y TRANSFERENCIA</p><h2>Convierte la práctica en criterio propio.</h2><p>Esta fase compara tu punto de partida con tu avance, te propone una ruta y reúne un proyecto integrador ficticio.</p></div><span class="phase5-badge">LOCAL-FIRST<br/>SIN ENVÍO DE RESPUESTAS</span></div><div class="phase5-grid"><article class="phase5-card"><div class="phase5-card-kicker">01 · DIAGNÓSTICO</div><h3>Tu punto de partida</h3>${renderDiagnosticForm("initial", state.phase5.initialResult)}</article><article class="phase5-card"><div class="phase5-card-kicker">02 · CIERRE</div><h3>Diagnóstico final</h3>${finalBlock}</article></div><article class="phase5-project" data-testid="integrator-project"><div class="phase5-project-top"><div><div class="phase5-card-kicker">03 · PROYECTO INTEGRADOR</div><h3>Del documento ficticio a un flujo verificable</h3><p>Completa las etapas en orden. Cada una produce una evidencia que puedes revisar o descargar por separado.</p></div><strong>${completed}/${PROJECT_STAGES.length}</strong></div><div class="project-stage-list">${PROJECT_STAGES.map((stage) => { const done = state.phase5.projectCompleted.has(stage.id); return `<article class="project-stage ${done ? "is-complete" : ""}"><div class="project-stage-number">${stage.number}</div><div><h4>${escapeHtml(stage.title)}</h4><p>${escapeHtml(stage.task)}</p><small><b>Evidencia:</b> ${escapeHtml(stage.evidence)}</small></div><button type="button" class="project-stage-toggle" data-project-stage="${stage.id}" aria-pressed="${done}">${done ? "Completada ✓" : "Marcar lista"}</button></article>`; }).join("")}</div></article><details class="remote-ai-gate" data-testid="remote-ai-gate"><summary><span><b>PUERTA DE DECISIÓN</b><strong>Antes de conectar una IA remota</strong></span><span aria-hidden="true">＋</span></summary><div><p>ContaIA permanece local. Esta puerta explica qué tendría que entenderse y aprobarse antes de enviar cualquier texto a un proveedor externo. No activa ninguna conexión.</p><ol>${REMOTE_AI_GATE.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol><p class="remote-ai-gate-status"><b>Estado actual:</b> desactivada. Nora local continúa siendo la única asistencia disponible.</p></div></details></section>`;
 }
 
 function renderCourse() {
@@ -371,10 +339,9 @@ function renderCourse() {
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
     ${renderOnboarding()}
     ${renderGlossaryIndex()}
-    ${renderPhase5()}
     <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
-    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador módulos, prácticas, etapas y resultados agregados; nunca tus respuestas, selecciones ni documentos.")}</p>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
     <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
     <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
     <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
@@ -509,15 +476,6 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
-  const projectStage = event.target.closest("[data-project-stage]");
-  if (projectStage) {
-    const stageId = projectStage.dataset.projectStage;
-    if (state.phase5.projectCompleted.has(stageId)) state.phase5.projectCompleted.delete(stageId);
-    else state.phase5.projectCompleted.add(stageId);
-    persistPhase5Summary();
-    render();
-    return;
-  }
   const moduleToggle = event.target.closest("[data-module-toggle]");
   if (moduleToggle) {
     const moduleId = moduleToggle.dataset.moduleToggle;
@@ -552,6 +510,14 @@ app.addEventListener("click", (event) => {
     const item = state.studyItems.find((entry) => entry.id === studyNavigate.dataset.studyNavigate);
     if (!item) return;
     const destination = item.destination ?? {};
+    if (destination.section === "external") {
+      try {
+        const url = new URL(destination.url);
+        if (url.protocol !== "https:") return;
+        window.open(url.href, "_blank", "noopener,noreferrer");
+      } catch { /* Nunca abrir URLs no válidas o con protocolos activos. */ }
+      return;
+    }
     if (destination.section === "lab") {
       resetTutor(destination.exerciseId);
       state.section = "lab";
@@ -597,6 +563,12 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
+  if (action.dataset.action === "study-more") {
+    state.studyVisibleCount += 60;
+    const results = document.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    return;
+  }
   if (action.dataset.action === "study-export") {
     downloadStudyDatabase();
     return;
@@ -608,21 +580,6 @@ app.addEventListener("click", (event) => {
       state.studyDraftNote = "";
       render();
     }).catch(() => { state.studyDbWarning = "No se pudo eliminar la nota local."; render(); });
-    return;
-  }
-  if (action.dataset.action === "phase5-open-final") {
-    state.phase5.finalOpen = true;
-    render();
-    document.querySelector("[data-testid='final-diagnostic-form']")?.querySelector("input")?.focus({ preventScroll: true });
-    return;
-  }
-  if (action.dataset.action === "phase5-reset-diagnostic") {
-    const kind = action.dataset.diagnosticKind === "final" ? "final" : "initial";
-    state.phase5[`${kind}Result`] = null;
-    state.phase5[`${kind}Answers`] = {};
-    if (kind === "final") state.phase5.finalOpen = true;
-    persistPhase5Summary();
-    render();
     return;
   }
   if (action.dataset.action === "complete-onboarding") {
@@ -662,19 +619,6 @@ app.addEventListener("submit", (event) => {
     }).catch(() => { state.studyDbWarning = "Escribe una nota breve para guardarla en la base local."; render(); });
     return;
   }
-  const phase5Form = event.target.closest("[data-phase5-form]");
-  if (phase5Form) {
-    event.preventDefault();
-    const kind = phase5Form.dataset.phase5Form === "final" ? "final" : "initial";
-    const answers = Object.fromEntries(DIAGNOSTIC_QUESTIONS.map((question) => [question.id, phase5Form.querySelector(`input[name='${kind}-${question.id}']:checked`)?.value || ""]));
-    state.phase5[`${kind}Answers`] = answers;
-    state.phase5[`${kind}Result`] = scoreDiagnostic(answers);
-    if (kind === "final") state.phase5.finalOpen = false;
-    persistPhase5Summary();
-    render();
-    document.querySelector(`[data-testid='${kind}-diagnostic-result']`)?.focus({ preventScroll: true });
-    return;
-  }
   const form = event.target.closest("[data-tutor-form]");
   if (!form) return;
   event.preventDefault();
@@ -688,6 +632,7 @@ app.addEventListener("submit", (event) => {
 app.addEventListener("input", (event) => {
   if (event.target.matches("[data-study-search]")) {
     state.studyQuery = event.target.value;
+    state.studyVisibleCount = 60;
     const results = document.querySelector("[data-study-results]");
     if (results) results.innerHTML = renderStudyResults();
     const count = document.querySelector(".study-browser .count-pill");
@@ -708,6 +653,7 @@ app.addEventListener("input", (event) => {
 app.addEventListener("change", (event) => {
   if (event.target.matches("[data-study-filter]")) {
     state.studyKind = event.target.value;
+    state.studyVisibleCount = 60;
     const results = document.querySelector("[data-study-results]");
     if (results) results.innerHTML = renderStudyResults();
     const count = document.querySelector(".study-browser .count-pill");
