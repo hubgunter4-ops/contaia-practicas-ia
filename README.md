@@ -61,6 +61,14 @@ TODO.md        Criterios del alcance y estado del producto
 
 El código fuente está en el [repositorio privado de GitHub](https://github.com/hubgunter4-ops/contaia-practicas-ia). El sitio no requiere credenciales, base de datos ni configuración de servicios externos.
 
+## Tutor local de Nora
+
+La vista de cada práctica incluye un panel plegable **Nora · Tutor local**. El panel utiliza el escenario, la consigna, las pistas y la etapa pedagógica del ejercicio para ofrecer ayudas preparadas en español: pista, reformulación, siguiente paso y explicación después de la comparación autorizada.
+
+El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
+
+La voz opcional usa `SpeechSynthesis` del navegador, está apagada por defecto, se activa mediante un clic explícito y puede cancelarse. Si el navegador no ofrece Web Speech API, el control queda deshabilitado. Los estados del tutor, el panel, el foco y la región de mensajes están preparados para teclado, lector de pantalla, móvil y `prefers-reduced-motion`.
+
 [^1]: Alegra Academy. “Inteligencia Artificial para Contadores”. https://academy.alegra.com/courses/ia-para-contadores/
 [^2]: Edutin. “Curso de IA para contabilidad”. https://edutin.com/curso-de-ia-para-contabilidad
 [^3]: ContadorMx. “Inteligencia artificial aplicada a la contabilidad, finanzas e impuestos”. https://contadormx.net/cursos/inteligencia-artificial-aplicada-a-la-contabilidad-finanzas-e-impuestos/
