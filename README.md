@@ -85,6 +85,8 @@ La Fase 1 de fluidez inmediata añade un diagnóstico inicial no calificable, un
 
 La Fase 2 añade **contexto continuo**: cada módulo indica qué documento puede aportar el usuario, qué campos debe contener, qué formato conviene y qué debe anonimizarse. La [guía de contexto continuo](docs/curso/contexto-continuo/README.md) incluye una tabla por módulo y una preparación mínima. Los archivos no se suben ni se almacenan en ContaIA.
 
+La revisión de entrega está registrada en el [acta de Fase 4](docs/qa/fase-04-revision-entrega.md), con resultados de seguridad, preview, pruebas automatizadas y verificación manual.
+
 El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
 
 La voz opcional usa `SpeechSynthesis` del navegador, está apagada por defecto, se activa mediante un clic explícito y puede cancelarse. Si el navegador no ofrece Web Speech API, el control queda deshabilitado. Los estados del tutor, el panel, el foco y la región de mensajes están preparados para teclado, lector de pantalla, móvil y `prefers-reduced-motion`.
