@@ -21,24 +21,27 @@
 
 ## Restricciones e integración
 
-- No añadir cuentas, almacenamiento remoto, analítica, API de IA ni proveedores externos. La base de estudio es local, nativa del navegador y no requiere dependencias nuevas.
+- La base de estudio y el progreso siguen locales. La tutoría IA usa exclusivamente el backend seguro de Vercel; no añadir cuentas, analítica ni sincronización de notas.
 - El progreso del curso se guarda solo en `localStorage`; el portafolio se descarga desde el navegador. El texto de respuestas, selecciones y respuestas de evaluación no se persiste.
-- Si una integración externa adicional pareciera útil, detener ese punto, describirla y pedir autorización antes de proponerla o conectarla. No se prevé ninguna para este alcance.
+- Las claves de proveedor solo viven en secretos del servidor; no guardarlas en el navegador, el repositorio ni el historial del chat. El front-end no llama directamente a OpenAI/Anthropic.
 - Cerrar cada fase con un commit separado en el repositorio privado canónico; verificar pruebas y Preview antes de continuar. No solicitar publicación del sitio.
 
 
-## Sección 3: tutor local de Nora
+## Sección 3: Nora como tutora IA durante todo el recorrido
 
-- [x] Integrar un panel plegable de “Nora · Tutor local” en cada práctica, con historial efímero y sin persistencia.
-- [x] Añadir contexto didáctico normalizado por tipo de ejercicio, sin exponer claves, selecciones ni respuestas del estudiante.
-- [x] Añadir respuestas locales para pista, reformulación, explicación condicionada, siguiente paso y fallback seguro.
-- [x] Añadir estados visuales del tutor y avisos explícitos de que no existe conexión externa.
+- [x] Integrar un solo panel global de Nora en curso, laboratorio y base de estudio, abierto desde la bienvenida y disponible hasta el módulo 10/proyecto integrador.
+- [x] Mantener el hilo en memoria durante la pestaña actual, actualizar el contexto curricular al cambiar de módulo/práctica y descartarlo al recargar.
+- [x] Retirar las respuestas automáticas locales del tutor: las respuestas se solicitan al backend IA y un error se comunica sin inventar una respuesta de reemplazo.
+- [x] Añadir funciones Node de Vercel, streaming SSE, proveedor/modelo configurables y una protección básica por IP; conservar rutas compatibles con `server.js` local.
+- [x] Validar módulos y prácticas en servidor y no enviar progreso, notas, respuestas de ejercicios, selecciones ni portafolio al proveedor.
+- [x] Añadir estados visuales animados y aviso de procesamiento externo; respetar `prefers-reduced-motion`.
 - [x] Añadir voz opcional mediante `SpeechSynthesis`, apagada por defecto y cancelable.
-- [x] Añadir controles accesibles, foco visible, región de mensajes y diseño responsive.
-- [x] Cubrir contexto, motor local y voz con pruebas unitarias.
-- [ ] Revisar manualmente las nueve prácticas en Preview antes de fusionar o publicar.
+- [x] Añadir controles accesibles, avatar plegado compacto, navegación responsive y región de mensajes.
+- [x] Cubrir secuencia, proveedor sin configurar, contexto/privacidad, SSE, CORS, errores, voz y navegación con pruebas unitarias/E2E.
+- [ ] En Vercel, definir proveedor/modelo y clave como secretos, configurar los orígenes y hacer un despliegue autorizado; no poner claves en el chat ni en el repositorio.
+- [ ] Antes de asociar una clave real, establecer límites de gasto del proveedor y protección/rate limiting distribuido de Vercel; CORS no evita llamadas directas al endpoint.
 
-> La integración remota con OpenAI, Anthropic u otro proveedor permanece fuera de alcance y no se implementa en esta rama.
+> OpenAI o Anthropic se configuran desde variables privadas del servidor. Si falta la configuración, Nora explica el problema y no recurre al antiguo tutor local.
 
 ## Sección 6: base de estudio local
 
@@ -55,7 +58,7 @@
 
 - [x] Añadir selectores `data-testid` estables al panel de Nora.
 - [x] Configurar Playwright para Chromium de escritorio y móvil.
-- [x] Cubrir apertura/cierre, respuesta local, privacidad de red, limpieza, no persistencia, accesibilidad y voz mockeada.
+- [x] Cubrir apertura/cierre, respuesta del backend simulado, ausencia de llamadas directas al proveedor, continuidad, no persistencia, accesibilidad y voz mockeada.
 - [x] Añadir comandos `test:e2e` y `test:e2e:headed`.
 - [x] Crear workflow de GitHub Actions para ejecutar unit tests y E2E en cada Pull Request.
 - [x] Conservar informes, trazas, capturas y videos como artefactos cuando corresponda.
@@ -67,3 +70,10 @@
 - [x] Cada módulo incluye una pregunta de control para separar hechos, supuestos y evidencia faltante.
 - [x] Cada módulo define una evidencia de salida concreta.
 - [x] La guía aparece dentro de la tarjeta curricular, antes de la práctica vinculada y con diseño responsive.
+
+## Sección 7: secuencia de sesiones
+
+- [x] Reordenar la portada para priorizar el curso, la primera acción con Nora y herramientas secundarias plegadas.
+- [x] Mostrar en los diez módulos la misma secuencia: activación (15 min), concepto/demo (35), práctica guiada (80), revisión/reflexión (40) y cierre/evidencia (10).
+- [x] Mantener 60 minutos de práctica independiente fuera de las tres horas guiadas y cerrar con el proyecto integrador del módulo 10.
+- [x] Validar en Chromium de escritorio y móvil, junto con el build estático de Vercel.
