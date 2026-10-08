@@ -20,6 +20,12 @@ La [aplicación interactiva](https://8328-i143dgisqzurgn5srq8gm-85c68042.us3.man
 
 Las prácticas siguen una secuencia de intento, pista, ejemplo y comparación con retroalimentación en el navegador. El sitio no llama a un modelo externo ni solicita cuentas. `localStorage` conserva solo los identificadores de módulos y prácticas completados y, si la persona lo elige, su ruta inicial de aprendizaje; no guarda texto de respuestas ni selecciones. El portafolio se descarga como Markdown local. Si el almacenamiento falla, se muestra un aviso y la actividad continúa en memoria.
 
+## Base de estudio local
+
+La pestaña **03 · Base de estudio** integra una base IndexedDB privada en el navegador. Se inicializa con 47 fichas del catálogo del curso: 10 módulos, 9 prácticas y 28 conceptos del glosario. Permite buscar y filtrar el contenido, abrir el módulo/práctica/concepto de origen, guardar una nota privada por ficha y descargar una copia JSON bajo acción explícita de la persona usuaria.
+
+La base no sincroniza, no crea cuentas y no envía notas a ningún proveedor. Las notas se limitan a 2,000 caracteres y se recomienda escribir únicamente ideas educativas, nunca información real, personal o confidencial. Si IndexedDB no está disponible, la interfaz conserva una sesión en memoria y lo comunica.
+
 ## Alcance y confidencialidad
 
 Todos los nombres, movimientos e importes de los ejercicios son ficticios. **No pegues información real, personal o confidencial de clientes o empleados.** Los módulos sobre ISR, RESICO y nómina son didácticos: no calculan obligaciones ni constituyen asesoría contable, fiscal, laboral o legal. Para una situación real, verifica la normativa y los materiales oficiales vigentes y consulta a una persona profesional calificada.
@@ -27,7 +33,7 @@ Todos los nombres, movimientos e importes de los ejercicios son ficticios. **No 
 ## Requisitos y ejecución
 
 - Node.js 22 o posterior.
-- No hay dependencias npm externas.
+- No hay dependencias npm externas; IndexedDB es una capacidad nativa del navegador.
 
 ```bash
 node server.js
@@ -59,7 +65,7 @@ Playwright inicia automáticamente `server.js` en el puerto 3000. El workflow `.
 
 ```text
 public/        Entrada HTML, favicon y manifiesto de rutas
-src/           Interfaz, ejercicios y lógica local
+src/           Interfaz, ejercicios, base de estudio y lógica local
 data/          Archivo CSV de movimientos ficticios
 docs/          Plan del curso y paquetes didácticos por módulo
 tests/         Pruebas Node.js
@@ -84,8 +90,6 @@ Cada módulo incluye además una actividad opcional con **NotebookLM**, **Claude
 La Fase 1 de fluidez inmediata añade un diagnóstico inicial no calificable, una secuencia visible de **Aprende primero → Nora demuestra → Herramienta opcional → Ruta en 3 pasos → Práctica**, y un glosario contextual. Los términos subrayados de cada módulo se pueden abrir sin abandonar la página; además, el índice general reúne 28 conceptos con definición sencilla, ejemplo contable y pregunta de comprobación. La selección de ruta es reversible y se guarda únicamente en el navegador.
 
 La Fase 2 añade **contexto continuo**: cada módulo indica qué documento puede aportar el usuario, qué campos debe contener, qué formato conviene y qué debe anonimizarse. La [guía de contexto continuo](docs/curso/contexto-continuo/README.md) incluye una tabla por módulo y una preparación mínima. Los archivos no se suben ni se almacenan en ContaIA.
-
-La revisión de entrega está registrada en el [acta de Fase 4](docs/qa/fase-04-revision-entrega.md), con resultados de seguridad, preview, pruebas automatizadas y verificación manual.
 
 El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
 
