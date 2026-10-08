@@ -55,6 +55,7 @@
 - `src/logic.js`: funciones puras de puntuación, etapas de guía y evaluación de cuestionarios.
 - `src/progress.js`: lectura/escritura saneada del progreso local y creación del portafolio sin respuestas.
 - `src/study-db.js`: esquema IndexedDB versionado, catálogo semillado, búsqueda, notas privadas y exportación local.
+- `src/knowledge-data.js`: catálogo generado de fuentes públicas revisadas: casos sintéticos contables, prompts seleccionados y metadatos mexicanos. Se guarda como texto plano con procedencia/licencia; no se ejecutan contenidos importados.
 - `src/styles.css`: sistema visual responsive para las vistas y nuevos componentes.
 - `server.js`: servidor sin dependencias que expone `public/`, los archivos actuales `src/` y `data/`, y solo Markdown desde `docs/curso/`.
 - `tests/logic.test.js`, `tests/course.test.js` y `tests/progress.test.js`: pruebas deterministas de la lógica nueva y existente.
