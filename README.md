@@ -22,9 +22,9 @@ Las prácticas siguen una secuencia de intento, pista, ejemplo y comparación co
 
 ## Base de estudio local
 
-La pestaña **03 · Base de estudio** integra una base IndexedDB privada en el navegador. Se inicializa con 47 fichas del catálogo del curso: 10 módulos, 9 prácticas y 28 conceptos del glosario. Permite buscar y filtrar el contenido, abrir el módulo/práctica/concepto de origen, guardar una nota privada por ficha y descargar una copia JSON bajo acción explícita de la persona usuaria.
+La pestaña **03 · Base de estudio** integra una base IndexedDB privada en el navegador. Se inicializa con el catálogo del curso y un catálogo externo revisado: 10 módulos, 9 prácticas, 28 conceptos, 50 casos sintéticos de evaluación contable, 3 prompts comunitarios y 903 referencias de contexto mexicano (metadatos y enlaces, no artículos completos). Permite buscar y filtrar el contenido, abrir el origen, guardar una nota privada por ficha y descargar una copia JSON bajo acción explícita de la persona usuaria.
 
-La base no sincroniza, no crea cuentas y no envía notas a ningún proveedor. Las notas se limitan a 2,000 caracteres y se recomienda escribir únicamente ideas educativas, nunca información real, personal o confidencial. Si IndexedDB no está disponible, la interfaz conserva una sesión en memoria y lo comunica.
+La base no sincroniza, no crea cuentas y no envía notas a ningún proveedor. Los textos externos se importan como texto plano escapado; no se ejecutan scripts, HTML, comandos ni instrucciones de control. Solo se aceptan enlaces HTTPS y se abre una fuente externa únicamente mediante una acción explícita. Las notas se limitan a 2,000 caracteres y se recomienda escribir únicamente ideas educativas, nunca información real, personal o confidencial. Si IndexedDB no está disponible, la interfaz conserva una sesión en memoria y lo comunica.
 
 ## Alcance y confidencialidad
 
@@ -90,10 +90,6 @@ Cada módulo incluye además una actividad opcional con **NotebookLM**, **Claude
 La Fase 1 de fluidez inmediata añade un diagnóstico inicial no calificable, una secuencia visible de **Aprende primero → Nora demuestra → Herramienta opcional → Ruta en 3 pasos → Práctica**, y un glosario contextual. Los términos subrayados de cada módulo se pueden abrir sin abandonar la página; además, el índice general reúne 28 conceptos con definición sencilla, ejemplo contable y pregunta de comprobación. La selección de ruta es reversible y se guarda únicamente en el navegador.
 
 La Fase 2 añade **contexto continuo**: cada módulo indica qué documento puede aportar el usuario, qué campos debe contener, qué formato conviene y qué debe anonimizarse. La [guía de contexto continuo](docs/curso/contexto-continuo/README.md) incluye una tabla por módulo y una preparación mínima. Los archivos no se suben ni se almacenan en ContaIA.
-
-La revisión de entrega está registrada en el [acta de Fase 4](docs/qa/fase-04-revision-entrega.md), con resultados de seguridad, preview, pruebas automatizadas y verificación manual.
-
-La Fase 5 incorpora diagnóstico inicial y final, ruta adaptativa de Nora y un proyecto integrador de cinco etapas. La [guía de Fase 5](docs/curso/fase-05/README.md) explica qué debe hacer la persona y presenta con anterioridad la puerta de decisión para una IA remota. Esa puerta es informativa y permanece desactivada: no hay proveedor, endpoint ni envío de datos.
 
 El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
 
