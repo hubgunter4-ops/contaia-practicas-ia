@@ -18,6 +18,8 @@ test("los diez módulos tienen una guía completa de Nora", () => {
     assert.ok(module.teachFirst.example, `${module.id} necesita un ejemplo sencillo`);
     assert.ok(module.toolkit?.length >= 2, `${module.id} necesita al menos dos herramientas opcionales`);
     assert.ok(module.toolkit.every((tool) => tool.name && tool.activity && tool.guardrail && tool.url), `${module.id} tiene una actividad de herramienta incompleta`);
+    assert.ok(module.demonstration, `${module.id} necesita una demostración`);
+    assert.ok(module.demonstration.before && module.demonstration.after && module.demonstration.why, `${module.id} tiene una demostración incompleta`);
   }
 });
 

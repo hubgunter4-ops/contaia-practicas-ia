@@ -18,7 +18,7 @@ La [aplicación interactiva](https://8328-i143dgisqzurgn5srq8gm-85c68042.us3.man
 - **México:** escenarios educativos sobre ISR, RESICO y privacidad en nómina.
 - **Datos de ejemplo:** archivo CSV inventado, descargable desde el menú de la página.
 
-Las prácticas siguen una secuencia de intento, pista, ejemplo y comparación con retroalimentación en el navegador. El sitio no llama a un modelo externo ni solicita cuentas. `localStorage` conserva solo los identificadores de módulos y prácticas completados; no guarda texto de respuestas ni selecciones. El portafolio se descarga como Markdown local. Si el almacenamiento falla, se muestra un aviso y la actividad continúa en memoria.
+Las prácticas siguen una secuencia de intento, pista, ejemplo y comparación con retroalimentación en el navegador. El sitio no llama a un modelo externo ni solicita cuentas. `localStorage` conserva solo los identificadores de módulos y prácticas completados y, si la persona lo elige, su ruta inicial de aprendizaje; no guarda texto de respuestas ni selecciones. El portafolio se descarga como Markdown local. Si el almacenamiento falla, se muestra un aviso y la actividad continúa en memoria.
 
 ## Alcance y confidencialidad
 
@@ -80,6 +80,8 @@ La vista de cada práctica incluye un panel plegable **Nora · Tutor local**. El
 La ruta del curso también incluye una guía de Nora dentro de cada uno de sus diez módulos. Cada guía presenta una apertura contextual, una ruta de tres pasos, una pregunta de control y la evidencia de salida esperada. Así, Nora acompaña el aprendizaje desde el plan del curso antes de llevar a la persona a la práctica ficticia vinculada.
 
 Cada módulo incluye además una actividad opcional con **NotebookLM**, **Claude** o **n8n**. La secuencia pedagógica es: NotebookLM para entender conceptos con fuentes controladas, Claude para practicar explicaciones y borradores, y n8n para modelar flujos con validaciones, trazabilidad y aprobación humana. El sitio no conecta estas herramientas ni envía datos automáticamente; las prácticas usan datos ficticios. Consulta la [guía de herramientas de IA](docs/curso/herramientas-ia/README.md) para las actividades, límites y enlaces oficiales.
+
+La Fase 1 de fluidez inmediata añade un diagnóstico inicial no calificable, una secuencia visible de **Aprende primero → Nora demuestra → Herramienta opcional → Ruta en 3 pasos → Práctica**, y un glosario contextual: los términos subrayados de cada módulo se pueden abrir sin abandonar la página. La selección de ruta es reversible y se guarda únicamente en el navegador.
 
 El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
 

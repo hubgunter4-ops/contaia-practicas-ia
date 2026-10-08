@@ -31,6 +31,28 @@ test.describe("Panel de Nora", () => {
     await expect(guides.first()).toContainText("Evidencia de salida");
   });
 
+  test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await expect(page.getByTestId("onboarding")).toBeVisible();
+    await page.getByLabel(/voy empezando/i).check();
+    await page.getByTestId("onboarding").getByRole("button", { name: /elegir mi ruta/i }).click();
+    await expect(page.getByTestId("onboarding-complete")).toContainText("Voy empezando");
+  });
+
+  test("permite consultar un concepto y ver a Nora demostrarlo", async ({ page }) => {
+    await page.goto("/");
+    const firstGuide = page.locator("[data-testid='module-nora-modulo-01']");
+    await firstGuide.getByRole("button", { name: /Prompt/i }).click();
+    await expect(firstGuide.locator(".glossary-definition")).toContainText("Prompt");
+
+    await firstGuide.getByRole("button", { name: /Nora demuestra/i }).click();
+    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("Antes");
+    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("Después");
+  });
+
   test("aparece cerrado y puede abrirse", async ({ page }) => {
     await openFirstExercise(page);
 

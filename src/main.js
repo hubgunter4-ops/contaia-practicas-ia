@@ -18,6 +18,10 @@ const state = {
   selections: new Map(),
   feedback: new Map(),
   tutor: { exerciseId: null, messages: [], collapsed: true, voiceEnabled: false, avatarState: "idle" },
+  onboardingLevel: "",
+  onboardingDraft: "",
+  demoModuleId: null,
+  glossary: null,
 };
 
 let progressStorage = null;
@@ -26,6 +30,10 @@ const restoredProgress = loadProgress(progressStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
 state.storageWarning = progressStorage ? "" : "El navegador no permite guardar el progreso; esta sesión seguirá en memoria.";
+try {
+  state.onboardingLevel = progressStorage?.getItem("contaia.onboarding.v1") || "";
+  state.onboardingDraft = state.onboardingLevel;
+} catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
 
 function persistProgress() {
   const saved = saveProgress({
@@ -34,6 +42,11 @@ function persistProgress() {
   }, progressStorage);
   state.storageWarning = saved ? "" : "No se pudo guardar el progreso local; podrás continuar en memoria durante esta sesión.";
   return saved;
+}
+
+function persistOnboarding() {
+  state.onboardingLevel = state.onboardingDraft;
+  try { progressStorage?.setItem("contaia.onboarding.v1", state.onboardingLevel); } catch { /* La ruta permanece disponible en memoria. */ }
 }
 
 function downloadPortfolio() {
@@ -183,15 +196,24 @@ function renderModuleGuide(module) {
   if (!moduleGuide) return "";
   const steps = moduleGuide.steps.map((step, index) => `<li><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(step)}</li>`).join("");
   const foundation = module.teachFirst;
-  const concepts = foundation?.concepts?.map(([term, meaning]) => `<li><b>${escapeHtml(term)}</b><span>${escapeHtml(meaning)}</span></li>`).join("") || "";
+  const concepts = foundation?.concepts?.map(([term, meaning]) => `<li><button type="button" class="glossary-term" data-glossary-module="${escapeHtml(module.id)}" data-glossary-term="${escapeHtml(term)}">${escapeHtml(term)} <span aria-hidden="true">?</span></button><span>${escapeHtml(meaning)}</span></li>`).join("") || "";
   const tools = module.toolkit?.map((tool) => `<article class="module-tool-card"><div class="module-tool-top"><a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(tool.name)} ↗</a><span>${escapeHtml(tool.role)}</span></div><p><b>Actividad:</b> ${escapeHtml(tool.activity)}</p><p class="module-tool-guardrail"><b>Límite:</b> ${escapeHtml(tool.guardrail)}</p></article>`).join("") || "";
+  const demo = module.demonstration;
+  const isDemoOpen = state.demoModuleId === module.id;
+  const activeDefinition = state.glossary?.moduleId === module.id ? module.teachFirst?.concepts?.find(([term]) => term === state.glossary.term) : null;
   return `<aside class="module-nora-guide" data-testid="module-nora-${escapeHtml(module.id)}" aria-label="Guía de Nora para ${escapeHtml(module.title)}">
     <div class="module-nora-heading"><div class="module-nora-avatar" aria-hidden="true">N</div><div><p class="module-nora-kicker">NORA · GUÍA DEL MÓDULO</p><strong>Te acompaño a verificar, no a adivinar.</strong></div></div>
-    ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul><p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
+    ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul>${activeDefinition ? `<div class="glossary-definition" role="status"><b>Glosario · ${escapeHtml(activeDefinition[0])}</b><span>${escapeHtml(activeDefinition[1])}</span></div>` : ""}<p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
+    ${demo ? `<div class="module-demo-wrap"><button type="button" class="module-demo-button" data-action="module-demo" data-module-demo="${escapeHtml(module.id)}" aria-expanded="${isDemoOpen}">${isDemoOpen ? "Ocultar demostración" : "Nora demuestra: antes y después"} <span aria-hidden="true">${isDemoOpen ? "↑" : "→"}</span></button>${isDemoOpen ? `<div class="module-demo" data-testid="module-demo-${escapeHtml(module.id)}"><div><b>Antes</b><p>${escapeHtml(demo.before)}</p></div><div><b>Después</b><p>${escapeHtml(demo.after)}</p></div><p><strong>Qué observar:</strong> ${escapeHtml(demo.why)}</p></div>` : ""}</div>` : ""}
     ${tools ? `<div class="module-toolkit" data-testid="module-toolkit-${escapeHtml(module.id)}"><div class="module-toolkit-heading"><b>Herramientas para practicar</b><span>Opcionales · siempre con datos ficticios</span></div><div class="module-tool-grid">${tools}</div></div>` : ""}
     <p class="module-nora-opening">${escapeHtml(moduleGuide.opening)}</p>
     <div class="module-nora-grid"><div><b>Ruta en 3 pasos</b><ol>${steps}</ol></div><div class="module-nora-check"><b>Pregunta de control</b><p>${escapeHtml(moduleGuide.checkpoint)}</p><b>Evidencia de salida</b><p>${escapeHtml(moduleGuide.deliverable)}</p></div></div>
   </aside>`;
+}
+
+function renderOnboarding() {
+  if (state.onboardingLevel) return `<section class="onboarding-complete" data-testid="onboarding-complete"><span class="onboarding-check">✓</span><p><b>Ruta inicial seleccionada:</b> ${escapeHtml({ new: "Voy empezando", some: "Ya conozco algo", experienced: "Quiero ir más rápido" }[state.onboardingLevel] || "Ruta personalizada")}</p><button type="button" class="text-link" data-action="reset-onboarding">Cambiar</button></section>`;
+  return `<section class="onboarding-card" data-testid="onboarding"><div><p class="eyebrow">NORA · PRIMER PASO</p><h2>Antes de empezar, dime cómo te acompaño.</h2><p>No es un examen. Solo ajusta el ritmo inicial para explicar los conceptos antes de pedirte una práctica.</p></div><fieldset><legend>¿Qué frase te describe mejor?</legend><label><input type="radio" name="onboarding-level" value="new" ${state.onboardingDraft === "new" ? "checked" : ""}/> Voy empezando: no conozco IA ni prompts.</label><label><input type="radio" name="onboarding-level" value="some" ${state.onboardingDraft === "some" ? "checked" : ""}/> Ya conozco algo, pero necesito ejemplos contables.</label><label><input type="radio" name="onboarding-level" value="experienced" ${state.onboardingDraft === "experienced" ? "checked" : ""}/> Ya he usado IA y quiero ir más rápido.</label><button type="button" class="button button-primary" data-action="complete-onboarding" ${state.onboardingDraft ? "" : "disabled"}>Elegir mi ruta <span aria-hidden="true">→</span></button></fieldset></section>`;
 }
 
 function renderCourse() {
@@ -210,9 +232,10 @@ function renderCourse() {
 
   return `<main id="contenido" class="content course-content" tabindex="-1">
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
+    ${renderOnboarding()}
     <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
-    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos y prácticas completados; nunca tus respuestas ni selecciones.")}</p>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
     <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
     <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
     <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
@@ -335,6 +358,18 @@ app.addEventListener("click", (event) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  const glossaryTerm = event.target.closest("[data-glossary-term]");
+  if (glossaryTerm) {
+    state.glossary = { moduleId: glossaryTerm.dataset.glossaryModule, term: glossaryTerm.dataset.glossaryTerm };
+    render();
+    return;
+  }
+  const demo = event.target.closest("[data-module-demo]");
+  if (demo) {
+    state.demoModuleId = state.demoModuleId === demo.dataset.moduleDemo ? null : demo.dataset.moduleDemo;
+    render();
+    return;
+  }
   const moduleToggle = event.target.closest("[data-module-toggle]");
   if (moduleToggle) {
     const moduleId = moduleToggle.dataset.moduleToggle;
@@ -373,6 +408,20 @@ app.addEventListener("click", (event) => {
     downloadPortfolio();
     return;
   }
+  if (action.dataset.action === "complete-onboarding") {
+    if (!state.onboardingDraft) return;
+    persistOnboarding();
+    render();
+    document.querySelector("[data-testid='onboarding-complete']")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "reset-onboarding") {
+    state.onboardingLevel = "";
+    state.onboardingDraft = "";
+    try { progressStorage?.removeItem("contaia.onboarding.v1"); } catch { /* Se mantiene en memoria. */ }
+    render();
+    return;
+  }
   const exercise = exercises.find((item) => item.id === action.dataset.id);
   if (!exercise) return;
   const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
@@ -404,6 +453,12 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[name='onboarding-level']")) {
+    state.onboardingDraft = event.target.value;
+    const button = document.querySelector("[data-action='complete-onboarding']");
+    if (button) button.disabled = false;
+    return;
+  }
   if (event.target.matches("[data-choice]")) {
     state.selections.set(event.target.dataset.choice, event.target.value);
     const exercise = exercises.find((item) => item.id === event.target.dataset.choice);
