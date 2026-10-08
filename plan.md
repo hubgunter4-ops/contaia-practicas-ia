@@ -4,7 +4,7 @@
 
 **Objetivo:** colocar el plan del curso y los materiales didácticos bajo `docs/curso/` y convertir el laboratorio existente en una experiencia de aprendizaje con ruta curricular, práctica progresiva, progreso local, evaluaciones y controles de revisión responsable.
 
-**Arquitectura:** conservar la aplicación estática de una sola página, escrita en HTML/CSS/JavaScript y servida por Node.js. Añadir un catálogo de curso separado de la interfaz, una capa pequeña para persistir únicamente identificadores de progreso en `localStorage` y evaluaciones deterministas ejecutadas en el navegador. Las respuestas escritas, selecciones, diagnósticos y calificaciones no se guardarán ni enviarán a terceros.
+**Arquitectura:** conservar la aplicación estática de una sola página, escrita en HTML/CSS/JavaScript y servida por Node.js. Añadir un catálogo de curso separado de la interfaz, una capa pequeña para persistir únicamente identificadores de progreso en `localStorage`, evaluaciones deterministas ejecutadas en el navegador y una base de estudio IndexedDB local. Las respuestas escritas, selecciones, diagnósticos y calificaciones no se guardarán ni enviarán a terceros; las notas de estudio son opt-in, privadas al navegador y separadas del progreso.
 
 **Tecnologías:** HTML semántico, CSS, módulos JavaScript modernos, Node.js 22 integrado, `node:test`; sin dependencias nuevas ni llamadas a servicios externos. Los materiales en Markdown estarán dentro de `docs/curso/` y el servidor permitirá solicitar únicamente archivos `.md` de ese subdirectorio.
 
@@ -15,7 +15,7 @@
 - La aplicación tendrá dos secciones principales: **01 · Curso completo** y **02 · Laboratorio práctico**; el laboratorio actual conserva sus nueve ejercicios.
 - El curso propuesto mantiene 40 horas, 10 módulos y 3 horas guiadas más 1 hora de práctica independiente por semana.
 - No almacenar texto de respuestas, opciones seleccionadas, contenidos del diagnóstico ni calificaciones; el almacenamiento persistente se limita a identificadores de módulos y prácticas completados.
-- No enviar respuestas ni progreso a servicios externos; no añadir cuentas, API de IA, analítica, base de datos, proveedores ni dependencias externas.
+- No enviar respuestas ni progreso a servicios externos; no añadir cuentas, API de IA, analítica, base de datos remota, proveedores ni dependencias externas. La base de estudio usa únicamente IndexedDB nativo del navegador.
 - El curso, las soluciones y los ejercicios usan exclusivamente datos ficticios. El contenido de ISR, RESICO, nómina y auditoría sigue siendo educativo, no asesoría ni determinación de obligaciones reales.
 - Mantener la paleta vino `#7A2E3A`, oro `#D8B26E`, estética editorial de expediente, navegación por teclado, foco visible, adaptación móvil y soporte a `prefers-reduced-motion`.
 - Mantener Node.js `>=22`, puerto `3000`, manifiesto de rutas de página `GET /manus-routes.json` con la ruta única `/`, y cero dependencias npm adicionales.
@@ -54,6 +54,7 @@
 - `src/main.js`: navegación 01/02, renderizado, flujo de ayudas, evaluaciones, lista de revisión y eventos.
 - `src/logic.js`: funciones puras de puntuación, etapas de guía y evaluación de cuestionarios.
 - `src/progress.js`: lectura/escritura saneada del progreso local y creación del portafolio sin respuestas.
+- `src/study-db.js`: esquema IndexedDB versionado, catálogo semillado, búsqueda, notas privadas y exportación local.
 - `src/styles.css`: sistema visual responsive para las vistas y nuevos componentes.
 - `server.js`: servidor sin dependencias que expone `public/`, los archivos actuales `src/` y `data/`, y solo Markdown desde `docs/curso/`.
 - `tests/logic.test.js`, `tests/course.test.js` y `tests/progress.test.js`: pruebas deterministas de la lógica nueva y existente.
