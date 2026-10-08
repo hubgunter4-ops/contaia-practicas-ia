@@ -334,6 +334,20 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .onboarding-complete p { margin: 0; flex: 1; }
 .onboarding-check { color: #547562; font: 13px var(--mono); }
 .onboarding-complete .text-link { border: 0; background: transparent; cursor: pointer; }
+.course-glossary { margin: 0 0 18px; border: 1px solid #d8c7aa; background: #f8f0e3; }
+.course-glossary-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border: 0; background: transparent; color: var(--wine); text-align: left; cursor: pointer; }
+.course-glossary-toggle > span:first-child { display: grid; gap: 3px; }
+.course-glossary-toggle b { color: #8a7257; font: 8px var(--mono); letter-spacing: .08em; }
+.course-glossary-toggle strong { color: var(--wine-dark); font-size: 13px; font-weight: 600; }
+.course-glossary-toggle > span:last-child { font: 20px var(--mono); }
+.glossary-index-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 0 15px 13px; }
+.glossary-index-entry { padding: 8px; border: 1px solid #e1d2b9; background: #fffaf2; }
+.glossary-index-entry button { padding: 0; border: 0; background: transparent; color: var(--wine); font-size: 12px; font-weight: 700; text-align: left; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; cursor: pointer; }
+.glossary-index-entry p { margin: 4px 0; color: #635548; font-size: 11px; line-height: 1.35; }
+.glossary-index-entry small { color: #806f5d; font-size: 10px; line-height: 1.35; }
+.glossary-index-selected { display: grid; gap: 4px; margin: 0 15px 14px; padding: 10px 12px; border-left: 2px solid var(--gold); background: #f4ead9; color: #65584b; font-size: 11px; line-height: 1.35; }
+.glossary-index-selected b { color: var(--wine-dark); font-size: 13px; }
+.glossary-index-selected p { margin: 0; }
 .course-hero { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 28px; min-height: 280px; padding: 32px 38px; overflow: hidden; background: var(--wine); color: #fff9f0; }
 .course-hero::after { position: absolute; top: -80px; right: 22%; width: 1px; height: 440px; content: ""; transform: rotate(31deg); background: rgba(255,255,255,.1); }
 .course-hero-copy { position: relative; z-index: 1; max-width: 700px; }
@@ -456,6 +470,7 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .onboarding-card h2 { font-size: 20px; }
   .onboarding-complete { align-items: flex-start; flex-wrap: wrap; }
   .onboarding-complete p { flex-basis: calc(100% - 28px); }
+  .glossary-index-grid { grid-template-columns: 1fr; }
   .course-hero { min-height: auto; align-items: start; padding: 23px 20px; }
   .course-hero h1 { font-size: clamp(30px, 8vw, 42px); }
   .course-hero-stamp { width: 84px; height: 84px; margin-top: 28px; }

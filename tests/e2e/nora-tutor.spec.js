@@ -56,6 +56,17 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("module-demo-modulo-01")).toContainText("Después");
   });
 
+  test("abre el índice del glosario y muestra definición, ejemplo y comprobación", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("glossary-index").getByRole("button", { name: /glosario contextual/i }).click();
+    await expect(page.getByTestId("glossary-index").locator(".glossary-index-entry")).toHaveCount(28);
+    await page.getByTestId("glossary-index").getByRole("button", { name: "Prompt" }).click();
+    const selected = page.locator(".glossary-index-selected");
+    await expect(selected).toContainText("Prompt");
+    await expect(selected).toContainText("Ejemplo:");
+    await expect(selected).toContainText("Comprueba:");
+  });
+
   test("aparece cerrado y puede abrirse", async ({ page }) => {
     await openFirstExercise(page);
 

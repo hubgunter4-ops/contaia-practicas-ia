@@ -5,6 +5,7 @@ import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.
 import { toTutorContext } from "./tutor/context.js";
 import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
+import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -22,6 +23,7 @@ const state = {
   onboardingDraft: "",
   demoModuleId: null,
   glossary: null,
+  glossaryOpen: false,
 };
 
 let progressStorage = null;
@@ -200,13 +202,13 @@ function renderModuleGuide(module) {
   const tools = module.toolkit?.map((tool) => `<article class="module-tool-card"><div class="module-tool-top"><a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(tool.name)} ↗</a><span>${escapeHtml(tool.role)}</span></div><p><b>Actividad:</b> ${escapeHtml(tool.activity)}</p><p class="module-tool-guardrail"><b>Límite:</b> ${escapeHtml(tool.guardrail)}</p></article>`).join("") || "";
   const demo = module.demonstration;
   const isDemoOpen = state.demoModuleId === module.id;
-  const activeDefinition = state.glossary?.moduleId === module.id ? module.teachFirst?.concepts?.find(([term]) => term === state.glossary.term) : null;
+  const activeDefinition = state.glossary?.moduleId === module.id ? findGlossaryEntry(state.glossary.term) : null;
   const context = module.context;
   const contextDocuments = context?.documents?.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "";
   const contextFields = context?.mustContain?.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "";
   return `<aside class="module-nora-guide" data-testid="module-nora-${escapeHtml(module.id)}" aria-label="Guía de Nora para ${escapeHtml(module.title)}">
     <div class="module-nora-heading"><div class="module-nora-avatar" aria-hidden="true">N</div><div><p class="module-nora-kicker">NORA · GUÍA DEL MÓDULO</p><strong>Te acompaño a verificar, no a adivinar.</strong></div></div>
-    ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul>${activeDefinition ? `<div class="glossary-definition" role="status"><b>Glosario · ${escapeHtml(activeDefinition[0])}</b><span>${escapeHtml(activeDefinition[1])}</span></div>` : ""}<p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
+    ${foundation ? `<div class="module-nora-foundation"><div><b>Aprende primero</b><p>${escapeHtml(foundation.why)}</p></div><ul>${concepts}</ul>${activeDefinition ? `<div class="glossary-definition" role="status"><b>Glosario · ${escapeHtml(activeDefinition.term)}</b><span>${escapeHtml(activeDefinition.definition)}</span><em><strong>Ejemplo:</strong> ${escapeHtml(activeDefinition.example)}</em><em><strong>Comprueba:</strong> ${escapeHtml(activeDefinition.check)}</em></div>` : ""}<p class="module-nora-example"><strong>Ejemplo sencillo:</strong> ${escapeHtml(foundation.example)}</p></div>` : ""}
     ${demo ? `<div class="module-demo-wrap"><button type="button" class="module-demo-button" data-action="module-demo" data-module-demo="${escapeHtml(module.id)}" aria-expanded="${isDemoOpen}">${isDemoOpen ? "Ocultar demostración" : "Nora demuestra: antes y después"} <span aria-hidden="true">${isDemoOpen ? "↑" : "→"}</span></button>${isDemoOpen ? `<div class="module-demo" data-testid="module-demo-${escapeHtml(module.id)}"><div><b>Antes</b><p>${escapeHtml(demo.before)}</p></div><div><b>Después</b><p>${escapeHtml(demo.after)}</p></div><p><strong>Qué observar:</strong> ${escapeHtml(demo.why)}</p></div>` : ""}</div>` : ""}
     ${context ? `<div class="module-context" data-testid="module-context-${escapeHtml(module.id)}"><div class="module-context-heading"><b>Contexto que puedes aportar</b><span>No se sube a ContaIA</span></div><div class="module-context-grid"><div><b>Documento o material</b><ul>${contextDocuments}</ul></div><div><b>Debe contener</b><ul>${contextFields}</ul></div></div><p><b>Formato sugerido:</b> ${escapeHtml(context.format)}</p><p class="module-context-protect"><b>Antes de usarlo:</b> ${escapeHtml(context.protect)}</p></div>` : ""}
     ${tools ? `<div class="module-toolkit" data-testid="module-toolkit-${escapeHtml(module.id)}"><div class="module-toolkit-heading"><b>Herramientas para practicar</b><span>Opcionales · siempre con datos ficticios</span></div><div class="module-tool-grid">${tools}</div></div>` : ""}
@@ -218,6 +220,12 @@ function renderModuleGuide(module) {
 function renderOnboarding() {
   if (state.onboardingLevel) return `<section class="onboarding-complete" data-testid="onboarding-complete"><span class="onboarding-check">✓</span><p><b>Ruta inicial seleccionada:</b> ${escapeHtml({ new: "Voy empezando", some: "Ya conozco algo", experienced: "Quiero ir más rápido" }[state.onboardingLevel] || "Ruta personalizada")}</p><button type="button" class="text-link" data-action="reset-onboarding">Cambiar</button></section>`;
   return `<section class="onboarding-card" data-testid="onboarding"><div><p class="eyebrow">NORA · PRIMER PASO</p><h2>Antes de empezar, dime cómo te acompaño.</h2><p>No es un examen. Solo ajusta el ritmo inicial para explicar los conceptos antes de pedirte una práctica.</p></div><fieldset><legend>¿Qué frase te describe mejor?</legend><label><input type="radio" name="onboarding-level" value="new" ${state.onboardingDraft === "new" ? "checked" : ""}/> Voy empezando: no conozco IA ni prompts.</label><label><input type="radio" name="onboarding-level" value="some" ${state.onboardingDraft === "some" ? "checked" : ""}/> Ya conozco algo, pero necesito ejemplos contables.</label><label><input type="radio" name="onboarding-level" value="experienced" ${state.onboardingDraft === "experienced" ? "checked" : ""}/> Ya he usado IA y quiero ir más rápido.</label><button type="button" class="button button-primary" data-action="complete-onboarding" ${state.onboardingDraft ? "" : "disabled"}>Elegir mi ruta <span aria-hidden="true">→</span></button></fieldset></section>`;
+}
+
+function renderGlossaryIndex() {
+  const entries = GLOSSARY.map((entry) => `<article class="glossary-index-entry"><button type="button" data-glossary-module="global" data-glossary-term="${escapeHtml(entry.term)}">${escapeHtml(entry.term)}</button><p>${escapeHtml(entry.definition)}</p><small><b>Ejemplo:</b> ${escapeHtml(entry.example)}</small></article>`).join("");
+  const selected = state.glossary?.moduleId === "global" ? findGlossaryEntry(state.glossary.term) : null;
+  return `<section class="course-glossary" data-testid="glossary-index"><button type="button" class="course-glossary-toggle" data-action="toggle-glossary" aria-expanded="${state.glossaryOpen}"><span><b>GLOSARIO CONTEXTUAL</b><strong>Consulta los términos del recorrido con ejemplos contables.</strong></span><span aria-hidden="true">${state.glossaryOpen ? "−" : "+"}</span></button>${state.glossaryOpen ? `<div class="glossary-index-grid">${entries}</div>${selected ? `<div class="glossary-index-selected" role="status"><b>${escapeHtml(selected.term)}</b><p>${escapeHtml(selected.definition)}</p><span><strong>Ejemplo:</strong> ${escapeHtml(selected.example)}</span><span><strong>Comprueba:</strong> ${escapeHtml(selected.check)}</span></div>` : ""}` : ""}</section>`;
 }
 
 function renderCourse() {
@@ -237,6 +245,7 @@ function renderCourse() {
   return `<main id="contenido" class="content course-content" tabindex="-1">
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
     ${renderOnboarding()}
+    ${renderGlossaryIndex()}
     <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
     <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
     <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
@@ -410,6 +419,11 @@ app.addEventListener("click", (event) => {
   }
   if (action.dataset.action === "download-portfolio") {
     downloadPortfolio();
+    return;
+  }
+  if (action.dataset.action === "toggle-glossary") {
+    state.glossaryOpen = !state.glossaryOpen;
+    render();
     return;
   }
   if (action.dataset.action === "complete-onboarding") {
