@@ -9,7 +9,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const normalizeText = (value) => String(value ?? "").trim();
 
-export function createStudyItems({ modules = [], exercises = [], glossary = [] } = {}) {
+export function createStudyItems({ modules = [], exercises = [], glossary = [], knowledge = [] } = {}) {
   const moduleItems = modules.map((module) => ({
     id: `module:${module.id}`,
     kind: "module",
@@ -40,7 +40,18 @@ export function createStudyItems({ modules = [], exercises = [], glossary = [] }
     tags: ["glosario", "concepto"],
     destination: { section: "course", glossaryTerm: entry.term },
   }));
-  return [...moduleItems, ...exerciseItems, ...glossaryItems];
+  const knowledgeItems = knowledge.map((entry) => ({
+    id: entry.id,
+    kind: "knowledge",
+    label: entry.label ?? "Conocimiento externo",
+    title: entry.title,
+    summary: entry.summary,
+    body: entry.body,
+    tags: entry.tags ?? ["fuente externa"],
+    source: entry.source,
+    destination: entry.destination,
+  }));
+  return [...moduleItems, ...exerciseItems, ...glossaryItems, ...knowledgeItems];
 }
 
 export function searchStudyItems(items, query = "", kind = "all") {
