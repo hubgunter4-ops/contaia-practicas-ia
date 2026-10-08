@@ -20,6 +20,10 @@ test("los diez módulos tienen una guía completa de Nora", () => {
     assert.ok(module.toolkit.every((tool) => tool.name && tool.activity && tool.guardrail && tool.url), `${module.id} tiene una actividad de herramienta incompleta`);
     assert.ok(module.demonstration, `${module.id} necesita una demostración`);
     assert.ok(module.demonstration.before && module.demonstration.after && module.demonstration.why, `${module.id} tiene una demostración incompleta`);
+    assert.ok(module.context, `${module.id} necesita contexto documental`);
+    assert.ok(module.context.documents.length >= 1, `${module.id} necesita indicar qué documento llevar`);
+    assert.ok(module.context.mustContain.length >= 3, `${module.id} necesita campos mínimos`);
+    assert.ok(module.context.format && module.context.protect, `${module.id} necesita formato y protección`);
   }
 });
 

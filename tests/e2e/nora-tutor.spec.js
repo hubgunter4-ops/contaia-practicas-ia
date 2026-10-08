@@ -29,6 +29,9 @@ test.describe("Panel de Nora", () => {
     await expect(guides.first()).toContainText("Ruta en 3 pasos");
     await expect(guides.first()).toContainText("Pregunta de control");
     await expect(guides.first()).toContainText("Evidencia de salida");
+    await expect(guides.first()).toContainText("Contexto que puedes aportar");
+    await expect(guides.first()).toContainText("Debe contener");
+    await expect(guides.first()).toContainText("No se sube a ContaIA");
   });
 
   test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {

@@ -412,6 +412,16 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .module-demo p { margin: 0; color: #5e5245; font-size: 11px; line-height: 1.4; }
 .module-demo > p { grid-column: 1 / -1; margin: 1px 0 0; color: #776650; }
 .module-demo > p strong { color: var(--wine-dark); }
+.module-context { margin: 12px 0 14px; padding: 11px 12px; border: 1px solid #d9d2c3; background: #f4f0e7; }
+.module-context-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.module-context-heading b { color: #75664f; font: 8px var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+.module-context-heading span { color: #8b7a63; font-size: 10px; }
+.module-context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.module-context-grid > div > b { display: block; margin-bottom: 4px; color: #5b4d3e; font-size: 11px; }
+.module-context-grid ul { display: grid; gap: 3px; margin: 0; padding-left: 16px; color: #675a4c; font-size: 11px; line-height: 1.35; }
+.module-context > p { margin: 8px 0 0; color: #6f6252; font-size: 11px; line-height: 1.35; }
+.module-context-protect { padding-top: 7px; border-top: 1px solid #ddd4c4; color: #725c47 !important; }
+.module-context-protect b { color: var(--wine-dark); }
 .module-toolkit { margin: 12px 0 14px; padding-top: 11px; border-top: 1px solid #ddcdb4; }
 .module-toolkit-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
 .module-toolkit-heading b { color: #7d6d58; font: 8px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
@@ -465,6 +475,8 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .module-nora-foundation ul { grid-template-columns: 1fr; gap: 7px; }
   .module-demo { grid-template-columns: 1fr; }
   .module-demo > p { grid-column: auto; }
+  .module-context-grid { grid-template-columns: 1fr; gap: 8px; }
+  .module-context-heading { display: grid; gap: 3px; }
   .module-tool-grid { grid-template-columns: 1fr; }
   .module-toolkit-heading { display: grid; gap: 3px; }
 }
