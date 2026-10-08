@@ -47,6 +47,9 @@
 - [x] Integrar búsqueda por relevancia, filtros por tipo y apertura del contenido de origen desde la pestaña **03 · Base de estudio**.
 - [x] Guardar, editar, eliminar y exportar notas locales de hasta 2,000 caracteres, con fallback en memoria cuando IndexedDB no está disponible.
 - [x] Cubrir catálogo, búsqueda, depuración de notas y validación de identificadores con pruebas unitarias.
+- [x] Integrar 50 casos sintéticos de `llm-eval-contable`, 3 prompts seleccionados de `AI-prompt-database` y 903 metadatos mexicanos de Kaggle.
+- [x] Revisar fuentes contra HTML/script activo, protocolos no HTTPS, secretos y patrones de prompt injection antes de generar el catálogo.
+- [x] Mantener atribución, licencia, jurisdicción, carácter sintético y URL de procedencia en cada ficha externa; paginar resultados para no renderizar 1,000 fichas de una vez.
 
 ## Sección 4: pruebas E2E y CI
 
