@@ -1,6 +1,7 @@
 import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
 import { COURSE, courseModules } from "./course.js";
+import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -14,6 +15,35 @@ const state = {
   selections: new Map(),
   feedback: new Map(),
 };
+
+let progressStorage = null;
+try { progressStorage = window.localStorage; } catch { /* El navegador puede bloquear el almacenamiento local. */ }
+const restoredProgress = loadProgress(progressStorage);
+state.completedModules = new Set(restoredProgress.completedModules);
+state.completed = new Set(restoredProgress.completedExercises);
+state.storageWarning = progressStorage ? "" : "El navegador no permite guardar el progreso; esta sesión seguirá en memoria.";
+
+function persistProgress() {
+  const saved = saveProgress({
+    completedModules: [...state.completedModules],
+    completedExercises: [...state.completed],
+  }, progressStorage);
+  state.storageWarning = saved ? "" : "No se pudo guardar el progreso local; podrás continuar en memoria durante esta sesión.";
+  return saved;
+}
+
+function downloadPortfolio() {
+  const markdown = createPortfolioMarkdown({
+    completedModules: [...state.completedModules],
+    completedExercises: [...state.completed],
+  }, courseModules, exercises, new Date());
+  const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `portafolio-contaia-${new Date().toISOString().slice(0, 10)}.md`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -90,27 +120,29 @@ function renderHome() {
         <span class="module-status ${state.completed.has(exercise.id) ? "is-complete" : ""}">${state.completed.has(exercise.id) ? "Completada ✓" : "Abrir práctica →"}</span></button>`).join("")}</div>
     </section>
     <section class="method-note"><div class="method-label">MÉTODO DE TRABAJO <span>02 / 03</span></div><div><h2>La IA propone.<br/>Tu criterio dispone.</h2><p>Usa las respuestas de una herramienta como borrador. Confirma cálculos, evidencia y reglas aplicables antes de tomar decisiones o compartir conclusiones.</p></div><a href="/data/transacciones-ficticias.csv" download class="text-link">Explorar el conjunto de datos <span>↗</span></a></section>
-    <p class="home-footnote">Esta página no envía tus respuestas a servicios externos ni guarda lo que escribas. Al actualizar, el progreso de esta sesión se reinicia.</p>
+    <p class="home-footnote">${escapeHtml(state.storageWarning || "Las respuestas y selecciones no se guardan; solo los módulos y prácticas completados permanecen en este navegador.")}</p>
   </main>`;
 }
 
 function renderCourse() {
   const moduleMarkup = courseModules.map((module, index) => {
     const linkedExercises = module.exerciseIds.map((id) => exercises.find((exercise) => exercise.id === id)).filter(Boolean);
+    const moduleCompleted = state.completedModules.has(module.id);
     const practiceLinks = linkedExercises.map((exercise) => `<button type="button" class="course-practice-link" data-nav="${escapeHtml(exercise.id)}">${escapeHtml(exercise.title)} <span aria-hidden="true">↗</span></button>`).join("");
     const material = module.materialPath
       ? `<a class="course-material-link" href="${escapeHtml(module.materialPath)}" download>Descargar materiales del módulo <span aria-hidden="true">↓</span></a>`
       : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
     return `<details class="course-module-card" ${index === 0 ? "open" : ""}>
       <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
-      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p><div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}</div></div>
+      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p><div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
     </details>`;
   }).join("");
 
   return `<main id="contenido" class="content course-content" tabindex="-1">
     <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
-    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
-    <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${COURSE.weeks}</b><span>módulos semanales</span></div><div><b>${exercises.length}</b><span>prácticas ficticias</span></div></div>
+    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido desde los fundamentos y los prompts hasta la integración de flujos contables. Cada módulo se conecta con una práctica ficticia del laboratorio.</p><div class="course-hero-actions"><a class="button button-primary" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Descargar plan de trabajo <span aria-hidden="true">↓</span></a><button class="button course-secondary-button" type="button" data-action="download-portfolio">Descargar portafolio <span aria-hidden="true">↓</span></button><button class="button course-secondary-button" type="button" data-section="lab">Ir al laboratorio <span aria-hidden="true">→</span></button></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
+    <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos y prácticas completados; nunca tus respuestas ni selecciones.")}</p>
     <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
     <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
     <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
@@ -174,6 +206,7 @@ function renderExercise(exercise) {
       <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
     </div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
     <footer class="exercise-footer"><span>${state.completed.has(exercise.id) ? '<b class="completed-mark">✓</b> Práctica completada en esta sesión' : "Tu respuesta se queda en este navegador durante la sesión"}</span>${nextExercise ? `<button type="button" class="next-link" data-nav="${nextExercise.id}">Siguiente práctica <span>→</span></button>` : `<button type="button" class="next-link" data-nav="home">Terminar recorrido <span>→</span></button>`}</footer>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se conserva el estado de finalización; la respuesta escrita o seleccionada no se guarda.")}</p>
     <p class="disclaimer-inline">Material educativo con datos ficticios. No constituye asesoría profesional, contable o fiscal.</p>
   </main>`;
 }
@@ -216,6 +249,7 @@ function checkAnswer(exercise) {
       explanation: result.correct ? exercise.explanation : "",
     });
   }
+  persistProgress();
   render();
 }
 
@@ -229,6 +263,16 @@ app.addEventListener("click", (event) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  const moduleToggle = event.target.closest("[data-module-toggle]");
+  if (moduleToggle) {
+    const moduleId = moduleToggle.dataset.moduleToggle;
+    if (!courseModules.some((module) => module.id === moduleId)) return;
+    if (state.completedModules.has(moduleId)) state.completedModules.delete(moduleId);
+    else state.completedModules.add(moduleId);
+    persistProgress();
+    render();
+    return;
+  }
   const nav = event.target.closest("[data-nav]");
   if (nav) {
     state.section = "lab";
@@ -240,6 +284,10 @@ app.addEventListener("click", (event) => {
   }
   const action = event.target.closest("[data-action]");
   if (!action) return;
+  if (action.dataset.action === "download-portfolio") {
+    downloadPortfolio();
+    return;
+  }
   const exercise = exercises.find((item) => item.id === action.dataset.id);
   if (!exercise) return;
   const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });

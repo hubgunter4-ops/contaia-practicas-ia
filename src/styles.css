@@ -427,3 +427,15 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .guided-progress-step { min-width: 76px; gap: 5px; padding-inline: 5px; font-size: 9px; }
   .comparison-panel { grid-template-columns: 1fr; }
 }
+
+
+/* Progreso local y portafolio */
+.progress-storage-note { margin: 10px 0 18px; padding: 9px 12px; border-left: 2px solid var(--gold); background: #f3ecdf; color: #65594a; font-size: 11px; line-height: 1.45; }
+.module-progress-toggle { min-height: 31px; padding: 6px 9px; border: 1px solid #c6b69c; background: #fffaf2; color: var(--wine); font-size: 10px; cursor: pointer; }
+.module-progress-toggle:hover { border-color: var(--wine); background: #f6ebdc; }
+.module-progress-toggle[aria-pressed="true"] { border-color: #7d9c84; background: #e7efe6; color: #3f684b; }
+.course-resource-row { justify-content: space-between; }
+@media (max-width: 760px) {
+  .course-resource-row { align-items: flex-start; flex-direction: column; }
+  .module-progress-toggle { width: 100%; text-align: left; }
+}
