@@ -2,6 +2,7 @@ import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
 import { COURSE, courseModules, courseSessionFlow } from "./course.js";
 import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
+import { buildVideoBrief, NOTEBOOKLM_URL, resolveCourseVideo, SYNTHESIA_URL } from "./course-videos.js";
 import { loadTutorConfig, requestTutorReply } from "./tutor/api.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
@@ -328,6 +329,55 @@ function renderModuleSessionFlow(module) {
   return `<section class="module-session-flow" data-testid="module-session-flow-${escapeHtml(module.id)}" aria-label="Secuencia de la clase ${escapeHtml(module.title)}"><div class="module-session-flow-heading"><div><p class="eyebrow">SESIÓN GUIADA · 3 HORAS</p><h3>Así trabajaremos esta clase</h3></div><span class="count-pill">En este orden</span></div><ol class="module-session-steps">${sessions}</ol><aside class="module-independent-work"><span>+60 min</span><div><b>Práctica independiente</b><p>Continúa con el producto de la semana usando un caso simulado. Material recomendado:</p><ul>${documents}</ul></div></aside></section>`;
 }
 
+function renderVideoCard({ kind, id, module, exercise = null }) {
+  const video = resolveCourseVideo(kind, id);
+  const cardId = `${kind}-${id}`;
+  const title = kind === "module" ? `Explicación del módulo: ${module.title}` : `Apoyo para la práctica: ${exercise?.title || "actividad"}`;
+  const player = video
+    ? `<div class="course-video-player"><iframe src="${escapeHtml(video.embedUrl)}" title="${escapeHtml(video.title)}" loading="lazy" allow="encrypted-media; fullscreen" allowfullscreen></iframe></div><p class="course-video-reviewed">Video publicado y revisado${video.duration ? ` · ${escapeHtml(video.duration)}` : ""}. El reproductor y la reproducción se cargan desde Synthesia.</p>`
+    : `<div class="course-video-pending"><span aria-hidden="true">▶</span><div><b>Video en preparación</b><p>NotebookLM puede preparar el guion desde las fuentes del módulo; Synthesia produce el video narrado. La explicación aparecerá aquí después de revisarla y publicarla.</p></div></div>`;
+  return `<section class="course-video-card" data-testid="course-video-${escapeHtml(cardId)}" aria-label="${escapeHtml(title)}">
+    <div class="course-video-heading"><div><p class="eyebrow">VIDEO EXPLICATIVO</p><h4>${escapeHtml(title)}</h4></div><span class="course-video-pipeline">NOTEBOOKLM → SYNTHESIA</span></div>
+    ${player}
+    <div class="course-video-actions"><button type="button" class="button button-quiet" data-action="copy-video-brief" data-video-kind="${escapeHtml(kind)}" data-video-id="${escapeHtml(id)}">Copiar briefing para NotebookLM</button><a class="course-video-service-link" href="${NOTEBOOKLM_URL}" target="_blank" rel="noopener noreferrer">Abrir NotebookLM ↗</a><a class="course-video-service-link" href="${SYNTHESIA_URL}" target="_blank" rel="noopener noreferrer">Abrir Synthesia ↗</a></div>
+    <p class="course-video-brief-status" data-video-brief-status="${escapeHtml(cardId)}" role="status" aria-live="polite"></p>
+  </section>`;
+}
+
+async function copyVideoBrief(kind, id) {
+  const module = kind === "module"
+    ? courseModules.find((item) => item.id === id)
+    : courseModules.find((item) => item.exerciseIds.includes(id));
+  const exercise = kind === "exercise" ? exercises.find((item) => item.id === id) : null;
+  if (!module || (kind === "exercise" && !exercise)) return;
+  const statusKey = `${kind}-${id}`;
+  const status = [...app.querySelectorAll("[data-video-brief-status]")].find((item) => item.dataset.videoBriefStatus === statusKey);
+  try {
+    const brief = buildVideoBrief({ module, exercise });
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(brief);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = brief;
+      textarea.setAttribute("aria-hidden", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      let copied = false;
+      try {
+        textarea.select();
+        copied = document.execCommand("copy");
+      } finally {
+        textarea.remove();
+      }
+      if (!copied) throw new Error("Clipboard no disponible");
+    }
+    if (status) status.textContent = "Briefing copiado. Revísalo con las fuentes del módulo antes de producir el video.";
+  } catch {
+    if (status) status.textContent = "No se pudo copiar. Abre NotebookLM y vuelve a intentarlo desde un navegador con permiso para usar el portapapeles.";
+  }
+}
+
 function renderModuleGuide(module) {
   const moduleGuide = module.guide;
   if (!moduleGuide) return "";
@@ -420,7 +470,7 @@ function renderCourse() {
     const isOpen = state.openCourseModuleId === "__none__" ? false : state.openCourseModuleId ? state.openCourseModuleId === module.id : index === 0;
     return `<details class="course-module-card" data-course-module="${escapeHtml(module.id)}" ${isOpen ? "open" : ""}>
       <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
-      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
+      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}${renderVideoCard({ kind: "module", id: module.id, module })}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
     </details>`;
   }).join("");
 
@@ -469,6 +519,7 @@ function renderGuidedProgress(stage) {
 
 function renderExercise(exercise) {
   const isWritten = exercise.kind === "prompt" || exercise.kind === "written";
+  const linkedModule = courseModules.find((module) => module.exerciseIds.includes(exercise.id)) ?? courseModules[0];
   const feedback = renderFeedback(exercise);
   const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
   const showHint = state.hints.has(exercise.id);
@@ -487,7 +538,7 @@ function renderExercise(exercise) {
   return `<main id="contenido" class="content exercise-content" tabindex="-1">
     <div class="exercise-topline"><button class="back-link" type="button" data-nav="home">← Volver al recorrido</button><span class="exercise-count">PRÁCTICA ${String(previousIndex + 1).padStart(2, "0")} <i>/</i> ${String(exercises.length).padStart(2, "0")}</span></div>
     <div class="exercise-heading"><div class="exercise-number">${String(previousIndex + 1).padStart(2, "0")}</div><div><p class="eyebrow">${escapeHtml(exercise.category)} · ${exercise.time}</p><h1>${escapeHtml(exercise.title)}</h1><p class="exercise-intro">${escapeHtml(exercise.intro)}</p></div><span class="case-tag">PRÁCTICA</span></div>
-    ${scenario}${tables}${stageProgress}
+    ${scenario}${tables}${stageProgress}${renderVideoCard({ kind: "exercise", id: exercise.id, module: linkedModule, exercise })}
     <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions">
       <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
       <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
@@ -648,6 +699,11 @@ app.addEventListener("click", (event) => {
   }
   const action = event.target.closest("[data-action]");
   if (!action) return;
+  if (action.dataset.action === "copy-video-brief") {
+    const { videoKind, videoId } = action.dataset;
+    if (["module", "exercise"].includes(videoKind) && videoId) copyVideoBrief(videoKind, videoId);
+    return;
+  }
   if (action.dataset.action === "tutor-open") {
     state.tutor.collapsed = false;
     render();

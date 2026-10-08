@@ -42,7 +42,15 @@ Cada sesión guiada de tres horas aparece en el mismo orden:
 
 Se separa una **hora de práctica independiente**. Cada módulo abre con su agenda, pregunta de control, producto esperado y práctica ficticia vinculada. El diagnóstico inicial, el glosario, los materiales y las actividades externas quedan como apoyos secundarios para no competir con la ruta central.
 
-Consulta el [plan integral de 40 horas](docs/curso/plan-trabajo-curso-ia-contaduria.md), el [paquete didáctico del Módulo 2](docs/curso/modulo-02/README.md), el [índice de materiales por módulo](docs/curso/README.md) y la [serie de mini clases en video](docs/curso/videos/README.md). Las actividades con NotebookLM, Claude y n8n son opcionales; no se conectan automáticamente a ContaIA.
+Consulta el [plan integral de 40 horas](docs/curso/plan-trabajo-curso-ia-contaduria.md), el [paquete didáctico del Módulo 2](docs/curso/modulo-02/README.md), el [índice de materiales por módulo](docs/curso/README.md) y la [serie de mini clases en video](docs/curso/videos/README.md). El flujo NotebookLM→Synthesia para los videos es manual; ContaIA no llama sus APIs ni comparte automáticamente notas o actividad del estudiante.
+
+## Videos explicativos por módulo y práctica
+
+Cada sesión del curso y cada práctica tiene una tarjeta de video. Mientras no haya un enlace aprobado, muestra **Video en preparación** y permite copiar un briefing curricular en español para pegarlo en [NotebookLM](https://notebook.google/). Carga únicamente las fuentes educativas aprobadas del módulo; NotebookLM puede preparar un [Video Overview](https://support.google.com/gemininotebook/answer/16454555?hl=es) o un guion estructurado. Revisa citas, afirmaciones, duración y ejemplos ficticios antes de pasar el guion a [Synthesia](https://app.synthesia.io/) para crear la versión narrada/avatar y [obtener su embed oficial](https://help.synthesia.io/en/articles/9189559-how-do-i-share-my-synthesia-video).
+
+Después de revisar y publicar el video en Synthesia, copia el `src` del iframe oficial —con formato `https://share.synthesia.io/embeds/videos/<id>?language=es`— al catálogo `COURSE_VIDEO_LIBRARY` de `src/course-videos.js`. Usa la clave del módulo (`modulo-01`…`modulo-10`) o de la práctica (`prompt`, `clasificacion`, `conciliacion`, etc.): `"modulo-01": { approved: true, embedUrl: "https://share.synthesia.io/embeds/videos/<id>?language=es", title: "Explicación del módulo 1", duration: "3–5 min" }`. Conserva `approved: true` solo después de la revisión docente. La web rechaza dominios, rutas y parámetros distintos; nunca pegues un bloque HTML arbitrario.
+
+Al reproducir un embed, el navegador carga el player desde Synthesia; los enlaces públicos también pueden ser vistos fuera del curso. La protección con contraseña o SSO depende del plan de Synthesia. No cargues datos reales, personales, fiscales, laborales ni confidenciales en NotebookLM o Synthesia. El catálogo está vacío inicialmente: no se generan ni publican videos automáticamente. Consulta el [plan de integración NotebookLM y Synthesia](docs/superpowers/plans/2026-10-08-videos-notebooklm-synthesia.md).
 
 ## Progreso, base de estudio y privacidad local
 

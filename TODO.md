@@ -77,3 +77,11 @@
 - [x] Mostrar en los diez módulos la misma secuencia: activación (15 min), concepto/demo (35), práctica guiada (80), revisión/reflexión (40) y cierre/evidencia (10).
 - [x] Mantener 60 minutos de práctica independiente fuera de las tres horas guiadas y cerrar con el proyecto integrador del módulo 10.
 - [x] Validar en Chromium de escritorio y móvil, junto con el build estático de Vercel.
+
+## Sección 8: videos explicativos por módulo y práctica
+
+- [x] Crear briefings en español desde el contenido curricular para preparar videos con NotebookLM sin incluir respuestas, progreso ni notas locales.
+- [x] Agregar tarjetas por módulo y por ejercicio, con estado pendiente, enlaces a NotebookLM/Synthesia y copiado accesible del briefing.
+- [x] Mostrar solo iframes aprobados de Synthesia en el dominio y ruta oficiales; no aceptar HTML arbitrario y avisar que el player carga desde un tercero.
+- [x] Cubrir el prompt curricular, las URL hostiles y los estados de copia/pendiente en pruebas unitarias y E2E de escritorio y móvil.
+- [ ] Generar, revisar y publicar los videos reales y añadir sus IDs aprobados a `COURSE_VIDEO_LIBRARY`; no hay enlaces publicados en este cambio.
