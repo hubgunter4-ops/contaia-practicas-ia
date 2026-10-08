@@ -25,3 +25,17 @@
 - El progreso del curso se guarda solo en `localStorage`; el portafolio se descarga desde el navegador. El texto de respuestas, selecciones y respuestas de evaluación no se persiste.
 - Si una integración externa adicional pareciera útil, detener ese punto, describirla y pedir autorización antes de proponerla o conectarla. No se prevé ninguna para este alcance.
 - Cerrar cada fase con un commit separado en el repositorio privado canónico; verificar pruebas y Preview antes de continuar. No solicitar publicación del sitio.
+
+
+## Sección 3: tutor local de Nora
+
+- [x] Integrar un panel plegable de “Nora · Tutor local” en cada práctica, con historial efímero y sin persistencia.
+- [x] Añadir contexto didáctico normalizado por tipo de ejercicio, sin exponer claves, selecciones ni respuestas del estudiante.
+- [x] Añadir respuestas locales para pista, reformulación, explicación condicionada, siguiente paso y fallback seguro.
+- [x] Añadir estados visuales del tutor y avisos explícitos de que no existe conexión externa.
+- [x] Añadir voz opcional mediante `SpeechSynthesis`, apagada por defecto y cancelable.
+- [x] Añadir controles accesibles, foco visible, región de mensajes y diseño responsive.
+- [x] Cubrir contexto, motor local y voz con pruebas unitarias.
+- [ ] Revisar manualmente las nueve prácticas en Preview antes de fusionar o publicar.
+
+> La integración remota con OpenAI, Anthropic u otro proveedor permanece fuera de alcance y no se implementa en esta rama.
