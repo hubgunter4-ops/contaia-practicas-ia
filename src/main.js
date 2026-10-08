@@ -71,17 +71,17 @@ const tutorSpeaker = createSpeechSpeaker({
 });
 
 function renderTutorPanel(exercise) {
-  const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTOR LOCAL" : "TÚ"}</span><p>${escapeHtml(message.text)}</p></div>`).join("");
+  const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}" data-testid="nora-message"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTOR LOCAL" : "TÚ"}</span><p>${escapeHtml(message.text)}</p></div>`).join("");
   const bodyId = `tutor-panel-${escapeHtml(exercise.id)}`;
-  return `<section class="tutor-panel" aria-labelledby="tutor-heading">
+  return `<section class="tutor-panel" data-testid="nora-panel" aria-labelledby="tutor-heading">
     <header class="tutor-header">
       <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><span aria-hidden="true">N</span></div><div><p class="tutor-kicker">APOYO PEDAGÓGICO</p><h2 id="tutor-heading">Nora · Tutor local</h2><span class="tutor-status"><i aria-hidden="true"></i> Respuestas preparadas, sin conexión externa</span></div></div>
-      <div class="tutor-controls"><button class="tutor-control" type="button" data-action="tutor-voice" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Activar voz"}</button><button class="tutor-control" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Abrir tutor" : "Cerrar tutor"}</button></div>
+      <div class="tutor-controls"><button class="tutor-control" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Activar voz"}</button><button class="tutor-control" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Abrir tutor" : "Cerrar tutor"}</button></div>
     </header>
     <div id="${bodyId}" class="tutor-body" ${state.tutor.collapsed ? "hidden" : ""}>
-      <div class="tutor-log" role="log" aria-live="polite" aria-relevant="additions text">${messages || `<div class="tutor-empty"><b>Empieza con una pregunta breve.</b><span>Prueba “Dame una pista” o “¿Cuál es el siguiente paso?”.</span></div>`}</div>
-      <form class="tutor-form" data-tutor-form>
-        <label class="sr-only" for="tutor-input">Pregunta al tutor local</label><input id="tutor-input" data-tutor-input maxlength="500" autocomplete="off" placeholder="Escribe una duda sobre este ejercicio…"/><button class="button button-primary" type="submit">Enviar <span aria-hidden="true">→</span></button>
+      <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages || `<div class="tutor-empty"><b>Empieza con una pregunta breve.</b><span>Prueba “Dame una pista” o “¿Cuál es el siguiente paso?”.</span></div>`}</div>
+      <form class="tutor-form" data-testid="nora-form" data-tutor-form>
+        <label class="sr-only" for="tutor-input">Pregunta al tutor local</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="500" autocomplete="off" placeholder="Escribe una duda sobre este ejercicio…"/><button class="button button-primary" type="submit">Enviar <span aria-hidden="true">→</span></button>
       </form>
       <p class="tutor-disclaimer">El tutor usa solo las ayudas del ejercicio ficticio. No compartas información real, personal o confidencial.</p>
     </div>

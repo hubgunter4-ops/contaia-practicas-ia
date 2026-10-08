@@ -39,3 +39,12 @@
 - [ ] Revisar manualmente las nueve prácticas en Preview antes de fusionar o publicar.
 
 > La integración remota con OpenAI, Anthropic u otro proveedor permanece fuera de alcance y no se implementa en esta rama.
+
+## Sección 4: pruebas E2E y CI
+
+- [x] Añadir selectores `data-testid` estables al panel de Nora.
+- [x] Configurar Playwright para Chromium de escritorio y móvil.
+- [x] Cubrir apertura/cierre, respuesta local, privacidad de red, limpieza, no persistencia, accesibilidad y voz mockeada.
+- [x] Añadir comandos `test:e2e` y `test:e2e:headed`.
+- [x] Crear workflow de GitHub Actions para ejecutar unit tests y E2E en cada Pull Request.
+- [x] Conservar informes, trazas, capturas y videos como artefactos cuando corresponda.

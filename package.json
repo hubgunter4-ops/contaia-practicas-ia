@@ -9,6 +9,11 @@
   },
   "scripts": {
     "dev": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0"
   }
 }

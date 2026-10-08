@@ -41,7 +41,19 @@ Abre `http://localhost:3000`. También está disponible `npm run dev`.
 node --test
 ```
 
-Las pruebas verifican la rúbrica de prompts, las respuestas de opción múltiple y el cálculo de diferencia de una balanza. No validan interpretaciones tributarias.
+Las pruebas verifican la rúbrica de prompts, las respuestas de opción múltiple, el cálculo de diferencia de una balanza, el contexto seguro del tutor local y la síntesis de voz con mocks. No validan interpretaciones tributarias.
+
+### Pruebas E2E con Playwright
+
+Las pruebas E2E cubren el panel de Nora en Chromium de escritorio y móvil: apertura/cierre, respuesta local, ausencia de llamadas a proveedores, limpieza al cambiar de práctica, conservación durante un render, no persistencia, accesibilidad básica y activación explícita de voz.
+
+```bash
+npm run test:e2e
+npm run test:e2e:headed
+npx playwright show-report
+```
+
+Playwright inicia automáticamente `server.js` en el puerto 3000. El workflow `.github/workflows/tests.yml` ejecuta las pruebas unitarias y la matriz E2E en cada Pull Request y en cambios sobre `main`. En caso de fallo conserva el informe, trazas, capturas y video como artefactos de GitHub Actions.
 
 ## Estructura
 
