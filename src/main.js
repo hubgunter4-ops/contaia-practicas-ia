@@ -6,6 +6,7 @@ import { toTutorContext } from "./tutor/context.js";
 import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
+import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -24,6 +25,15 @@ const state = {
   demoModuleId: null,
   glossary: null,
   glossaryOpen: false,
+  studyDb: null,
+  studyItems: [],
+  studyNotes: [],
+  studyQuery: "",
+  studyKind: "all",
+  studySelectedId: "",
+  studyDraftNote: "",
+  studyDbWarning: "",
+  openCourseModuleId: null,
 };
 
 let progressStorage = null;
@@ -48,7 +58,36 @@ function persistProgress() {
 
 function persistOnboarding() {
   state.onboardingLevel = state.onboardingDraft;
-  try { progressStorage?.setItem("contaia.onboarding.v1", state.onboardingLevel); } catch { /* La ruta permanece disponible en memoria. */ }
+  try { progressStorage?.setItem("contaia.onboarding.v1", state.onboardingLevel); } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
+}
+
+async function initializeStudyDatabase() {
+  try {
+    state.studyDb = await openStudyDatabase({ modules: courseModules, exercises, glossary: GLOSSARY });
+    state.studyItems = await state.studyDb.listItems();
+    state.studyNotes = await state.studyDb.listNotes();
+    state.studyDbWarning = state.studyDb.persistent
+      ? ""
+      : "Este navegador no ofrece IndexedDB; la base seguirá disponible solo durante esta sesión.";
+  } catch {
+    state.studyDbWarning = "No se pudo abrir la base de estudio. Puedes seguir usando el curso y el laboratorio.";
+  }
+  if (state.section === "study") render();
+}
+
+function selectedStudyNote(itemId) {
+  return state.studyNotes.find((note) => note.itemId === itemId) ?? null;
+}
+
+async function downloadStudyDatabase() {
+  if (!state.studyDb) return;
+  const data = await state.studyDb.exportData();
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `base-estudio-contaia-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function downloadPortfolio() {
@@ -141,6 +180,9 @@ function sidebar() {
     <button class="nav-item nav-home ${state.section === "lab" && state.current === "home" ? "is-active" : ""}" type="button" data-nav="home" aria-current="${state.section === "lab" && state.current === "home" ? "page" : "false"}">
       <span class="home-glyph" aria-hidden="true">⌂</span><span>Panel de práctica</span>
     </button>
+    <button class="nav-item ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">
+      <span class="home-glyph" aria-hidden="true">⌕</span><span>Base de estudio</span>
+    </button>
     ${groupMarkup}
     <div class="sidebar-bottom">
       <div class="folio-stamp"><span class="stamp-dot"></span><div><b>CASOS FICTICIOS</b><small>Sin datos de clientes</small></div></div>
@@ -151,11 +193,12 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Plan del curso" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "Plan del curso" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Curso completo</span></button>
       <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>02</b><span>Laboratorio práctico</span></button>
+      <button class="section-tab ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}"><b>03</b><span>Base de estudio</span></button>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
   </header>`;
@@ -228,6 +271,51 @@ function renderGlossaryIndex() {
   return `<section class="course-glossary" data-testid="glossary-index"><button type="button" class="course-glossary-toggle" data-action="toggle-glossary" aria-expanded="${state.glossaryOpen}"><span><b>GLOSARIO CONTEXTUAL</b><strong>Consulta los términos del recorrido con ejemplos contables.</strong></span><span aria-hidden="true">${state.glossaryOpen ? "−" : "+"}</span></button>${state.glossaryOpen ? `<div class="glossary-index-grid">${entries}</div>${selected ? `<div class="glossary-index-selected" role="status"><b>${escapeHtml(selected.term)}</b><p>${escapeHtml(selected.definition)}</p><span><strong>Ejemplo:</strong> ${escapeHtml(selected.example)}</span><span><strong>Comprueba:</strong> ${escapeHtml(selected.check)}</span></div>` : ""}` : ""}</section>`;
 }
 
+const studyKindLabels = { module: "Módulo", practice: "Práctica", concept: "Concepto" };
+
+function renderStudyResults() {
+  if (!state.studyItems.length) {
+    return `<div class="study-empty"><strong>Preparando la base de estudio…</strong><span>El catálogo se inicializa en este navegador, sin enviar contenido a un servicio externo.</span></div>`;
+  }
+  const results = searchStudyItems(state.studyItems, state.studyQuery, state.studyKind);
+  if (!results.length) {
+    return `<div class="study-empty"><strong>No encontramos coincidencias.</strong><span>Prueba con otra palabra o cambia el tipo de contenido.</span></div>`;
+  }
+  return `<div class="study-results-list">${results.map((item) => {
+    const note = selectedStudyNote(item.id);
+    return `<article class="study-result-card ${state.studySelectedId === item.id ? "is-selected" : ""}">
+      <div class="study-result-meta"><span>${escapeHtml(studyKindLabels[item.kind] ?? item.kind)}</span>${note ? "<b>Nota guardada</b>" : ""}</div>
+      <button type="button" class="study-result-title" data-study-open="${escapeHtml(item.id)}">${escapeHtml(item.title)} <span aria-hidden="true">↗</span></button>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="study-result-footer"><span>${escapeHtml((item.tags ?? []).slice(0, 3).join(" · "))}</span><button type="button" class="study-note-link" data-study-open="${escapeHtml(item.id)}">${note ? "Editar nota" : "Tomar nota"}</button></div>
+    </article>`;
+  }).join("")}</div>`;
+}
+
+function renderStudy() {
+  const selected = state.studyItems.find((item) => item.id === state.studySelectedId);
+  const note = selected ? selectedStudyNote(selected.id) : null;
+  const detail = selected ? `<aside class="study-detail" aria-label="Detalle de estudio">
+    <div class="study-detail-kicker">${escapeHtml(studyKindLabels[selected.kind] ?? "Registro")}</div>
+    <h2>${escapeHtml(selected.title)}</h2>
+    <p>${escapeHtml(selected.body)}</p>
+    <div class="study-detail-actions">${selected.kind === "module" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver módulo ↗</button>` : selected.kind === "practice" ? `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Abrir práctica ↗</button>` : `<button type="button" class="button button-primary" data-study-navigate="${escapeHtml(selected.id)}">Ver concepto ↗</button>`}<button type="button" class="button button-quiet" data-action="study-close">Cerrar</button></div>
+    <form class="study-note-form" data-study-note-form>
+      <label for="study-note">Nota privada de estudio</label>
+      <textarea id="study-note" data-study-note rows="6" maxlength="2000" placeholder="Escribe una idea, duda o ejemplo para repasar…">${escapeHtml(note?.content ?? state.studyDraftNote)}</textarea>
+      <div class="study-note-form-footer"><span>Se guarda únicamente en esta base local.</span><button type="submit" class="button button-primary">Guardar nota</button></div>
+    </form>
+    ${note ? `<button type="button" class="study-delete-note" data-action="study-delete-note" data-note-id="${escapeHtml(note.id)}">Eliminar esta nota</button>` : ""}
+  </aside>` : `<aside class="study-detail study-detail-empty" aria-label="Ayuda de la base de estudio"><span class="study-detail-mark">+</span><h2>Selecciona una ficha</h2><p>Abre un módulo, práctica o concepto para guardarlo como referencia de repaso.</p></aside>`;
+  return `<main id="contenido" class="content study-content" tabindex="-1">
+    <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 03 · BASE LOCAL DE ESTUDIO</span></div>
+    <section class="study-hero"><div><p class="eyebrow">CATÁLOGO PRIVADO · INDEXEDDB</p><h1>Estudia con el contenido<br/><em>en un solo expediente.</em></h1><p>Busca módulos, prácticas y conceptos del curso. Añade notas de repaso sin crear una cuenta y sin subir información a internet.</p></div><div class="study-hero-stamp"><strong>${state.studyItems.length || "—"}</strong><span>FICHAS<br/>DISPONIBLES</span></div></section>
+    <div class="study-notice"><span class="notice-icon" aria-hidden="true">i</span><p><strong>Privacidad primero.</strong> La base se guarda en este navegador. No escribas datos reales, personales o confidenciales en tus notas.</p><button type="button" class="text-link" data-action="study-export">Descargar copia JSON <span>↓</span></button></div>
+    <section class="study-layout"><div class="study-browser"><div class="section-heading"><div><p class="eyebrow">BÚSQUEDA</p><h2>Biblioteca del recorrido</h2></div><span class="count-pill">${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados</span></div><div class="study-search-row"><label class="sr-only" for="study-search">Buscar en la base de estudio</label><input id="study-search" data-study-search type="search" value="${escapeHtml(state.studyQuery)}" placeholder="Busca por tema, práctica o concepto…" autocomplete="off"/><select data-study-filter aria-label="Filtrar por tipo"><option value="all" ${state.studyKind === "all" ? "selected" : ""}>Todo el catálogo</option><option value="module" ${state.studyKind === "module" ? "selected" : ""}>Módulos</option><option value="practice" ${state.studyKind === "practice" ? "selected" : ""}>Prácticas</option><option value="concept" ${state.studyKind === "concept" ? "selected" : ""}>Conceptos</option></select></div><div data-study-results>${renderStudyResults()}</div></div>${detail}</section>
+    <p class="progress-storage-note" role="status">${escapeHtml(state.studyDbWarning || "La base incluye el catálogo del curso y tus notas privadas locales; no sincroniza con cuentas ni servicios externos.")}</p>
+  </main>`;
+}
+
 function renderCourse() {
   const moduleMarkup = courseModules.map((module, index) => {
     const linkedExercises = module.exerciseIds.map((id) => exercises.find((exercise) => exercise.id === id)).filter(Boolean);
@@ -236,7 +324,8 @@ function renderCourse() {
     const material = module.materialPath
       ? `<a class="course-material-link" href="${escapeHtml(module.materialPath)}" download>Descargar materiales del módulo <span aria-hidden="true">↓</span></a>`
       : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
-    return `<details class="course-module-card" ${index === 0 ? "open" : ""}>
+    const isOpen = state.openCourseModuleId ? state.openCourseModuleId === module.id : index === 0;
+    return `<details class="course-module-card" ${isOpen ? "open" : ""}>
       <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
       <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
     </details>`;
@@ -320,7 +409,7 @@ function renderExercise(exercise) {
 
 function render() {
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
-  const content = state.section === "course" ? renderCourse() : exercise ? renderExercise(exercise) : renderHome();
+  const content = state.section === "course" ? renderCourse() : state.section === "study" ? renderStudy() : exercise ? renderExercise(exercise) : renderHome();
   app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div></div>`;
 }
 
@@ -363,7 +452,7 @@ function checkAnswer(exercise) {
 app.addEventListener("click", (event) => {
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = section.dataset.section === "lab" ? "lab" : "course";
+    state.section = ["course", "lab", "study"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     render();
@@ -404,6 +493,36 @@ app.addEventListener("click", (event) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  const studyOpen = event.target.closest("[data-study-open]");
+  if (studyOpen) {
+    state.studySelectedId = studyOpen.dataset.studyOpen;
+    state.studyDraftNote = selectedStudyNote(state.studySelectedId)?.content ?? "";
+    render();
+    document.querySelector("#study-note")?.focus({ preventScroll: true });
+    return;
+  }
+  const studyNavigate = event.target.closest("[data-study-navigate]");
+  if (studyNavigate) {
+    const item = state.studyItems.find((entry) => entry.id === studyNavigate.dataset.studyNavigate);
+    if (!item) return;
+    const destination = item.destination ?? {};
+    if (destination.section === "lab") {
+      resetTutor(destination.exerciseId);
+      state.section = "lab";
+      state.current = destination.exerciseId;
+    } else {
+      state.section = "course";
+      state.openCourseModuleId = destination.moduleId ?? null;
+      if (destination.glossaryTerm) {
+        state.glossaryOpen = true;
+        state.glossary = { moduleId: "global", term: destination.glossaryTerm };
+      }
+    }
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   const action = event.target.closest("[data-action]");
   if (!action) return;
   if (action.dataset.action === "tutor-toggle") {
@@ -424,6 +543,25 @@ app.addEventListener("click", (event) => {
   if (action.dataset.action === "toggle-glossary") {
     state.glossaryOpen = !state.glossaryOpen;
     render();
+    return;
+  }
+  if (action.dataset.action === "study-close") {
+    state.studySelectedId = "";
+    state.studyDraftNote = "";
+    render();
+    return;
+  }
+  if (action.dataset.action === "study-export") {
+    downloadStudyDatabase();
+    return;
+  }
+  if (action.dataset.action === "study-delete-note") {
+    if (!state.studyDb || !action.dataset.noteId) return;
+    state.studyDb.deleteNote(action.dataset.noteId).then(async () => {
+      state.studyNotes = await state.studyDb.listNotes();
+      state.studyDraftNote = "";
+      render();
+    }).catch(() => { state.studyDbWarning = "No se pudo eliminar la nota local."; render(); });
     return;
   }
   if (action.dataset.action === "complete-onboarding") {
@@ -452,6 +590,17 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("submit", (event) => {
+  const studyForm = event.target.closest("[data-study-note-form]");
+  if (studyForm) {
+    event.preventDefault();
+    if (!state.studyDb || !state.studySelectedId) return;
+    state.studyDb.saveNote({ id: `note:${state.studySelectedId}`, itemId: state.studySelectedId, content: state.studyDraftNote, updatedAt: Date.now() }).then(async () => {
+      state.studyNotes = await state.studyDb.listNotes();
+      render();
+      document.querySelector("#study-note")?.focus({ preventScroll: true });
+    }).catch(() => { state.studyDbWarning = "Escribe una nota breve para guardarla en la base local."; render(); });
+    return;
+  }
   const form = event.target.closest("[data-tutor-form]");
   if (!form) return;
   event.preventDefault();
@@ -463,6 +612,18 @@ app.addEventListener("submit", (event) => {
 });
 
 app.addEventListener("input", (event) => {
+  if (event.target.matches("[data-study-search]")) {
+    state.studyQuery = event.target.value;
+    const results = document.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    const count = document.querySelector(".study-browser .count-pill");
+    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
+    return;
+  }
+  if (event.target.matches("[data-study-note]")) {
+    state.studyDraftNote = event.target.value;
+    return;
+  }
   if (event.target.matches("[data-answer]")) {
     state.answers.set(event.target.dataset.answer, event.target.value);
     const counter = event.target.closest(".writing-prompt")?.querySelector(".field-meta span:last-child");
@@ -471,6 +632,14 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[data-study-filter]")) {
+    state.studyKind = event.target.value;
+    const results = document.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    const count = document.querySelector(".study-browser .count-pill");
+    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
+    return;
+  }
   if (event.target.matches("[name='onboarding-level']")) {
     state.onboardingDraft = event.target.value;
     const button = document.querySelector("[data-action='complete-onboarding']");
@@ -486,3 +655,4 @@ app.addEventListener("change", (event) => {
 });
 
 render();
+initializeStudyDatabase();
