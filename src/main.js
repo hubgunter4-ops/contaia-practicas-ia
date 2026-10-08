@@ -2,6 +2,9 @@ import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
 import { COURSE, courseModules } from "./course.js";
 import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
+import { toTutorContext } from "./tutor/context.js";
+import { detectLocalIntent, getLocalTutorReply } from "./tutor/local.js";
+import { createSpeechSpeaker } from "./tutor/speech.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -14,6 +17,7 @@ const state = {
   answers: new Map(),
   selections: new Map(),
   feedback: new Map(),
+  tutor: { exerciseId: null, messages: [], collapsed: true, voiceEnabled: false, avatarState: "idle" },
 };
 
 let progressStorage = null;
@@ -48,6 +52,56 @@ function downloadPortfolio() {
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[character]));
+
+function resetTutor(exerciseId = null) {
+  tutorSpeaker.stop();
+  state.tutor = { exerciseId, messages: [], collapsed: true, voiceEnabled: false, avatarState: "idle" };
+}
+
+function tutorAvatarLabel() {
+  return { thinking: "Nora está pensando.", explaining: "Nora está explicando.", celebrating: "Nora celebra el avance." }[state.tutor.avatarState] || "Nora está lista para ayudarte.";
+}
+
+const tutorSpeaker = createSpeechSpeaker({
+  onStateChange: (voiceState) => {
+    if (voiceState === "speaking") state.tutor.avatarState = "explaining";
+    else if (state.tutor.avatarState === "explaining") state.tutor.avatarState = "idle";
+    if (state.section === "lab" && state.current === state.tutor.exerciseId) render();
+  },
+});
+
+function renderTutorPanel(exercise) {
+  const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}" data-testid="nora-message"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTOR LOCAL" : "TÚ"}</span><p>${escapeHtml(message.text)}</p></div>`).join("");
+  const bodyId = `tutor-panel-${escapeHtml(exercise.id)}`;
+  return `<section class="tutor-panel" data-testid="nora-panel" aria-labelledby="tutor-heading">
+    <header class="tutor-header">
+      <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><span aria-hidden="true">N</span></div><div><p class="tutor-kicker">APOYO PEDAGÓGICO</p><h2 id="tutor-heading">Nora · Tutor local</h2><span class="tutor-status"><i aria-hidden="true"></i> Respuestas preparadas, sin conexión externa</span></div></div>
+      <div class="tutor-controls"><button class="tutor-control" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Activar voz"}</button><button class="tutor-control" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Abrir tutor" : "Cerrar tutor"}</button></div>
+    </header>
+    <div id="${bodyId}" class="tutor-body" ${state.tutor.collapsed ? "hidden" : ""}>
+      <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages || `<div class="tutor-empty"><b>Empieza con una pregunta breve.</b><span>Prueba “Dame una pista” o “¿Cuál es el siguiente paso?”.</span></div>`}</div>
+      <form class="tutor-form" data-testid="nora-form" data-tutor-form>
+        <label class="sr-only" for="tutor-input">Pregunta al tutor local</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="500" autocomplete="off" placeholder="Escribe una duda sobre este ejercicio…"/><button class="button button-primary" type="submit">Enviar <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="tutor-disclaimer">El tutor usa solo las ayudas del ejercicio ficticio. No compartas información real, personal o confidencial.</p>
+    </div>
+  </section>`;
+}
+
+function sendLocalTutorMessage(text) {
+  const exercise = exercises.find((item) => item.id === state.current);
+  if (!exercise || !text.trim() || state.tutor.exerciseId !== exercise.id) return;
+  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
+  const context = toTutorContext(exercise, stage);
+  const intent = detectLocalIntent(text);
+  const reply = getLocalTutorReply({ intent, context });
+  state.tutor.messages.push({ role: "user", text: text.trim() }, { role: "assistant", text: reply });
+  state.tutor.collapsed = false;
+  state.tutor.avatarState = intent === "hint" ? "thinking" : "explaining";
+  render();
+  if (state.tutor.voiceEnabled) tutorSpeaker.say(reply);
+  document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+}
 
 function logoMark() {
   return `<svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><path d="M7 15a3 3 0 0 1 3-3h10l4 4h14a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z" fill="currentColor"/><path d="M15 23h18M15 28h18M15 33h9" stroke="#fffaf3" stroke-width="2" stroke-linecap="round"/><circle cx="35" cy="34" r="5" fill="#d8b26e"/><path d="M33 34h4" stroke="#7a2e3a" stroke-width="1.6" stroke-linecap="round"/></svg>`;
@@ -205,6 +259,7 @@ function renderExercise(exercise) {
       <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
       <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
     </div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
+    ${renderTutorPanel(exercise)}
     <footer class="exercise-footer"><span>${state.completed.has(exercise.id) ? '<b class="completed-mark">✓</b> Práctica completada en esta sesión' : "Tu respuesta se queda en este navegador durante la sesión"}</span>${nextExercise ? `<button type="button" class="next-link" data-nav="${nextExercise.id}">Siguiente práctica <span>→</span></button>` : `<button type="button" class="next-link" data-nav="home">Terminar recorrido <span>→</span></button>`}</footer>
     <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se conserva el estado de finalización; la respuesta escrita o seleccionada no se guarda.")}</p>
     <p class="disclaimer-inline">Material educativo con datos ficticios. No constituye asesoría profesional, contable o fiscal.</p>
@@ -257,6 +312,7 @@ app.addEventListener("click", (event) => {
   const section = event.target.closest("[data-section]");
   if (section) {
     state.section = section.dataset.section === "lab" ? "lab" : "course";
+    resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
@@ -275,8 +331,10 @@ app.addEventListener("click", (event) => {
   }
   const nav = event.target.closest("[data-nav]");
   if (nav) {
+    const destination = nav.dataset.nav;
+    if (state.section !== "lab" || state.current !== destination) resetTutor(destination);
     state.section = "lab";
-    state.current = nav.dataset.nav;
+    state.current = destination;
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -284,6 +342,17 @@ app.addEventListener("click", (event) => {
   }
   const action = event.target.closest("[data-action]");
   if (!action) return;
+  if (action.dataset.action === "tutor-toggle") {
+    state.tutor.collapsed = !state.tutor.collapsed;
+    render();
+    if (!state.tutor.collapsed) document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "tutor-voice") {
+    state.tutor.voiceEnabled = tutorSpeaker.setEnabled(!state.tutor.voiceEnabled);
+    render();
+    return;
+  }
   if (action.dataset.action === "download-portfolio") {
     downloadPortfolio();
     return;
@@ -297,6 +366,17 @@ app.addEventListener("click", (event) => {
   if (action.dataset.action === "hint") state.hints.add(exercise.id);
   if (action.dataset.action === "solution") state.revealed.add(exercise.id);
   if (action.dataset.action === "hint" || action.dataset.action === "solution") render();
+});
+
+app.addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-tutor-form]");
+  if (!form) return;
+  event.preventDefault();
+  const input = form.querySelector("[data-tutor-input]");
+  const text = input?.value ?? "";
+  if (!text.trim()) return;
+  input.value = "";
+  sendLocalTutorMessage(text);
 });
 
 app.addEventListener("input", (event) => {

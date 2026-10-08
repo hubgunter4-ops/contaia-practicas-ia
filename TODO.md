@@ -25,3 +25,26 @@
 - El progreso del curso se guarda solo en `localStorage`; el portafolio se descarga desde el navegador. El texto de respuestas, selecciones y respuestas de evaluación no se persiste.
 - Si una integración externa adicional pareciera útil, detener ese punto, describirla y pedir autorización antes de proponerla o conectarla. No se prevé ninguna para este alcance.
 - Cerrar cada fase con un commit separado en el repositorio privado canónico; verificar pruebas y Preview antes de continuar. No solicitar publicación del sitio.
+
+
+## Sección 3: tutor local de Nora
+
+- [x] Integrar un panel plegable de “Nora · Tutor local” en cada práctica, con historial efímero y sin persistencia.
+- [x] Añadir contexto didáctico normalizado por tipo de ejercicio, sin exponer claves, selecciones ni respuestas del estudiante.
+- [x] Añadir respuestas locales para pista, reformulación, explicación condicionada, siguiente paso y fallback seguro.
+- [x] Añadir estados visuales del tutor y avisos explícitos de que no existe conexión externa.
+- [x] Añadir voz opcional mediante `SpeechSynthesis`, apagada por defecto y cancelable.
+- [x] Añadir controles accesibles, foco visible, región de mensajes y diseño responsive.
+- [x] Cubrir contexto, motor local y voz con pruebas unitarias.
+- [ ] Revisar manualmente las nueve prácticas en Preview antes de fusionar o publicar.
+
+> La integración remota con OpenAI, Anthropic u otro proveedor permanece fuera de alcance y no se implementa en esta rama.
+
+## Sección 4: pruebas E2E y CI
+
+- [x] Añadir selectores `data-testid` estables al panel de Nora.
+- [x] Configurar Playwright para Chromium de escritorio y móvil.
+- [x] Cubrir apertura/cierre, respuesta local, privacidad de red, limpieza, no persistencia, accesibilidad y voz mockeada.
+- [x] Añadir comandos `test:e2e` y `test:e2e:headed`.
+- [x] Crear workflow de GitHub Actions para ejecutar unit tests y E2E en cada Pull Request.
+- [x] Conservar informes, trazas, capturas y videos como artefactos cuando corresponda.

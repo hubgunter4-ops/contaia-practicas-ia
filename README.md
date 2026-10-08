@@ -41,7 +41,19 @@ Abre `http://localhost:3000`. También está disponible `npm run dev`.
 node --test
 ```
 
-Las pruebas verifican la rúbrica de prompts, las respuestas de opción múltiple y el cálculo de diferencia de una balanza. No validan interpretaciones tributarias.
+Las pruebas verifican la rúbrica de prompts, las respuestas de opción múltiple, el cálculo de diferencia de una balanza, el contexto seguro del tutor local y la síntesis de voz con mocks. No validan interpretaciones tributarias.
+
+### Pruebas E2E con Playwright
+
+Las pruebas E2E cubren el panel de Nora en Chromium de escritorio y móvil: apertura/cierre, respuesta local, ausencia de llamadas a proveedores, limpieza al cambiar de práctica, conservación durante un render, no persistencia, accesibilidad básica y activación explícita de voz.
+
+```bash
+npm run test:e2e
+npm run test:e2e:headed
+npx playwright show-report
+```
+
+Playwright inicia automáticamente `server.js` en el puerto 3000. El workflow `.github/workflows/tests.yml` ejecuta las pruebas unitarias y la matriz E2E en cada Pull Request y en cambios sobre `main`. En caso de fallo conserva el informe, trazas, capturas y video como artefactos de GitHub Actions.
 
 ## Estructura
 
@@ -60,6 +72,14 @@ TODO.md        Criterios del alcance y estado del producto
 ## Repositorio
 
 El código fuente está en el [repositorio privado de GitHub](https://github.com/hubgunter4-ops/contaia-practicas-ia). El sitio no requiere credenciales, base de datos ni configuración de servicios externos.
+
+## Tutor local de Nora
+
+La vista de cada práctica incluye un panel plegable **Nora · Tutor local**. El panel utiliza el escenario, la consigna, las pistas y la etapa pedagógica del ejercicio para ofrecer ayudas preparadas en español: pista, reformulación, siguiente paso y explicación después de la comparación autorizada.
+
+El tutor funciona completamente en el navegador: no usa `fetch`, SSE, cuentas, proveedores externos ni almacenamiento de conversaciones. El historial se mantiene únicamente en memoria durante la sesión y no se incorpora al progreso, al CSV ni al portafolio. La interfaz identifica de forma visible que se trata de respuestas locales y no de un modelo generativo conectado.
+
+La voz opcional usa `SpeechSynthesis` del navegador, está apagada por defecto, se activa mediante un clic explícito y puede cancelarse. Si el navegador no ofrece Web Speech API, el control queda deshabilitado. Los estados del tutor, el panel, el foco y la región de mensajes están preparados para teclado, lector de pantalla, móvil y `prefers-reduced-motion`.
 
 [^1]: Alegra Academy. “Inteligencia Artificial para Contadores”. https://academy.alegra.com/courses/ia-para-contadores/
 [^2]: Edutin. “Curso de IA para contabilidad”. https://edutin.com/curso-de-ia-para-contabilidad
