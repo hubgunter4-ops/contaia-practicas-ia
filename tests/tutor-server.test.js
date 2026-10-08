@@ -101,6 +101,8 @@ test("cada proveedor usa el endpoint, modelo y clave Gateway que le corresponden
     assert.equal(gatewayBody.stream, true);
     assert.equal(gatewayBody.max_tokens, 450);
     assert.equal(gatewayBody.messages[0].role, "system");
+    assert.match(gatewayBody.messages[0].content, /calcula primero los totales y la diferencia/i);
+    assert.match(gatewayBody.messages[0].content, /no retrases la detección de un descuadre/i);
     assert.equal(gatewayBody.messages.at(-2).content, "Primera pregunta");
     assert.equal(gatewayBody.messages.at(-1).role, "user");
     assert.match(gatewayBody.messages.at(-1).content, /CONTEXTO CANÓNICO DEL CURSO/);
