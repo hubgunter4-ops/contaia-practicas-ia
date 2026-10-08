@@ -85,3 +85,11 @@
 - [x] Mostrar solo iframes aprobados de Synthesia en el dominio y ruta oficiales; no aceptar HTML arbitrario y avisar que el player carga desde un tercero.
 - [x] Cubrir el prompt curricular, las URL hostiles y los estados de copia/pendiente en pruebas unitarias y E2E de escritorio y móvil.
 - [ ] Generar, revisar y publicar los videos reales y añadir sus IDs aprobados a `COURSE_VIDEO_LIBRARY`; no hay enlaces publicados en este cambio.
+
+## Sección 9: proveedor del tutor mediante Vercel AI Gateway
+
+- [x] Enrutar las llamadas del backend para los modelos OpenAI y Anthropic por Chat Completions de AI Gateway, con una clave y un ID de modelo por ruta.
+- [x] Mantener el streaming SSE, la selección del proveedor, el contexto canónico y el tratamiento privado de errores sin divulgar las claves ni usar fallback local.
+- [x] Documentar las cuatro variables del servidor, el prefijo de ID de modelo, el nivel gratuito y los presupuestos de USD 10/mes por clave.
+- [x] Validar ambas rutas simuladas, presupuesto agotado (402), límites (429), autenticación inválida y SSE fragmentado: 60 unit tests, 34 E2E y build Vercel pasan.
+- [ ] Crear/conectar un proyecto Vercel al repositorio ContaIA; guardar dos claves Gateway dedicadas con USD 10/mes cada una, restringidas a `projectId` si está disponible, elegir modelos y desplegar tras recuperar el acceso. No incluir claves en el repo o el chat.

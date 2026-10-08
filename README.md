@@ -6,23 +6,29 @@ Aplicación educativa en español para aprender IA aplicada a la contaduría en 
 
 Nora aparece como un único panel accesible desde **Curso completo**, **Laboratorio práctico** y **Base de estudio**. El hilo se conserva mientras la pestaña está abierta, se actualiza el contexto cuando se cambia de módulo o práctica y se descarta al recargar. Sus estados animados distinguen disponibilidad, pensamiento, explicación y celebración; se respeta `prefers-reduced-motion`. La voz es opcional y se activa solo con una acción explícita.
 
-Las respuestas se generan en un backend Node de Vercel (streaming SSE); **no existe una respuesta local preprogramada como sustituto**. Se puede configurar OpenAI o Anthropic desde variables privadas del servidor:
+Las respuestas se generan en un backend Node de Vercel que enruta **OpenAI y Anthropic a través de Vercel AI Gateway** y transmite SSE; **no existe una respuesta local preprogramada como sustituto**. Nora selecciona una de las dos rutas y el servidor mantiene sus claves separadas:
 
 - `AI_PROVIDER_DEFAULT`: `openai` o `anthropic`.
-- `OPENAI_API_KEY` y `OPENAI_MODEL`, o `ANTHROPIC_API_KEY` y `ANTHROPIC_MODEL`.
+- `AI_GATEWAY_OPENAI_API_KEY` y `AI_GATEWAY_OPENAI_MODEL`, por ejemplo `openai/<modelo-del-catálogo>`.
+- `AI_GATEWAY_ANTHROPIC_API_KEY` y `AI_GATEWAY_ANTHROPIC_MODEL`, por ejemplo `anthropic/<modelo-del-catálogo>`.
 - `TUTOR_ALLOWED_ORIGINS`: orígenes HTTPS exactos separados por comas si la página está en otro dominio; déjalo vacío si el front-end y la función comparten dominio.
 
-Para desarrollo local, copia `.env.example` a `.env`, completa las variables fuera del repositorio y ejecuta `npm run dev`. Nunca pongas claves en `public/tutor-config.js`, HTML, variables `VITE_*` ni en un mensaje o commit.
+Para desarrollo local, copia `.env.example` a `.env`, configura credenciales Gateway fuera del repositorio y ejecuta `npm run dev`. Nunca pongas claves en `public/tutor-config.js`, HTML, variables `VITE_*`, en el chat o en un commit. El backend ya no llama directamente a las API de OpenAI ni Anthropic.
 
 ### Publicar el backend en Vercel
 
-1. Importa el repositorio `hubgunter4-ops/contaia-practicas-ia` en Vercel.
+1. Importa el repositorio `hubgunter4-ops/contaia-practicas-ia` como un proyecto conectado a GitHub; no reutilices un proyecto Vercel Drop sin vínculo al repositorio.
 2. Usa el comando de build `npm run build:vercel`, el directorio de salida `dist` y el runtime Node.js compatible con `package.json`.
-3. Añade las variables anteriores en Vercel → Project Settings → Environment Variables para los entornos necesarios y configura al menos un proveedor/modelo.
-4. Despliega el proyecto. Las Functions quedan en `/api/tutor/config` y `/api/tutor/stream`; la clave solo se usa en el servidor.
-5. Si el front-end continúa publicado en GitHub Pages, pon el origen de la API de Vercel (por ejemplo, `https://tu-proyecto.vercel.app`) en `window.CONTAIA_TUTOR_API_BASE` dentro de `public/tutor-config.js`, vuelve a publicar la página y configura el origen exacto de GitHub Pages en `TUTOR_ALLOWED_ORIGINS` de Vercel. La alternativa más sencilla es publicar el front-end y la API bajo el mismo proyecto/dominio de Vercel.
+3. En Vercel AI Gateway crea dos claves dedicadas a ContaIA, una para cada ruta, y asigna a **cada clave un presupuesto mensual de USD 10**. El límite de gasto es por clave; si la consola lo permite, restringe también cada clave al proyecto ContaIA (`projectId`). No reutilices las claves en otras aplicaciones y revisa el consumo en el panel de AI Gateway.
+4. Añade en Vercel → Project Settings → Environment Variables las cuatro variables Gateway como secretos. Configura los IDs `openai/<modelo>` y `anthropic/<modelo>` desde el catálogo vigente y deja `AI_PROVIDER_DEFAULT=openai` (o cambia a `anthropic`). No añadas claves directas de los proveedores.
+5. Despliega el proyecto. Las Functions quedan en `/api/tutor/config` y `/api/tutor/stream`; las claves solo se leen en el servidor.
+6. Si el front-end continúa publicado en GitHub Pages, pon el origen de la API de Vercel en `window.CONTAIA_TUTOR_API_BASE` dentro de `public/tutor-config.js`, vuelve a publicar la página y configura el origen exacto de GitHub Pages en `TUTOR_ALLOWED_ORIGINS`. La opción más sencilla es servir front-end y API bajo el mismo dominio Vercel.
 
-Si el backend no tiene proveedor o el sitio no puede alcanzarlo, Nora lo comunica y no inventa una respuesta de demostración. Las respuestas se transmiten por fragmentos SSE y el cliente puede cancelar una generación. El límite de solicitudes por IP en memoria es una protección básica por instancia, no un limitador distribuido. **CORS no es autenticación:** el endpoint público puede recibir llamadas directas fuera del navegador. Antes de asociar una clave real, configura límites de gasto en el proveedor y protección/rate limiting de Vercel (o un limitador distribuido); no uses este límite en memoria como única barrera de costos.
+El nivel gratuito de AI Gateway incluye un subconjunto de modelos y tiene límites de uso; la pantalla de Vercel compartida muestra USD 5/mes de créditos para ese nivel. Comprar créditos pasa la cuenta al nivel de pago y deja de aplicar el crédito gratuito mensual. La recarga automática es opcional y debe permanecer desactivada. Al agotar el presupuesto/saldo, Nora mostrará un aviso seguro; los presupuestos de Gateway son *soft caps*, así que una petición que cruce el límite puede terminar y producir un pequeño exceso. No se comprarán créditos ni se activará auto-top-up desde este flujo.
+
+Las respuestas se transmiten por fragmentos SSE y el cliente puede cancelar una generación. El límite de solicitudes por IP en memoria es una protección básica por instancia, no un limitador distribuido. **CORS no es autenticación:** el endpoint público puede recibir llamadas directas fuera del navegador. Conserva límites de gasto en AI Gateway y protección/rate limiting de Vercel; no uses el límite en memoria como única barrera de costos.
+
+Referencias operativas: [Chat Completions en Vercel AI Gateway](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions), [streaming SSE](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/streaming), [claves API](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys) y [presupuestos](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets).
 
 ## Qué datos procesa el tutor
 
