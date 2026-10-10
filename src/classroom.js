@@ -110,7 +110,7 @@ function renderSceneContent(scene, module) {
     const deliverable = module.guide?.deliverable || module.outcome || module.focus;
     const tool = module.toolkit?.[0];
     const toolHelp = tool ? `<p class="classroom-action-tool"><b>Opción para practicar:</b> ${escapeHtml(tool.name)} · ${escapeHtml(tool.activity)} <span>${escapeHtml(tool.guardrail)}</span></p>` : "";
-    return `<section class="classroom-action-card" aria-labelledby="classroom-action-title"><p class="classroom-action-counter">ACCIÓN ${String(scene.stepIndex + 1).padStart(2, "0")} / ${String(scene.stepCount).padStart(2, "0")} · LA HACES TÚ</p><h4 id="classroom-action-title">Tu instrucción</h4><p class="classroom-action-instruction" data-testid="classroom-current-instruction">${escapeHtml(scene.activeStep)}</p><div class="classroom-action-how"><b>Cómo ejecutarla</b><ol><li>Abre una nota local o una herramienta que tú elijas.</li><li>Usa este material ficticio: ${escapeHtml(material)}</li><li>Haz la acción indicada y conserva el resultado contigo. Tu producto final será: ${escapeHtml(deliverable)}</li></ol>${toolHelp}</div><p class="classroom-action-hint">No uses datos reales. ContaIA no abre herramientas ni ejecuta la actividad por ti.</p><button type="button" class="button button-primary classroom-action-done" data-action="classroom-practice-step-done">Lo hice · siguiente instrucción <span aria-hidden="true">→</span></button></section>`;
+    return `<section class="classroom-action-card" aria-labelledby="classroom-action-title"><p class="classroom-action-counter">ACCIÓN ${String(scene.stepIndex + 1).padStart(2, "0")} / ${String(scene.stepCount).padStart(2, "0")} · LA HACES TÚ</p><h4 id="classroom-action-title">Tu instrucción</h4><p class="classroom-action-instruction" data-testid="classroom-current-instruction">${escapeHtml(scene.activeStep)}</p><div class="classroom-action-how"><b>Cómo ejecutarla</b><ol><li>Abre una nota local o una herramienta que tú elijas.</li><li>Usa este material ficticio: ${escapeHtml(material)}</li><li>Haz la acción indicada y conserva el resultado contigo. Tu producto final será: ${escapeHtml(deliverable)}</li></ol>${toolHelp}</div><p class="classroom-action-hint">No uses datos reales. ContaIA no abre herramientas ni ejecuta la actividad por ti.</p><button type="button" class="classroom-advisor-open" data-action="tutor-open">Abrir asesoría para este paso ${module.context?.documents?.length ? "· consultar un documento" : ""}</button><button type="button" class="button button-primary classroom-action-done" data-action="classroom-practice-step-done">Lo hice · siguiente instrucción <span aria-hidden="true">→</span></button></section>`;
   }
   return `<p class="classroom-guardrail">${escapeHtml(module.focus)}</p>`;
 }
@@ -130,18 +130,13 @@ function renderResources(module) {
   return `<details class="classroom-resources"><summary>Material y herramientas de apoyo <span aria-hidden="true">＋</span></summary><div class="classroom-resource-body">${docs || fields ? `<div class="classroom-resource-grid">${docs}${fields}</div>` : ""}${context?.format ? `<p><b>Formato sugerido:</b> ${escapeHtml(context.format)}</p>` : ""}${context?.protect ? `<p class="classroom-privacy"><b>Privacidad:</b> ${escapeHtml(context.protect)}</p>` : ""}${tools ? `<div class="classroom-tools"><b>Herramientas opcionales</b>${tools}</div>` : ""}${material}</div></details>`;
 }
 
-export function renderClassroom({ modules, exercises, state, onboarding = "", glossary = "", tutorPanel = "", assetPath = (file) => file, avatarLabel = "Nora está lista.", voiceSupported = false, anam = { status: "idle", error: "" } }) {
+export function renderClassroom({ modules, exercises, state, onboarding = "", glossary = "", assetPath = (file) => file, avatarLabel = "Nora está lista.", voiceSupported = false, anam = { status: "idle", error: "" } }) {
   const moduleIndex = Math.max(0, modules.findIndex(({ id }) => id === state.activeModuleId));
   const module = modules[moduleIndex] ?? modules[0];
   const scene = buildClassroomScene(module, state.coursePhaseIndex, state.practiceStepIndex);
   const exercise = exercises.find(({ id }) => module.exerciseIds?.includes(id));
   const completedCount = state.completedModules.size;
   const percent = Math.round((completedCount / modules.length) * 100);
-  const moduleButtons = modules.map((item, index) => {
-    const selected = item.id === module.id;
-    const completed = state.completedModules.has(item.id);
-    return `<li><button type="button" class="classroom-module-button ${selected ? "is-active" : ""} ${completed ? "is-complete" : ""}" data-class-module="${escapeHtml(item.id)}" aria-current="${selected ? "step" : "false"}" aria-label="Clase ${String(index + 1).padStart(2, "0")}: ${escapeHtml(item.title)}${completed ? ", completada" : ""}"><span class="classroom-module-number">${String(index + 1).padStart(2, "0")}</span><span class="classroom-module-title">${escapeHtml(item.title)}</span><span class="classroom-module-mark" aria-hidden="true">${completed ? "✓" : ""}</span></button></li>`;
-  }).join("");
   const highestUnlockedPhase = state.highestUnlockedPhase ?? 0;
   const phaseButtons = CLASSROOM_PHASES.map((phase, index) => `<button type="button" class="classroom-phase-button ${scene.phaseIndex === index ? "is-active" : ""} ${scene.phaseIndex > index ? "is-past" : ""}" data-class-phase="${index}" aria-current="${scene.phaseIndex === index ? "step" : "false"}" ${index > highestUnlockedPhase ? "disabled" : ""}><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(phase.label)}</b></button>`).join("");
   const nextModule = modules[moduleIndex + 1];
@@ -166,8 +161,7 @@ export function renderClassroom({ modules, exercises, state, onboarding = "", gl
 
   return `<main id="contenido" class="content classroom-content" tabindex="-1">
     <header class="classroom-heading"><div><p class="eyebrow">AULA GUIADA · CON NORA</p><h1>Una acción<br/><em>a la vez.</em></h1><p>Nora te explica, te da una instrucción y espera. Tú ejecutas cada paso con el caso ficticio y decides cuándo continuar.</p></div><div class="classroom-course-progress"><span>AVANCE DEL RECORRIDO</span><b>${completedCount}<small> / ${modules.length} clases</small></b><div class="progress-track" role="progressbar" aria-label="Clases completadas" aria-valuenow="${completedCount}" aria-valuemin="0" aria-valuemax="${modules.length}"><span style="width:${percent}%"></span></div><button type="button" class="classroom-portfolio-link" data-action="download-portfolio">Descargar portafolio ↓</button></div></header>
-    <div class="classroom-layout">
-      <aside class="classroom-rail" aria-label="Índice del curso"><div class="classroom-rail-heading"><p class="eyebrow">TU RECORRIDO</p><h2>Clases</h2><span>${String(moduleIndex + 1).padStart(2, "0")} / ${String(modules.length).padStart(2, "0")}</span></div><nav aria-label="Seleccionar clase"><ol class="classroom-module-list">${moduleButtons}</ol></nav><div class="classroom-rail-footer"><b>CASOS FICTICIOS</b><p>Usa ejemplos simulados. No compartas datos reales, personales o confidenciales.</p><button type="button" class="classroom-rail-link" data-section="lab">Ver prácticas simuladas ↗</button></div></aside>
+    <div class="classroom-layout classroom-layout-live">
       <section class="classroom-stage" data-testid="classroom-stage" aria-labelledby="classroom-module-title">
         <header class="classroom-stage-heading"><div><p class="eyebrow">CLASE ${String(module.week).padStart(2, "0")} · FASE ${String(scene.phaseIndex + 1).padStart(2, "0")} DE ${CLASSROOM_PHASES.length}</p><h2 id="classroom-module-title">${escapeHtml(module.title)}</h2></div><span class="classroom-outcome">${state.completedModules.has(module.id) ? "COMPLETADA ✓" : "EN CURSO"}</span></header>
         <nav class="classroom-phase-nav" aria-label="Fases de la clase">${phaseButtons}</nav>
@@ -178,7 +172,6 @@ export function renderClassroom({ modules, exercises, state, onboarding = "", gl
         ${renderResources(module)}
         <p class="classroom-storage-note" role="status">${escapeHtml(state.storageWarning || "Tu progreso de clases y prácticas se guarda localmente; el chat y tus respuestas no se almacenan.")}</p>
       </section>
-      ${tutorPanel}
     </div>
     ${onboarding}
     ${glossary}

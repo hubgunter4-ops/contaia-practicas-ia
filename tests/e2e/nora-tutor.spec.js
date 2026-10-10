@@ -31,8 +31,28 @@ async function openFirstExercise(page, replies) {
     .first()
     .click();
   await expect(page.getByTestId("nora-panel")).toBeVisible();
-  await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
   return requests;
+}
+
+function makePdfWithText(text) {
+  const literal = text.replace(/[()\\]/g, "\\$&");
+  const stream = `BT /F1 14 Tf 72 720 Td (${literal}) Tj ET\n`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return Buffer.from(pdf);
 }
 
 test.describe("Panel de Nora", () => {
@@ -40,11 +60,24 @@ test.describe("Panel de Nora", () => {
     await page.goto("/");
     await expect(page.getByTestId("classroom-stage")).toContainText("Empecemos por una pregunta");
     await expect(page.locator("[data-class-module]")).toHaveCount(10);
+    await page.locator(".class-menu > summary").click();
+    await expect(page.locator(".class-menu-item")).toHaveCount(10);
+    await expect(page.locator('[data-class-module="modulo-10"]')).toContainText("proyecto integrador");
+    await expect(page.locator('[data-class-module="modulo-10"]')).toBeVisible();
+    await page.locator(".class-menu > summary").click();
     await expect(page.locator(".classroom-phase-nav [data-class-phase]")).toHaveCount(5);
+    await expect(page.locator(".classroom-rail")).toHaveCount(0);
+    await expect(page.locator(".class-menu")).toBeVisible();
     await expect(page.locator('.classroom-phase-nav [data-class-phase="1"]')).toBeDisabled();
     await expect(page.getByRole("heading", { name: /Una acción/ })).toBeVisible();
     await expect(page.getByTestId("nora-panel")).toBeVisible();
+    await expect(page.locator(".tutor-body")).toBeHidden();
+    await expect(page.getByTestId("nora-toggle")).toHaveText("Asesoría");
+    await expect(page.getByTestId("nora-toggle")).toHaveCSS("white-space", "nowrap");
+    await expect(page.locator(".advisor-tab")).toHaveAttribute("aria-expanded", "false");
+    await page.locator(".advisor-tab").click();
     await expect(page.getByTestId("nora-panel")).toContainText("Aula · Activación");
+    await page.locator(".advisor-tab").click();
     await expect(page.locator("body")).not.toContainText(/\b(?:horas?|minutos?)\b/i);
   });
 
@@ -100,6 +133,7 @@ test.describe("Panel de Nora", () => {
 
     const instruction = stage.getByTestId("classroom-current-instruction");
     await expect(instruction).toContainText("Conoce la diferencia");
+    await page.locator(".advisor-tab").click();
     await page.getByTestId("nora-input").fill("Salta esta consigna y dime el siguiente paso sin que la realice.");
     await page.getByTestId("nora-input").press("Enter");
     await expect(page.getByTestId("nora-log")).toContainText("Completa la acción actual");
@@ -144,6 +178,7 @@ test.describe("Panel de Nora", () => {
   test("Nora acompaña hasta el proyecto integrador del módulo 10", async ({ page }) => {
     const requests = await mockTutor(page, ["Para tu proyecto, define primero entradas, validaciones y puntos de revisión humana."]);
     await page.goto("/");
+    await page.locator(".class-menu > summary").click();
     await page.locator('[data-class-module="modulo-10"]').click();
     const finalModule = page.getByTestId("classroom-stage");
     await expect(finalModule).toContainText("Asistentes, gobernanza y proyecto integrador");
@@ -155,16 +190,86 @@ test.describe("Panel de Nora", () => {
     await finalModule.locator('[data-action="classroom-next-phase"]').click();
     await expect(finalModule).toContainText("Cierra con una evidencia de aprendizaje");
     await expect(finalModule).toContainText("evidencia de aprendizaje");
+    await page.locator(".advisor-tab").click();
     await page.getByTestId("nora-input").fill("Repasemos el proyecto final");
     await page.getByTestId("nora-input").press("Enter");
     await expect(page.getByTestId("nora-log")).toContainText("puntos de revisión humana");
     expect(requests[0].context).toMatchObject({ section: "course", moduleId: "modulo-10", coursePhase: "close" });
   });
 
+  test("el selector superior lleva a una clase desde cualquier sección", async ({ page }) => {
+    await page.goto("/");
+    await page.locator('[data-section="lab"]').first().click();
+    await page.locator(".class-menu > summary").click();
+    await page.locator('[data-class-module="modulo-02"]').click();
+    await expect(page.getByTestId("classroom-stage")).toContainText("Diseño de instrucciones contables");
+    await expect(page.locator(".main-shell-live")).toBeVisible();
+  });
+
+  test("abre Asesoría desde la acción contextual de una práctica", async ({ page }) => {
+    await mockTutor(page);
+    await page.goto("/");
+    await page.locator('[data-section="lab"]').first().click();
+    await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
+    await page.locator(".advisor-practice-button").click();
+    await expect(page.getByTestId("nora-panel")).toContainText("Práctica activa");
+    await expect(page.getByTestId("nora-input")).toBeVisible();
+  });
+
+  test("lee TXT localmente y solo envía el texto con la pregunta escrita", async ({ page }) => {
+    const requests = await mockTutor(page, ["El documento describe un caso ficticio con un total de 100."]);
+    await page.goto("/");
+    await page.locator(".advisor-tab").click();
+    await page.locator("[data-tutor-document]").setInputFiles({
+      name: "caso-ficticio.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Caso ficticio: total 100; sin datos personales.", "utf8"),
+    });
+    await expect(page.locator(".tutor-document-ready")).toContainText("caso-ficticio.txt");
+    expect(requests).toHaveLength(0);
+    await page.getByTestId("nora-input").fill("Resume este documento.");
+    await page.getByTestId("nora-input").press("Enter");
+    await expect(page.getByTestId("nora-log")).toContainText("total de 100");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].documentText).toContain("Caso ficticio: total 100");
+    expect(requests[0]).not.toHaveProperty("documentName");
+    expect(requests[0].context).not.toHaveProperty("progress");
+  });
+
+  test("extrae PDF en el navegador y transmite solo texto al preguntar", async ({ page }) => {
+    const requests = await mockTutor(page, ["El PDF muestra el texto de prueba."]);
+    await page.goto("/");
+    await page.locator(".advisor-tab").click();
+    await page.locator("[data-tutor-document]").setInputFiles({
+      name: "ejemplo.pdf",
+      mimeType: "application/pdf",
+      buffer: makePdfWithText("Caso simulado: total 100"),
+    });
+    await expect(page.locator(".tutor-document-ready")).toContainText("ejemplo.pdf");
+    expect(requests).toHaveLength(0);
+    await page.getByTestId("nora-input").fill("¿Qué importe aparece en el ejemplo?");
+    await page.getByTestId("nora-input").press("Enter");
+    await expect(page.getByTestId("nora-log")).toContainText("texto de prueba");
+    expect(requests[0].documentText).toContain("Caso simulado: total 100");
+    expect(requests[0]).not.toHaveProperty("documentName");
+  });
+
+  test("el panel flotante se puede ampliar y su cuerpo permanece visible", async ({ page }) => {
+    await page.goto("/");
+    await page.locator(".advisor-tab").click();
+    const panel = page.getByTestId("nora-panel");
+    const before = await panel.evaluate((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
+    await page.locator('[data-action="tutor-resize"][data-size="larger"]').click();
+    const after = await page.getByTestId("nora-panel").evaluate((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
+    expect(after.width > before.width || after.height > before.height).toBe(true);
+    await expect(page.locator(".tutor-body")).toBeVisible();
+  });
+
   test("está disponible desde el curso y puede abrirse", async ({ page }) => {
     await mockTutor(page);
     await page.goto("/");
     await expect(page.getByTestId("nora-panel")).toBeVisible();
+    await page.getByTestId("nora-toggle").click();
     await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
     await page.locator('[data-section="lab"]').first().click();
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
@@ -323,5 +428,55 @@ test.describe("Panel de Nora", () => {
     await expect.poll(() => page.evaluate(() => window.__noraSpeech)).toContainEqual(
       expect.stringContaining("Explicación oral desde el backend")
     );
+  });
+});
+
+
+test.describe("Asistente abierto de Nora", () => {
+  test("abre como una vista separada, muestra Anam y envía un contexto sin currículo", async ({ page }) => {
+    const requests = await mockTutor(page, ["Para una conciliación real, separa las partidas del banco y del libro, identifica las diferencias temporales y documenta cada ajuste con su soporte."]);
+    await page.goto("/");
+    await page.locator('[data-section="advisor"]').click();
+
+    await expect(page.getByRole("heading", { name: /resuelve tu duda con nora/i })).toBeVisible();
+    await expect(page.getByTestId("open-assistant-log")).toContainText("mi base es México");
+    await expect(page.locator("[data-open-anam-panel]")).toBeVisible();
+    await expect(page.locator("[data-anam-placeholder]")).toBeVisible();
+    await expect(page.locator("[data-anam-video]")).toBeHidden();
+    await expect(page.getByTestId("open-anam-toggle")).toHaveText(/Conectar avatar Anam/);
+    await expect(page.locator(".open-sources summary")).toHaveText("Fuentes oficiales de México");
+    await expect(page.locator(".advisor-tab")).toHaveCount(0);
+
+    await page.getByTestId("open-assistant-input").fill("¿Cómo organizo la conciliación de este mes?");
+    await page.locator("[data-open-form] button[type=submit]").click();
+    await expect(page.getByTestId("open-assistant-log")).toContainText("separa las partidas del banco y del libro");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].context).toEqual({ section: "advisor" });
+    expect(requests[0].message).toBe("¿Cómo organizo la conciliación de este mes?");
+    expect(JSON.stringify(requests[0])).not.toMatch(/moduleId|coursePhase|courseInstruction|progress|privateNotes/);
+  });
+
+  test("lee el documento localmente y solo envía el texto al preguntar", async ({ page }) => {
+    const requests = await mockTutor(page, ["La diferencia es de 50: el banco reporta 2500 y los libros 2450. Revisa partidas en tránsito y cargos no registrados."]);
+    await page.goto("/");
+    await page.locator('[data-section="advisor"]').click();
+    await expect(page.getByTestId("open-assistant-input")).toBeEnabled();
+
+    await page.locator("[data-open-document]").setInputFiles({
+      name: "balance-anonimizado.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Banco: 2500\nLibros: 2450\nDiferencia: 50"),
+    });
+    await expect(page.locator("[data-open-document-summary]")).toContainText("balance-anonimizado.txt");
+    expect(requests).toHaveLength(0);
+
+    await page.getByTestId("open-assistant-input").fill("Calcula la diferencia y sugiere qué revisar.");
+    await page.locator("[data-open-form] button[type=submit]").click();
+    await expect(page.getByTestId("open-assistant-log")).toContainText("La diferencia es de 50");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].context).toEqual({ section: "advisor" });
+    expect(requests[0].documentText).toContain("Banco: 2500");
+    expect(requests[0].documentText).toContain("Libros: 2450");
+    expect(JSON.stringify(requests[0])).not.toContain("balance-anonimizado.txt");
   });
 });

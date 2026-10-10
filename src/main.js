@@ -25,6 +25,13 @@ const state = {
     messages: [{ role: "assistant", text: "Hola, soy Nora. Te acompañaré desde los primeros conceptos hasta el proyecto final. ¿Qué te gustaría entender hoy?" }],
     collapsed: true, voiceEnabled: false, avatarState: "idle", providers: [], defaultProvider: "", provider: "",
     configState: "loading", configError: "", pending: false, abortController: null,
+    panelWidth: 430, panelHeight: 610, documentText: "", documentName: "", documentTruncated: false,
+    documentPageCount: null, documentError: "", documentLoading: false,
+  },
+  openAssistant: {
+    messages: [{ role: "assistant", text: "Hola, soy Nora. Podemos repasar conceptos, explorar un procedimiento o razonar sobre una situación de tu entorno. Cuéntame qué necesitas; mi base es México y, si la duda es fiscal o normativa, dime el ejercicio o periodo." }],
+    pending: false, abortController: null, documentText: "", documentName: "", documentTruncated: false,
+    documentPageCount: null, documentError: "", documentLoading: false,
   },
   anam: { status: "idle", error: "", activity: "", client: null, abortController: null, lastUserMessageId: "", pendingTranscript: "" },
   activeModuleId: "modulo-01",
@@ -189,6 +196,7 @@ function tutorAvatarLabel() {
 }
 
 function getTutorContext() {
+  if (state.section === "advisor") return { section: "advisor" };
   const moduleId = state.activeModuleId || courseModules[0].id;
   const module = courseModules.find((item) => item.id === moduleId) ?? courseModules[0];
   if (state.section === "lab" && state.current !== "home") {
@@ -212,25 +220,50 @@ function getTutorContext() {
   }
   return { section: "study", moduleId: module.id };
 }
-
 function assetPath(filename) {
   return new URL(`../assets/nora/${filename}`, import.meta.url).href;
+}
+
+function tutorBusy() {
+  return state.tutor.pending || state.openAssistant.pending;
+}
+
+function activeTutorConversation(openMode = state.section === "advisor") {
+  return openMode ? state.openAssistant : state.tutor;
 }
 
 function refreshTutorPanel() {
   const panel = app.querySelector('[data-testid="nora-panel"]');
   if (panel) {
     const template = document.createElement("template");
-    template.innerHTML = renderTutorPanel(getTutorContext(), { embedded: state.section === "course" }).trim();
+    template.innerHTML = renderTutorPanel(getTutorContext()).trim();
     panel.replaceWith(template.content.firstElementChild);
   }
+  refreshOpenAssistant();
   refreshClassroomVisual();
 }
 
 function refreshClassroomVisual() {
+  const live = state.anam.status === "live";
+  const statusText = state.anam.error || state.anam.activity || (live ? "En vivo · el micrófono está activo." : state.anam.status === "connecting" ? "Conectando con Nora…" : "Conecta a Nora cuando quieras iniciar voz y video.");
+  const openPanel = app.querySelector("[data-open-anam-panel]");
+  if (openPanel) {
+    openPanel.classList.toggle("is-live", live);
+    const video = openPanel.querySelector("[data-anam-video]");
+    if (video) video.hidden = !live;
+    const placeholder = openPanel.querySelector("[data-anam-placeholder]");
+    if (placeholder) placeholder.hidden = live;
+  }
+  const liveStatus = app.querySelector("[data-anam-status]");
+  if (liveStatus) liveStatus.textContent = statusText;
+  const liveButton = app.querySelector("[data-action='anam-toggle']");
+  if (liveButton) {
+    liveButton.disabled = state.anam.status === "connecting";
+    liveButton.setAttribute("aria-pressed", String(live));
+    liveButton.innerHTML = `${live ? "Desconectar avatar" : state.anam.status === "connecting" ? "Conectando…" : "Conectar avatar Anam"} <span aria-hidden="true">${live ? "Ⅱ" : state.anam.status === "connecting" ? "…" : "◉"}</span>`;
+  }
   const character = app.querySelector("[data-classroom-character]");
   if (!character) return;
-  const live = state.anam.status === "live";
   const label = live ? "Nora está impartiendo la clase en vivo." : tutorAvatarLabel();
   const image = character.querySelector("img");
   if (image) {
@@ -242,16 +275,8 @@ function refreshClassroomVisual() {
   character.classList.toggle("is-live", live);
   character.setAttribute("aria-label", label);
   character.classList.toggle("is-speaking", state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled);
-  const status = character.querySelector("[data-classroom-avatar-status]");
-  if (status) status.textContent = label;
-  const liveStatus = app.querySelector("[data-anam-status]");
-  if (liveStatus) liveStatus.textContent = state.anam.error || state.anam.activity || (live ? "En vivo · el micrófono está activo." : state.anam.status === "connecting" ? "Conectando con Nora…" : "Al conectar, Anam procesará el audio para la transcripción.");
-  const liveButton = app.querySelector("[data-action='anam-toggle']");
-  if (liveButton) {
-    liveButton.disabled = state.anam.status === "connecting";
-    liveButton.setAttribute("aria-pressed", String(live));
-    liveButton.innerHTML = `${live ? "Desconectar avatar" : state.anam.status === "connecting" ? "Conectando…" : "Conectar avatar en vivo"} <span aria-hidden="true">${live ? "Ⅱ" : state.anam.status === "connecting" ? "…" : "◉"}</span>`;
-  }
+  const characterStatus = character.querySelector("[data-classroom-avatar-status]");
+  if (characterStatus) characterStatus.textContent = live ? "Nora está en vivo." : label;
   const voiceLabel = app.querySelector("[data-classroom-voice-label]");
   const voiceIcon = app.querySelector("[data-classroom-voice-icon]");
   const classroomVoiceButton = app.querySelector("[data-classroom-voice-button]");
@@ -269,7 +294,7 @@ const tutorSpeaker = createSpeechSpeaker({
   },
 });
 
-function renderTutorPanel(context, { embedded = false } = {}) {
+function renderTutorPanel(context) {
   const provider = state.tutor.providers.find(({ id }) => id === state.tutor.provider);
   const status = state.tutor.pending ? "Nora está pensando…"
     : state.tutor.configState === "loading" ? "Conectando con la tutora…"
@@ -279,42 +304,178 @@ function renderTutorPanel(context, { embedded = false } = {}) {
   const bodyId = "tutor-panel-body";
   const providerPicker = state.tutor.providers.length > 1 ? `<label class="tutor-provider-label" for="tutor-provider">Modelo <select id="tutor-provider" data-tutor-provider>${state.tutor.providers.map((item) => `<option value="${escapeHtml(item.id)}" ${state.tutor.provider === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</select></label>` : "";
   const phaseLabel = CLASSROOM_PHASES.find(({ id }) => id === context.coursePhase)?.label;
-  const collapsed = !embedded && state.tutor.collapsed;
-  return `<section class="tutor-panel ${embedded ? "tutor-panel-embedded is-open" : collapsed ? "is-collapsed" : "is-open"}" data-testid="nora-panel" aria-labelledby="tutor-heading" data-tutor-context="${escapeHtml(context.section)}">
+  const collapsed = state.tutor.collapsed;
+  const width = Math.max(340, Math.min(state.tutor.panelWidth, window.innerWidth - 24));
+  const height = Math.max(420, Math.min(state.tutor.panelHeight, window.innerHeight - 28));
+  const panelStyle = collapsed ? "" : `style="width:${width}px;height:${height}px"`;
+  const contextNote = context.section === "lab" ? "Práctica activa · tú haces cada acción"
+    : context.section === "study" ? "Base de estudio · tus notas no se comparten"
+      : `Aula · ${phaseLabel || "aprendizaje paso a paso"}${context.coursePhase === "practice" ? " · tú ejecutas la práctica" : ""}`;
+  const documentSummary = state.tutor.documentText
+    ? `<div class="tutor-document-ready"><span><b>${escapeHtml(state.tutor.documentName)}</b> · ${state.tutor.documentText.length.toLocaleString("es-MX")} caracteres${state.tutor.documentPageCount ? ` · ${state.tutor.documentPageCount} páginas` : ""}${state.tutor.documentTruncated ? " · extracto limitado" : ""}</span><button type="button" class="tutor-document-remove" data-action="tutor-document-remove" ${state.tutor.pending ? "disabled" : ""}>Quitar</button></div>`
+    : "";
+  return `<section class="tutor-panel ${collapsed ? "is-collapsed" : "is-open"}" ${panelStyle} data-testid="nora-panel" aria-labelledby="tutor-heading" data-tutor-context="${escapeHtml(context.section)}">
     <header class="tutor-header">
       <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><img src="${escapeHtml(assetPath(`nora-${state.tutor.avatarState}.webp`))}" alt="" width="600" height="800" fetchpriority="low"/></div><div><p class="tutor-kicker">TUTORA DEL RECORRIDO</p><h2 id="tutor-heading">Nora</h2><span class="tutor-status" data-testid="nora-status"><i aria-hidden="true"></i>${escapeHtml(status)}</span></div></div>
-      <div class="tutor-controls">${providerPicker}<button class="tutor-control tutor-voice" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Voz"}</button>${embedded ? "" : `<button class="tutor-control tutor-toggle" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-label="${state.tutor.collapsed ? "Abrir conversación con Nora" : "Cerrar conversación con Nora"}" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Hablar con Nora" : "Cerrar"}</button>`}</div>
+      <div class="tutor-controls">${providerPicker}<button class="tutor-control tutor-voice" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Voz"}</button>${collapsed ? "" : `<button class="tutor-control tutor-resize-control" type="button" data-action="tutor-resize" data-size="smaller" aria-label="Reducir tamaño del panel">−</button><button class="tutor-control tutor-resize-control" type="button" data-action="tutor-resize" data-size="larger" aria-label="Ampliar tamaño del panel">＋</button>`}<button class="tutor-control tutor-toggle" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-label="${collapsed ? "Abrir asesoría de Nora" : "Cerrar asesoría de Nora"}" aria-expanded="${!collapsed}" aria-controls="${bodyId}">${collapsed ? "Asesoría" : "Cerrar"}</button></div>
     </header>
     <div id="${bodyId}" class="tutor-body" ${collapsed ? "hidden" : ""}>
-      <div class="tutor-context-note">${context.section === "lab" ? "Práctica activa" : context.section === "study" ? "Base de estudio · tus notas no se comparten" : `Aula · ${escapeHtml(phaseLabel || "aprendizaje paso a paso")}`}</div>
+      <div class="tutor-context-note">${escapeHtml(contextNote)}</div>
       <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages}</div>
       ${state.tutor.configError ? `<p class="tutor-error" role="status">${escapeHtml(state.tutor.configError)}</p>` : ""}
+      <section class="tutor-document" aria-label="Consulta de documento"><div class="tutor-document-heading"><b>APOYO CON DOCUMENTO</b><span>PDF · TXT · CSV</span></div><label class="tutor-document-select" for="tutor-document">${state.tutor.documentLoading ? "Leyendo en este navegador…" : state.tutor.documentText ? "Cambiar documento" : "Adjuntar documento"}<input id="tutor-document" type="file" data-tutor-document accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv" ${state.tutor.pending || state.tutor.documentLoading ? "disabled" : ""}/></label>${documentSummary}<p class="tutor-document-note">El archivo se procesa localmente. Su texto solo se envía al backend y al proveedor IA cuando envías una pregunta escrita desde aquí; el nombre no se comparte.</p>${state.tutor.documentError ? `<p class="tutor-error tutor-document-error" role="status">${escapeHtml(state.tutor.documentError)}</p>` : ""}</section>
       <form class="tutor-form" data-testid="nora-form" data-tutor-form>
-        <label class="sr-only" for="tutor-input">Pregunta a Nora, tu tutora IA</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="2000" autocomplete="off" placeholder="Escribe una pregunta sobre el curso…" ${state.tutor.pending || !provider ? "disabled" : ""}/><button class="button button-primary" type="submit" ${state.tutor.pending || !provider ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button>
+        <label class="sr-only" for="tutor-input">Pregunta a Nora, tu tutora IA</label><input id="tutor-input" data-testid="nora-input" data-tutor-input maxlength="2000" autocomplete="off" placeholder="Pregunta sobre el paso o documento…" ${state.tutor.pending || !provider || state.tutor.documentLoading ? "disabled" : ""}/><button class="button button-primary" type="submit" ${state.tutor.pending || !provider || state.tutor.documentLoading ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button>
       </form>
       ${state.tutor.pending ? '<button type="button" class="tutor-stop" data-action="tutor-cancel">Detener respuesta</button>' : ""}
-      <p class="tutor-disclaimer">Las preguntas se procesan por el proveedor de IA configurado. No compartas datos reales, personales ni confidenciales. El progreso, tus notas y el portafolio no se envían; este chat no se guarda.</p>
+      <p class="tutor-disclaimer">No compartas datos reales, personales ni confidenciales. Tus notas y el progreso guardado no se envían. Las conversaciones y el texto del documento no se guardan en ContaIA.</p>
     </div>
   </section>`;
 }
 
-async function sendTutorMessage(text) {
+function renderOpenAssistantMessages() {
+  return state.openAssistant.messages.map((message) => `<article class="open-message open-message-${message.role}" data-testid="open-assistant-message"><span class="open-message-label">${message.role === "assistant" ? "NORA" : "TÚ"}</span><p ${message.streaming ? 'data-open-stream="true"' : ""}>${escapeHtml(message.text || (message.streaming ? "Nora está pensando…" : ""))}</p></article>`).join("");
+}
+
+function openAssistantDocumentSummary() {
+  const doc = state.openAssistant;
+  if (!doc.documentText) return "";
+  return `<div class="open-document-ready"><span><b>${escapeHtml(doc.documentName)}</b> · ${doc.documentText.length.toLocaleString("es-MX")} caracteres${doc.documentPageCount ? ` · ${doc.documentPageCount} páginas` : ""}${doc.documentTruncated ? " · extracto limitado" : ""}</span><button type="button" data-action="open-document-remove" ${tutorBusy() ? "disabled" : ""}>Quitar</button></div>`;
+}
+
+function renderOpenAssistant() {
+  const provider = state.tutor.providers.find(({ id }) => id === state.tutor.provider);
+  const busy = tutorBusy();
+  const connectionStatus = busy ? "Nora está respondiendo…"
+    : state.tutor.configState === "loading" ? "Conectando con Nora…"
+      : state.tutor.configError ? "Revisa la conexión de Nora"
+        : provider ? `Disponible · ${provider.label}` : "IA sin configurar en el servidor";
+  const providerPicker = state.tutor.providers.length > 1 ? `<label class="open-provider-label" for="open-tutor-provider">Modelo<select id="open-tutor-provider" data-tutor-provider>${state.tutor.providers.map((item) => `<option value="${escapeHtml(item.id)}" ${state.tutor.provider === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</select></label>` : "";
+  const live = state.anam.status === "live";
+  const connecting = state.anam.status === "connecting";
+  const liveButtonLabel = live ? "Desconectar avatar" : connecting ? "Conectando…" : "Conectar avatar Anam";
+  const liveStatus = state.anam.error || state.anam.activity || (live ? "En vivo · puedes hablar o escribir." : connecting ? "Conectando con Nora…" : "El micrófono solo se solicita al conectar.");
+  const voiceLabel = state.tutor.voiceEnabled ? "Voz activada" : "Activar voz";
+  return `<main id="contenido" class="content open-assistant-content" data-open-assistant tabindex="-1">
+    <header class="open-assistant-heading"><div><p class="eyebrow">CONVERSACIÓN ABIERTA · MÉXICO</p><h1>Resuelve tu duda<br/><em>con Nora.</em></h1><p>Repasa un concepto, explora un procedimiento o encuentra pasos concretos para una situación de tu entorno contable.</p></div><aside class="open-jurisdiction-card"><span>JURISDICCIÓN BASE</span><strong><i aria-hidden="true">MX</i> México</strong><small>Si tu consulta corresponde a otro país, indícalo.</small></aside></header>
+    <section class="open-assistant-layout" aria-label="Chat abierto y avatar de Nora">
+      <section class="open-chat-panel" aria-labelledby="open-chat-title">
+        <header class="open-chat-header"><div><p class="eyebrow">CONTABILIDAD · ASESORÍA ABIERTA</p><h2 id="open-chat-title">Conversación con Nora</h2><span class="open-chat-status" data-open-status role="status" aria-live="polite">${escapeHtml(connectionStatus)}</span></div><div class="open-chat-controls">${providerPicker}<button class="tutor-control tutor-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${voiceLabel}</button></div></header>
+        <div class="open-chat-log" data-open-log data-testid="open-assistant-log" role="log" aria-live="polite" aria-relevant="additions text">${renderOpenAssistantMessages()}</div>
+        <div class="open-starters" aria-label="Ideas para iniciar"><button type="button" data-open-prompt="Explícame cómo revisar una conciliación bancaria y qué diferencias conviene investigar primero.">Revisar una conciliación</button><button type="button" data-open-prompt="Ayúdame a plantear un procedimiento contable para este proceso; primero pregúntame qué información necesitas.">Diseñar un procedimiento</button><button type="button" data-open-prompt="Tengo un descuadre entre estos totales. Ayúdame a calcular la diferencia y proponer verificaciones: ">Analizar un descuadre</button></div>
+        <form class="open-chat-form" data-tutor-form data-open-form><label class="sr-only" for="open-assistant-input">Pregunta abierta a Nora</label><input id="open-assistant-input" data-tutor-input data-open-input data-testid="open-assistant-input" maxlength="2000" autocomplete="off" placeholder="Escribe tu pregunta contable…" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}/><button class="button button-primary" type="submit" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button></form>
+        <section class="open-document-box" aria-label="Asesoría documental"><div class="open-document-heading"><div><b>CONSULTAR UN DOCUMENTO</b><span>PDF · TXT · CSV</span></div><label class="open-document-select" for="open-assistant-document">${state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentText ? "Cambiar archivo" : "Adjuntar archivo"}<input id="open-assistant-document" type="file" data-open-document accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv" ${busy || state.openAssistant.documentLoading ? "disabled" : ""}/></label></div><div data-open-document-summary>${openAssistantDocumentSummary()}</div><p>El archivo se procesa en tu navegador. Solo se envía el texto extraído cuando lo incluyes en una pregunta; el nombre del archivo no se comparte.</p><p data-open-document-error class="open-error" role="status" hidden></p></section>
+        <p class="open-config-error" data-open-config-error role="status" ${state.tutor.configError ? "" : "hidden"}>${escapeHtml(state.tutor.configError)}</p>
+        <button type="button" class="tutor-stop open-stop" data-action="tutor-cancel" ${busy ? "" : "hidden"}>Detener respuesta</button>
+        <p class="open-chat-privacy">El chat y los documentos no se guardan en ContaIA. No compartas claves, identificadores personales ni datos confidenciales; puedes describir el proceso sin incluirlos. Tus notas y progreso del curso no se envían.</p>
+      </section>
+      <aside class="open-nora-panel" aria-labelledby="open-nora-title"><header><div><p class="eyebrow">AVATAR EN VIVO · ANAM</p><h2 id="open-nora-title">Nora</h2><span>Tu asistente contable</span></div><span class="open-live-dot" aria-hidden="true"></span></header>
+        <figure class="open-anam-screen" data-open-anam-panel aria-label="Panel del avatar de Nora"><div class="open-anam-placeholder" data-anam-placeholder ${live ? "hidden" : ""}><div class="open-anam-mark" aria-hidden="true"><span>ANAM</span><b>N</b></div><strong>Avatar Anam de Nora</strong><p>Conecta cuando quieras conversar con voz y video.</p></div><video id="nora-live-video" class="open-anam-video" data-anam-video autoplay playsinline ${live ? "" : "hidden"} aria-label="Video en vivo de Nora"></video></figure>
+        <button type="button" class="open-anam-button" data-action="anam-toggle" data-testid="open-anam-toggle" aria-pressed="${live}" ${connecting ? "disabled" : ""}>${escapeHtml(liveButtonLabel)} <span aria-hidden="true">${live ? "Ⅱ" : connecting ? "…" : "◉"}</span></button><p class="open-anam-status" data-anam-status role="status" aria-live="polite">${escapeHtml(liveStatus)}</p>
+        <p class="open-anam-privacy">El video y el micrófono se activan únicamente al pulsar el botón. Puedes usar el chat sin conectarlos.</p>
+        <details class="open-sources"><summary>Fuentes oficiales de México</summary><nav aria-label="Fuentes normativas oficiales"><a href="https://www.sat.gob.mx/minisitio/NormatividadRMFyRGCE/normatividad_rmf_rgce2026.html" target="_blank" rel="noopener noreferrer">SAT · RMF y RGCE 2026 ↗</a><a href="https://www.dof.gob.mx/" target="_blank" rel="noopener noreferrer">Diario Oficial de la Federación ↗</a><a href="https://www.diputados.gob.mx/LeyesBiblio/ref/cff.htm" target="_blank" rel="noopener noreferrer">Cámara de Diputados · CFF ↗</a><a href="https://www.diputados.gob.mx/LeyesBiblio/ref/lisr.htm" target="_blank" rel="noopener noreferrer">Cámara de Diputados · LISR ↗</a><a href="https://www.diputados.gob.mx/LeyesBiblio/ref/liva.htm" target="_blank" rel="noopener noreferrer">Cámara de Diputados · LIVA ↗</a><a href="https://www.cinif.org.mx/normatividad_NIF2026.php" target="_blank" rel="noopener noreferrer">CINIF · NIF 2026 ↗</a></nav><p>Consulta la publicación y el periodo aplicable. Nora no verifica cambios normativos en tiempo real; puedes adjuntar una fuente oficial para analizarla.</p></details>
+      </aside>
+    </section>
+  </main>`;
+}
+
+function refreshOpenAssistant() {
+  const panel = app.querySelector("[data-open-assistant]");
+  if (!panel) return;
+  const log = panel.querySelector("[data-open-log]");
+  if (log) {
+    const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
+    log.innerHTML = renderOpenAssistantMessages();
+    if (nearBottom) log.scrollTop = log.scrollHeight;
+  }
+  const busy = tutorBusy();
+  const provider = state.tutor.providers.find(({ id }) => id === state.tutor.provider);
+  const status = panel.querySelector("[data-open-status]");
+  if (status) status.textContent = busy ? "Nora está respondiendo…" : state.tutor.configState === "loading" ? "Conectando con Nora…" : state.tutor.configError ? "Revisa la conexión de Nora" : provider ? `Disponible · ${provider.label}` : "IA sin configurar en el servidor";
+  const input = panel.querySelector("[data-open-input]");
+  if (input) input.disabled = busy || !provider || state.openAssistant.documentLoading;
+  const submit = panel.querySelector("[data-open-form] button[type=submit]");
+  if (submit) submit.disabled = busy || !provider || state.openAssistant.documentLoading;
+  const fileInput = panel.querySelector("[data-open-document]");
+  if (fileInput) fileInput.disabled = busy || state.openAssistant.documentLoading;
+  const documentLabel = panel.querySelector(".open-document-select");
+  if (documentLabel) documentLabel.firstChild.textContent = state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentText ? "Cambiar archivo" : "Adjuntar archivo";
+  const documentSummary = panel.querySelector("[data-open-document-summary]");
+  if (documentSummary) documentSummary.innerHTML = openAssistantDocumentSummary();
+  const documentError = panel.querySelector("[data-open-document-error]");
+  if (documentError) {
+    documentError.textContent = state.openAssistant.documentError;
+    documentError.hidden = !state.openAssistant.documentError;
+  }
+  const configError = panel.querySelector("[data-open-config-error]");
+  if (configError) {
+    configError.textContent = state.tutor.configError;
+    configError.hidden = !state.tutor.configError;
+  }
+  const stop = panel.querySelector(".open-stop");
+  if (stop) stop.hidden = !busy;
+  const voice = panel.querySelector(".tutor-voice");
+  if (voice) {
+    voice.textContent = state.tutor.voiceEnabled ? "Voz activada" : "Activar voz";
+    voice.setAttribute("aria-pressed", String(state.tutor.voiceEnabled));
+    voice.setAttribute("aria-label", state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora");
+  }
+}
+
+async function loadTutorDocument(file, { openMode = false } = {}) {
+  if (!file) return;
+  const conversation = openMode ? state.openAssistant : state.tutor;
+  conversation.documentText = "";
+  conversation.documentName = "";
+  conversation.documentTruncated = false;
+  conversation.documentPageCount = null;
+  conversation.documentError = "";
+  conversation.documentLoading = true;
+  refreshTutorPanel();
+  try {
+    const { extractDocumentText } = await import("/vendor/document-reader.js");
+    const extracted = await extractDocumentText(file);
+    conversation.documentText = extracted.text;
+    conversation.documentName = String(file.name).slice(0, 160);
+    conversation.documentTruncated = extracted.truncated;
+    conversation.documentPageCount = extracted.pageCount;
+  } catch (error) {
+    conversation.documentError = error instanceof Error ? error.message : "No se pudo leer el archivo.";
+  } finally {
+    conversation.documentLoading = false;
+    refreshTutorPanel();
+  }
+}
+function rememberTutorPanelSize() {
+  const panel = app.querySelector(".tutor-panel.is-open");
+  if (!panel) return;
+  const rect = panel.getBoundingClientRect();
+  if (rect.width >= 320 && rect.height >= 380) {
+    state.tutor.panelWidth = Math.round(rect.width);
+    state.tutor.panelHeight = Math.round(rect.height);
+  }
+}
+
+async function sendTutorMessage(text, { includeDocument = false, openMode = state.section === "advisor" } = {}) {
   const question = text.trim();
-  if (!question || state.tutor.pending) return;
+  const conversation = activeTutorConversation(openMode);
+  if (!question || tutorBusy()) return;
   if (!state.tutor.providers.length) {
     state.tutor.configError = "Configura un proveedor y su modelo en el servidor Vercel para habilitar las respuestas de Nora.";
-    state.tutor.collapsed = false;
+    if (!openMode) state.tutor.collapsed = false;
     refreshTutorPanel();
     return;
   }
-  const history = state.tutor.messages.slice(-8).map(({ role, text: content }) => ({ role, content }));
+  const history = conversation.messages.slice(-8).map(({ role, text: content }) => ({ role, content }));
   const assistantMessage = { role: "assistant", text: "", streaming: true };
-  state.tutor.messages.push({ role: "user", text: question }, assistantMessage);
-  state.tutor.messages = state.tutor.messages.slice(-20);
-  state.tutor.pending = true;
-  state.tutor.collapsed = false;
+  conversation.messages.push({ role: "user", text: question }, assistantMessage);
+  conversation.messages = conversation.messages.slice(-20);
+  conversation.pending = true;
+  if (!openMode) state.tutor.collapsed = false;
   state.tutor.avatarState = "thinking";
-  state.tutor.abortController = new AbortController();
+  const requestSection = openMode ? "advisor" : state.section;
+  const controller = new AbortController();
+  conversation.abortController = controller;
   const liveClient = state.anam.status === "live" ? state.anam.client : null;
   const talkStream = liveClient?.createTalkMessageStream?.() ?? null;
   let talkQueue = Promise.resolve();
@@ -323,14 +484,17 @@ async function sendTutorMessage(text) {
   try {
     const reply = await requestTutorReply({
       message: question,
-      context: getTutorContext(),
+      context: openMode ? { section: "advisor" } : getTutorContext(),
       history,
+      documentText: includeDocument ? conversation.documentText : "",
       provider: state.tutor.provider || state.tutor.defaultProvider,
-      signal: state.tutor.abortController.signal,
+      signal: controller.signal,
       onToken: (token) => {
         assistantMessage.text += token;
-        const streamed = app.querySelector("[data-tutor-stream]");
-        if (streamed) streamed.textContent = assistantMessage.text;
+        if (state.section === requestSection) {
+          const streamed = app.querySelector(openMode ? "[data-open-stream]" : "[data-tutor-stream]");
+          if (streamed) streamed.textContent = assistantMessage.text;
+        }
         if (talkStream && !talkStreamFailed) {
           talkQueue = talkQueue.then(() => talkStream.streamMessageChunk(token, false)).catch(() => { talkStreamFailed = true; });
         }
@@ -345,23 +509,22 @@ async function sendTutorMessage(text) {
   } catch (error) {
     await talkQueue;
     if (talkStream?.isActive()) await talkStream.endMessage().catch(() => {});
-    state.tutor.messages.pop();
+    conversation.messages.pop();
     assistantMessage.streaming = false;
     assistantMessage.text = error.name === "AbortError" ? "Respuesta detenida. Puedes continuar cuando quieras." : "No pude obtener respuesta de la tutora. Revisa la conexión o vuelve a intentarlo.";
     state.tutor.configError = error.name === "AbortError" ? "" : error.message;
     state.tutor.avatarState = "idle";
   } finally {
-    state.tutor.pending = false;
-    state.tutor.abortController = null;
+    conversation.pending = false;
+    conversation.abortController = null;
     if (state.anam.status === "live" && !state.anam.pendingTranscript) state.anam.activity = "En vivo · puedes hablar cuando quieras.";
     refreshTutorPanel();
-    app.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    if (state.section === requestSection) app.querySelector(openMode ? "[data-open-input]" : "[data-tutor-input]")?.focus({ preventScroll: true });
     const pendingTranscript = state.anam.pendingTranscript;
     state.anam.pendingTranscript = "";
     if (pendingTranscript && state.anam.status === "live") queueMicrotask(() => handleAnamTranscript(pendingTranscript));
   }
 }
-
 async function stopAnamSession({ silent = false } = {}) {
   const controller = state.anam.abortController;
   state.anam.abortController = null;
@@ -374,6 +537,7 @@ async function stopAnamSession({ silent = false } = {}) {
   state.anam.lastUserMessageId = "";
   state.anam.pendingTranscript = "";
   state.tutor.abortController?.abort();
+  state.openAssistant.abortController?.abort();
   try { await client?.stopStreaming?.(); } catch { /* El cliente pudo cerrarse por pérdida de red. */ }
   if (!silent) refreshClassroomVisual();
 }
@@ -403,13 +567,13 @@ async function startAnamSession() {
     client.addListener(AnamEvent.CONNECTION_ESTABLISHED, () => {
       if (state.anam.client !== client) return;
       state.anam.status = "live";
-      state.anam.activity = "Nora está preparando la primera consigna.";
+      state.anam.activity = state.section === "course" ? "Nora está preparando la primera consigna." : "En vivo · puedes hablar o escribir a Nora.";
       refreshClassroomVisual();
-      narrateClassroomInstruction();
+      if (state.section === "course") narrateClassroomInstruction();
     });
     client.addListener(AnamEvent.MESSAGE_HISTORY_UPDATED, (messages) => {
-      if (state.anam.client !== client || state.section !== "course" || !Array.isArray(messages)) return;
-      if (messages.at(-1)?.role === "persona" && !state.tutor.pending) {
+      if (state.anam.client !== client || !["course", "advisor"].includes(state.section) || !Array.isArray(messages)) return;
+      if (messages.at(-1)?.role === "persona" && !tutorBusy()) {
         state.anam.activity = "En vivo · puedes hablar cuando quieras.";
         refreshClassroomVisual();
       }
@@ -418,9 +582,10 @@ async function startAnamSession() {
       state.anam.lastUserMessageId = latestUser.id;
       const transcript = latestUser.content.trim().slice(0, 2000);
       state.anam.activity = "Consulta recibida · Nora está preparando una respuesta.";
-      if (state.tutor.pending) {
+      if (tutorBusy()) {
         state.anam.pendingTranscript = transcript;
-        state.tutor.abortController?.abort();
+        const pendingConversation = state.tutor.pending ? state.tutor : state.openAssistant;
+        pendingConversation.abortController?.abort();
       } else {
         handleAnamTranscript(transcript);
       }
@@ -443,7 +608,7 @@ async function startAnamSession() {
       void client.stopStreaming().catch(() => {});
       refreshClassroomVisual();
     });
-    client.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => state.tutor.abortController?.abort());
+    client.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => activeTutorConversation().abortController?.abort());
     client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
       if (state.anam.client !== client) return;
       state.anam.client = null;
@@ -510,12 +675,16 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Aula con Nora" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const classOptions = courseModules.map((module, index) => `<button type="button" class="class-menu-item ${module.id === state.activeModuleId ? "is-active" : ""} ${state.completedModules.has(module.id) ? "is-complete" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${module.id === state.activeModuleId ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><i aria-hidden="true">${state.completedModules.has(module.id) ? "✓" : ""}</i></button>`).join("");
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
-      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Curso completo</span></button>
-      <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>02</b><span>Laboratorio práctico</span></button>
-      <button class="section-tab ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}"><b>03</b><span>Base de estudio</span></button>
+      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Aula en vivo</span></button>
+      <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Seleccionar clase">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · estado local</p></div></details>
+      <button class="section-tab ${state.section === "advisor" ? "is-active" : ""}" type="button" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}"><b>03</b><span>Asistente abierto</span></button>
+      ${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><b>04</b><span>Asesoría</span></button>`}
+      <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>05</b><span>Laboratorio práctico</span></button>
+      <button class="section-tab ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}"><b>06</b><span>Base de estudio</span></button>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
   </header>`;
@@ -704,7 +873,6 @@ function renderCourse() {
     state,
     onboarding: renderOnboarding(),
     glossary: renderGlossaryIndex(),
-    tutorPanel: renderTutorPanel(getTutorContext(), { embedded: true }),
     assetPath,
     avatarLabel: tutorAvatarLabel(),
     voiceSupported: tutorSpeaker.supported,
@@ -768,6 +936,7 @@ function renderExercise(exercise) {
       <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
       <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
       <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
+      <button type="button" class="button button-quiet advisor-practice-button" data-action="tutor-open">Preguntar a Nora · tú haces el ejercicio</button>
     </div></section><aside class="work-feedback" aria-label="Retroalimentación">${feedback}${hint}${solution}</aside></div>
     <footer class="exercise-footer"><span>${state.completed.has(exercise.id) ? '<b class="completed-mark">✓</b> Práctica completada en esta sesión' : "Tu respuesta se queda en este navegador durante la sesión"}</span>${nextExercise ? `<button type="button" class="next-link" data-nav="${nextExercise.id}">Siguiente práctica <span>→</span></button>` : `<button type="button" class="next-link" data-nav="home">Terminar recorrido <span>→</span></button>`}</footer>
     <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se conserva el estado de finalización; la respuesta escrita o seleccionada no se guarda.")}</p>
@@ -776,21 +945,26 @@ function renderExercise(exercise) {
 }
 
 function render() {
-  const persistentVideo = state.section === "course" && state.anam.status === "live"
-    ? app.querySelector("[data-anam-video]")
-    : null;
+  const keepAnamVideo = ["course", "advisor"].includes(state.section) && ["live", "connecting"].includes(state.anam.status);
+  const persistentVideo = keepAnamVideo ? app.querySelector("[data-anam-video]") : null;
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
-  const content = state.section === "course" ? renderCourse() : state.section === "study" ? renderStudy() : exercise ? renderExercise(exercise) : renderHome();
-  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div>${state.section === "course" ? "" : renderTutorPanel(getTutorContext())}</div>`;
+  const content = state.section === "course" ? renderCourse()
+    : state.section === "advisor" ? renderOpenAssistant()
+      : state.section === "study" ? renderStudy()
+        : exercise ? renderExercise(exercise) : renderHome();
+  const showSidebar = ["lab", "study"].includes(state.section);
+  const tutorPanel = state.section === "advisor" ? "" : renderTutorPanel(getTutorContext());
+  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
     if (placeholder) placeholder.replaceWith(persistentVideo);
-    persistentVideo.hidden = false;
+    persistentVideo.hidden = state.anam.status !== "live";
   }
+  refreshClassroomVisual();
+  refreshOpenAssistant();
 }
-
 async function initializeTutorConfig() {
   try {
     const config = await loadTutorConfig();
@@ -846,7 +1020,7 @@ function checkAnswer(exercise) {
 app.addEventListener("click", (event) => {
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = ["course", "lab", "study"].includes(section.dataset.section) ? section.dataset.section : "course";
+    state.section = ["course", "lab", "study", "advisor"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     render();
@@ -854,10 +1028,20 @@ app.addEventListener("click", (event) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  const starterPrompt = event.target.closest("[data-open-prompt]");
+  if (starterPrompt) {
+    const input = app.querySelector("[data-open-input]");
+    if (input) {
+      input.value = starterPrompt.dataset.openPrompt || "";
+      input.focus({ preventScroll: true });
+    }
+    return;
+  }
   const classroomModule = event.target.closest("[data-class-module]");
   if (classroomModule) {
     const moduleId = classroomModule.dataset.classModule;
     if (!courseModules.some(({ id }) => id === moduleId)) return;
+    state.section = "course";
     resetTutor();
     state.activeModuleId = moduleId;
     state.coursePhaseIndex = 0;
@@ -974,11 +1158,39 @@ app.addEventListener("click", (event) => {
     if (!state.tutor.collapsed) document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
     return;
   }
-  if (action.dataset.action === "tutor-cancel") {
-    state.tutor.abortController?.abort();
+  if (action.dataset.action === "tutor-resize") {
+    const direction = action.dataset.size === "larger" ? 1 : -1;
+    state.tutor.panelWidth = Math.max(340, Math.min(760, state.tutor.panelWidth + direction * 56));
+    state.tutor.panelHeight = Math.max(420, Math.min(820, state.tutor.panelHeight + direction * 64));
+    render();
     return;
   }
-    if (action.dataset.action === "tutor-voice") {
+  if (action.dataset.action === "open-document-remove") {
+    if (tutorBusy()) return;
+    state.openAssistant.documentText = "";
+    state.openAssistant.documentName = "";
+    state.openAssistant.documentTruncated = false;
+    state.openAssistant.documentPageCount = null;
+    state.openAssistant.documentError = "";
+    refreshTutorPanel();
+    return;
+  }
+  if (action.dataset.action === "tutor-document-remove") {
+    if (state.tutor.pending) return;
+    state.tutor.documentText = "";
+    state.tutor.documentName = "";
+    state.tutor.documentTruncated = false;
+    state.tutor.documentPageCount = null;
+    state.tutor.documentError = "";
+    refreshTutorPanel();
+    return;
+  }
+  if (action.dataset.action === "tutor-cancel") {
+    const pendingConversation = state.tutor.pending ? state.tutor : state.openAssistant;
+    pendingConversation.abortController?.abort();
+    return;
+  }
+  if (action.dataset.action === "tutor-voice") {
     state.tutor.voiceEnabled = tutorSpeaker.setEnabled(!state.tutor.voiceEnabled);
     render();
     return;
@@ -1096,7 +1308,7 @@ app.addEventListener("submit", (event) => {
   const text = input?.value ?? "";
   if (!text.trim()) return;
   input.value = "";
-  sendTutorMessage(text);
+  sendTutorMessage(text, { includeDocument: true, openMode: form.hasAttribute("data-open-form") });
 });
 
 app.addEventListener("toggle", (event) => {
@@ -1129,6 +1341,18 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[data-open-document]")) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void loadTutorDocument(file, { openMode: true });
+    return;
+  }
+  if (event.target.matches("[data-tutor-document]")) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void loadTutorDocument(file);
+    return;
+  }
   if (event.target.matches("[data-tutor-provider]")) {
     state.tutor.provider = state.tutor.providers.some(({ id }) => id === event.target.value) ? event.target.value : state.tutor.defaultProvider;
     refreshTutorPanel();
@@ -1158,6 +1382,8 @@ app.addEventListener("change", (event) => {
 });
 
 render();
+app.addEventListener("pointerup", rememberTutorPanelSize, { passive: true });
+app.addEventListener("mouseup", rememberTutorPanelSize, { passive: true });
 initializeTutorConfig();
 initializeStudyDatabase();
 window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });

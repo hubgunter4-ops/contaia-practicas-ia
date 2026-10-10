@@ -27,4 +27,19 @@ await build({
   outfile: path.join(vendor, "anam-sdk.js"),
   logLevel: "warning",
 });
+await build({
+  stdin: {
+    contents: 'export { extractDocumentText } from "./src/tutor/document-reader.js";\n',
+    resolveDir: root,
+    sourcefile: "document-reader-entry.js",
+    loader: "js",
+  },
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  outfile: path.join(vendor, "document-reader.js"),
+  logLevel: "warning",
+});
+cpSync(fileURLToPath(import.meta.resolve("pdfjs-dist/build/pdf.worker.mjs")), path.join(vendor, "pdf.worker.mjs"));
 console.log(`Sitio estático preparado en ${path.relative(root, output)}.`);

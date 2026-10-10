@@ -20,13 +20,13 @@ export async function loadTutorConfig({ fetchImpl = fetch, apiBaseUrl } = {}) {
   return { providers, defaultProvider: providers.some(({ id }) => id === payload.defaultProvider) ? payload.defaultProvider : providers[0]?.id ?? "" };
 }
 
-export async function requestTutorReply({ message, context, history = [], provider = "", onToken = () => {}, fetchImpl = fetch, apiBaseUrl, signal } = {}) {
+export async function requestTutorReply({ message, context, history = [], provider = "", documentText = "", onToken = () => {}, fetchImpl = fetch, apiBaseUrl, signal } = {}) {
   const response = await fetchImpl(`${apiBase(apiBaseUrl)}/api/tutor/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
     cache: "no-store",
     signal,
-    body: JSON.stringify({ message, context, history, provider }),
+    body: JSON.stringify({ message, context, history, provider, ...(documentText ? { documentText } : {}) }),
   });
   if (!response.ok) throw new Error(await readError(response));
   const contentType = response.headers.get("content-type") || "";

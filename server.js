@@ -14,6 +14,7 @@ const mime = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
   ".mp4": "video/mp4",
@@ -45,6 +46,8 @@ function resolvePublicPath(pathname) {
   if (decoded === "/") relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
+  else if (decoded === "/vendor/document-reader.js") relative = "dist/vendor/document-reader.js";
+  else if (decoded === "/vendor/pdf.worker.mjs") relative = "dist/vendor/pdf.worker.mjs";
   else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";
   else if (decoded.startsWith("/assets/")) relative = `public${decoded}`;
   else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);

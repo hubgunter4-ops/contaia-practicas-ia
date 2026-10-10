@@ -19,6 +19,7 @@
     "esbuild": "^0.28.2"
   },
   "dependencies": {
-    "@anam-ai/js-sdk": "^4.28.0"
+    "@anam-ai/js-sdk": "^4.28.0",
+    "pdfjs-dist": "^6.4.299"
   }
 }

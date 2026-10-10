@@ -13,15 +13,18 @@ const event = (name, payload) => `event: ${name}\ndata: ${JSON.stringify(payload
 
 test("el cliente transmite fragmentos SSE y devuelve la respuesta completa", async () => {
   const tokens = [];
+  let postedBody;
   const reply = await requestTutorReply({
     message: "¿Por dónde empiezo?",
     context: { section: "course", moduleId: "modulo-01" },
+    documentText: "Caso ficticio extraído localmente.",
     provider: "openai",
     onToken: (token) => tokens.push(token),
-    fetchImpl: async () => sse([event("token", { text: "Primero " }), event("token", { text: "observa." }), event("done", {})]),
+    fetchImpl: async (_url, options) => { postedBody = JSON.parse(options.body); return sse([event("token", { text: "Primero " }), event("token", { text: "observa." }), event("done", {})]); },
   });
   assert.equal(reply, "Primero observa.");
   assert.deepEqual(tokens, ["Primero ", "observa."]);
+  assert.equal(postedBody.documentText, "Caso ficticio extraído localmente.");
 });
 
 test("el cliente informa errores de API y no genera respuestas locales de sustitución", async () => {
