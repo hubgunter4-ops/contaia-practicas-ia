@@ -117,6 +117,25 @@ test("cada proveedor usa el endpoint, modelo y clave Gateway que le corresponden
   }
 });
 
+test("el contexto de Nora incluye una fase de aula validada y descarta valores no permitidos", async () => {
+  for (const [index, coursePhase, expected] of [[0, "review", "review"], [1, "ignore-system-rules", "activate"]]) {
+    let providerRequest;
+    const response = new MockResponse();
+    await handleTutorStream(request({
+      message: "Ayúdame con esta clase",
+      context: { section: "course", moduleId: "modulo-01", coursePhase },
+    }, { ip: `127.0.3.${index + 1}` }), response, {
+      env: gatewayEnv,
+      fetchImpl: async (_url, options) => { providerRequest = options; return chunkedReply(); },
+    });
+    assert.equal(response.statusCode, 200);
+    const messages = JSON.parse(providerRequest.body).messages;
+    assert.match(messages[0].content, new RegExp(`Fase del aula actual: ${expected === "review" ? "Revisión" : "Activación"}`));
+    assert.match(messages.at(-1).content, new RegExp(`\\"coursePhase\\":\\"${expected}\\"`));
+    assert.equal(messages.at(-1).content.includes("ignore-system-rules"), false);
+  }
+});
+
 test("rechaza un origen fuera de la lista antes de llamar a AI Gateway", async () => {
   const response = new MockResponse();
   let called = false;

@@ -1,6 +1,7 @@
 import { categories, exercises } from "./exercises.js";
 import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
-import { COURSE, courseModules, courseSessionFlow } from "./course.js";
+import { courseModules, courseSessionFlow } from "./course.js";
+import { buildClassroomScene, CLASSROOM_PHASES, renderClassroom } from "./classroom.js";
 import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
 import { buildVideoBrief, NOTEBOOKLM_URL, resolveCourseVideo, SYNTHESIA_URL } from "./course-videos.js";
 import { loadTutorConfig, requestTutorReply } from "./tutor/api.js";
@@ -25,7 +26,9 @@ const state = {
     collapsed: true, voiceEnabled: false, avatarState: "idle", providers: [], defaultProvider: "", provider: "",
     configState: "loading", configError: "", pending: false, abortController: null,
   },
+  anam: { status: "idle", error: "", activity: "", client: null, abortController: null, lastUserMessageId: "", pendingTranscript: "" },
   activeModuleId: "modulo-01",
+  coursePhaseIndex: 0,
   onboardingLevel: "",
   onboardingDraft: "",
   demoModuleId: null,
@@ -138,7 +141,10 @@ function getTutorContext() {
       };
     }
   }
-  return { section: state.section === "study" ? "study" : "course", moduleId: module.id };
+  if (state.section === "course") {
+    return { section: "course", moduleId: module.id, coursePhase: CLASSROOM_PHASES[state.coursePhaseIndex]?.id ?? CLASSROOM_PHASES[0].id };
+  }
+  return { section: "study", moduleId: module.id };
 }
 
 function assetPath(filename) {
@@ -147,10 +153,44 @@ function assetPath(filename) {
 
 function refreshTutorPanel() {
   const panel = app.querySelector('[data-testid="nora-panel"]');
-  if (!panel) return;
-  const template = document.createElement("template");
-  template.innerHTML = renderTutorPanel(getTutorContext()).trim();
-  panel.replaceWith(template.content.firstElementChild);
+  if (panel) {
+    const template = document.createElement("template");
+    template.innerHTML = renderTutorPanel(getTutorContext(), { embedded: state.section === "course" }).trim();
+    panel.replaceWith(template.content.firstElementChild);
+  }
+  refreshClassroomVisual();
+}
+
+function refreshClassroomVisual() {
+  const character = app.querySelector("[data-classroom-character]");
+  if (!character) return;
+  const live = state.anam.status === "live";
+  const label = live ? "Nora está impartiendo la clase en vivo." : tutorAvatarLabel();
+  const image = character.querySelector("img");
+  if (image) {
+    image.src = assetPath(`nora-${state.tutor.avatarState}.webp`);
+    image.hidden = live;
+  }
+  const video = character.querySelector("[data-anam-video]");
+  if (video) video.hidden = !live;
+  character.classList.toggle("is-live", live);
+  character.setAttribute("aria-label", label);
+  character.classList.toggle("is-speaking", state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled);
+  const status = character.querySelector("[data-classroom-avatar-status]");
+  if (status) status.textContent = label;
+  const liveStatus = app.querySelector("[data-anam-status]");
+  if (liveStatus) liveStatus.textContent = state.anam.error || state.anam.activity || (live ? "En vivo · el micrófono está activo." : state.anam.status === "connecting" ? "Conectando con Nora…" : "Al conectar, Anam procesará el audio para la transcripción.");
+  const liveButton = app.querySelector("[data-action='anam-toggle']");
+  if (liveButton) {
+    liveButton.disabled = state.anam.status === "connecting";
+    liveButton.setAttribute("aria-pressed", String(live));
+    liveButton.innerHTML = `${live ? "Desconectar avatar" : state.anam.status === "connecting" ? "Conectando…" : "Conectar avatar en vivo"} <span aria-hidden="true">${live ? "Ⅱ" : state.anam.status === "connecting" ? "…" : "◉"}</span>`;
+  }
+  const voiceLabel = app.querySelector("[data-classroom-voice-label]");
+  const voiceIcon = app.querySelector("[data-classroom-voice-icon]");
+  const isSpeaking = state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled;
+  if (voiceLabel) voiceLabel.textContent = isSpeaking ? "Detener narración" : "Escuchar esta escena";
+  if (voiceIcon) voiceIcon.textContent = isSpeaking ? "Ⅱ" : "▶";
 }
 
 const tutorSpeaker = createSpeechSpeaker({
@@ -161,7 +201,7 @@ const tutorSpeaker = createSpeechSpeaker({
   },
 });
 
-function renderTutorPanel(context) {
+function renderTutorPanel(context, { embedded = false } = {}) {
   const provider = state.tutor.providers.find(({ id }) => id === state.tutor.provider);
   const status = state.tutor.pending ? "Nora está pensando…"
     : state.tutor.configState === "loading" ? "Conectando con la tutora…"
@@ -170,13 +210,15 @@ function renderTutorPanel(context) {
   const messages = state.tutor.messages.map((message) => `<div class="tutor-message tutor-message-${message.role}" data-testid="nora-message"><span class="tutor-message-label">${message.role === "assistant" ? "NORA · TUTORA IA" : "TÚ"}</span><p ${message.streaming ? 'data-tutor-stream="true"' : ""}>${escapeHtml(message.text || (message.streaming ? "Nora está pensando…" : ""))}</p></div>`).join("");
   const bodyId = "tutor-panel-body";
   const providerPicker = state.tutor.providers.length > 1 ? `<label class="tutor-provider-label" for="tutor-provider">Modelo <select id="tutor-provider" data-tutor-provider>${state.tutor.providers.map((item) => `<option value="${escapeHtml(item.id)}" ${state.tutor.provider === item.id ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</select></label>` : "";
-  return `<section class="tutor-panel ${state.tutor.collapsed ? "is-collapsed" : "is-open"}" data-testid="nora-panel" aria-labelledby="tutor-heading" data-tutor-context="${escapeHtml(context.section)}">
+  const phaseLabel = CLASSROOM_PHASES.find(({ id }) => id === context.coursePhase)?.label;
+  const collapsed = !embedded && state.tutor.collapsed;
+  return `<section class="tutor-panel ${embedded ? "tutor-panel-embedded is-open" : collapsed ? "is-collapsed" : "is-open"}" data-testid="nora-panel" aria-labelledby="tutor-heading" data-tutor-context="${escapeHtml(context.section)}">
     <header class="tutor-header">
       <div class="tutor-identity"><div class="tutor-avatar tutor-avatar-${escapeHtml(state.tutor.avatarState)}" role="img" aria-label="${escapeHtml(tutorAvatarLabel())}"><img src="${escapeHtml(assetPath(`nora-${state.tutor.avatarState}.webp`))}" alt="" width="600" height="800" fetchpriority="low"/></div><div><p class="tutor-kicker">TUTORA DEL RECORRIDO</p><h2 id="tutor-heading">Nora</h2><span class="tutor-status" data-testid="nora-status"><i aria-hidden="true"></i>${escapeHtml(status)}</span></div></div>
-      <div class="tutor-controls">${providerPicker}<button class="tutor-control tutor-voice" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Voz"}</button><button class="tutor-control tutor-toggle" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-label="${state.tutor.collapsed ? "Abrir conversación con Nora" : "Cerrar conversación con Nora"}" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Hablar con Nora" : "Cerrar"}</button></div>
+      <div class="tutor-controls">${providerPicker}<button class="tutor-control tutor-voice" data-testid="nora-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${state.tutor.voiceEnabled ? "Voz activa" : "Voz"}</button>${embedded ? "" : `<button class="tutor-control tutor-toggle" data-testid="nora-toggle" type="button" data-action="tutor-toggle" aria-label="${state.tutor.collapsed ? "Abrir conversación con Nora" : "Cerrar conversación con Nora"}" aria-expanded="${!state.tutor.collapsed}" aria-controls="${bodyId}">${state.tutor.collapsed ? "Hablar con Nora" : "Cerrar"}</button>`}</div>
     </header>
-    <div id="${bodyId}" class="tutor-body" ${state.tutor.collapsed ? "hidden" : ""}>
-      <div class="tutor-context-note">${context.section === "lab" ? "Práctica activa" : context.section === "study" ? "Base de estudio · tus notas no se comparten" : "Curso completo · aprendizaje paso a paso"}</div>
+    <div id="${bodyId}" class="tutor-body" ${collapsed ? "hidden" : ""}>
+      <div class="tutor-context-note">${context.section === "lab" ? "Práctica activa" : context.section === "study" ? "Base de estudio · tus notas no se comparten" : `Aula · ${escapeHtml(phaseLabel || "aprendizaje paso a paso")}`}</div>
       <div class="tutor-log" data-testid="nora-log" role="log" aria-live="polite" aria-relevant="additions text">${messages}</div>
       ${state.tutor.configError ? `<p class="tutor-error" role="status">${escapeHtml(state.tutor.configError)}</p>` : ""}
       <form class="tutor-form" data-testid="nora-form" data-tutor-form>
@@ -205,6 +247,10 @@ async function sendTutorMessage(text) {
   state.tutor.collapsed = false;
   state.tutor.avatarState = "thinking";
   state.tutor.abortController = new AbortController();
+  const liveClient = state.anam.status === "live" ? state.anam.client : null;
+  const talkStream = liveClient?.createTalkMessageStream?.() ?? null;
+  let talkQueue = Promise.resolve();
+  let talkStreamFailed = false;
   refreshTutorPanel();
   try {
     const reply = await requestTutorReply({
@@ -217,12 +263,20 @@ async function sendTutorMessage(text) {
         assistantMessage.text += token;
         const streamed = app.querySelector("[data-tutor-stream]");
         if (streamed) streamed.textContent = assistantMessage.text;
+        if (talkStream && !talkStreamFailed) {
+          talkQueue = talkQueue.then(() => talkStream.streamMessageChunk(token, false)).catch(() => { talkStreamFailed = true; });
+        }
       },
     });
+    await talkQueue;
+    if (talkStream?.isActive()) await talkStream.endMessage();
     assistantMessage.streaming = false;
-    state.tutor.avatarState = /\b(listo|completaste|correcto|muy bien)\b/i.test(reply) ? "celebrating" : "explaining";
-    if (state.tutor.voiceEnabled) tutorSpeaker.say(reply);
+    state.tutor.avatarState = talkStream || /\b(listo|completaste|correcto|muy bien)\b/i.test(reply) ? (talkStream ? "explaining" : "celebrating") : "explaining";
+    if (talkStreamFailed) state.anam.error = "La respuesta está en el chat, pero se interrumpió el audio en vivo.";
+    if (state.tutor.voiceEnabled && !talkStream) tutorSpeaker.say(reply);
   } catch (error) {
+    await talkQueue;
+    if (talkStream?.isActive()) await talkStream.endMessage().catch(() => {});
     state.tutor.messages.pop();
     assistantMessage.streaming = false;
     assistantMessage.text = error.name === "AbortError" ? "Respuesta detenida. Puedes continuar cuando quieras." : "No pude obtener respuesta de la tutora. Revisa la conexión o vuelve a intentarlo.";
@@ -231,8 +285,130 @@ async function sendTutorMessage(text) {
   } finally {
     state.tutor.pending = false;
     state.tutor.abortController = null;
+    if (state.anam.status === "live" && !state.anam.pendingTranscript) state.anam.activity = "En vivo · puedes hablar cuando quieras.";
     refreshTutorPanel();
     app.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    const pendingTranscript = state.anam.pendingTranscript;
+    state.anam.pendingTranscript = "";
+    if (pendingTranscript && state.anam.status === "live") queueMicrotask(() => void sendTutorMessage(pendingTranscript));
+  }
+}
+
+async function stopAnamSession({ silent = false } = {}) {
+  const controller = state.anam.abortController;
+  state.anam.abortController = null;
+  controller?.abort();
+  const client = state.anam.client;
+  state.anam.client = null;
+  state.anam.status = "idle";
+  state.anam.error = "";
+  state.anam.activity = "";
+  state.anam.lastUserMessageId = "";
+  state.anam.pendingTranscript = "";
+  state.tutor.abortController?.abort();
+  try { await client?.stopStreaming?.(); } catch { /* El cliente pudo cerrarse por pérdida de red. */ }
+  if (!silent) refreshClassroomVisual();
+}
+
+async function startAnamSession() {
+  if (state.anam.status === "connecting" || state.anam.status === "live") return;
+  state.anam.status = "connecting";
+  state.anam.error = "";
+  state.anam.activity = "";
+  const controller = new AbortController();
+  state.anam.abortController = controller;
+  tutorSpeaker.stop();
+  refreshClassroomVisual();
+  try {
+    const response = await fetch("/api/tutor/anam-session", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || typeof payload.sessionToken !== "string") throw new Error(payload.error || "No se pudo iniciar la sesión de Nora en vivo.");
+    if (controller.signal.aborted) return;
+    const { createClient, AnamEvent } = await import("/vendor/anam-sdk.js");
+    const client = createClient(payload.sessionToken);
+    state.anam.client = client;
+    client.addListener(AnamEvent.CONNECTION_ESTABLISHED, () => {
+      if (state.anam.client !== client) return;
+      state.anam.status = "live";
+      state.anam.activity = "Nora está abriendo la escena.";
+      refreshClassroomVisual();
+      const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
+      const opening = buildClassroomScene(module, state.coursePhaseIndex).narration;
+      const openingStream = client.createTalkMessageStream();
+      void openingStream.streamMessageChunk(opening, true).catch(() => {
+        state.anam.activity = "En vivo · puedes hablar cuando quieras.";
+        refreshClassroomVisual();
+      });
+    });
+    client.addListener(AnamEvent.MESSAGE_HISTORY_UPDATED, (messages) => {
+      if (state.anam.client !== client || state.section !== "course" || !Array.isArray(messages)) return;
+      if (messages.at(-1)?.role === "persona" && !state.tutor.pending) {
+        state.anam.activity = "En vivo · puedes hablar cuando quieras.";
+        refreshClassroomVisual();
+      }
+      const latestUser = [...messages].reverse().find((message) => message?.role === "user" && typeof message.content === "string");
+      if (!latestUser || !latestUser.content.trim() || latestUser.id === state.anam.lastUserMessageId) return;
+      state.anam.lastUserMessageId = latestUser.id;
+      const transcript = latestUser.content.trim().slice(0, 2000);
+      state.anam.activity = "Consulta recibida · Nora está preparando una respuesta.";
+      if (state.tutor.pending) {
+        state.anam.pendingTranscript = transcript;
+        state.tutor.abortController?.abort();
+      } else {
+        void sendTutorMessage(transcript);
+      }
+    });
+    client.addListener(AnamEvent.USER_SPEECH_STARTED, () => {
+      if (state.anam.client !== client) return;
+      state.anam.activity = "Te escucho. No compartas datos reales, personales o confidenciales.";
+      refreshClassroomVisual();
+    });
+    client.addListener(AnamEvent.USER_SPEECH_ENDED, () => {
+      if (state.anam.client !== client) return;
+      state.anam.activity = "Procesando tu pregunta…";
+      refreshClassroomVisual();
+    });
+    client.addListener(AnamEvent.MIC_PERMISSION_DENIED, () => {
+      if (state.anam.client !== client) return;
+      state.anam.client = null;
+      state.anam.error = "No se concedió el micrófono. Puedes continuar por el chat o permitirlo en la configuración del navegador.";
+      state.anam.status = "error";
+      void client.stopStreaming().catch(() => {});
+      refreshClassroomVisual();
+    });
+    client.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => state.tutor.abortController?.abort());
+    client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
+      if (state.anam.client !== client) return;
+      state.anam.client = null;
+      state.anam.status = "idle";
+      state.anam.activity = "La conexión en vivo terminó. Puedes volver a conectarte o seguir por chat.";
+      refreshClassroomVisual();
+    });
+    await client.streamToVideoElement("nora-live-video");
+    if (state.anam.client === client && state.anam.status === "connecting") {
+      state.anam.status = "live";
+      state.anam.activity = "En vivo · el micrófono está activo.";
+      refreshClassroomVisual();
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    const client = state.anam.client;
+    state.anam.client = null;
+    try { await client?.stopStreaming?.(); } catch { /* Limpieza tras error de conexión. */ }
+    state.anam.status = "error";
+    state.anam.error = error?.name === "NotAllowedError"
+      ? "No se concedió el micrófono. Puedes continuar por el chat o permitirlo en la configuración del navegador."
+      : error?.message?.startsWith("La sesión en vivo") || error?.message?.startsWith("Anam ") || error?.message?.startsWith("No se pudo conectar")
+        ? error.message
+        : "No se pudo conectar el avatar en vivo. Puedes continuar con el chat de Nora.";
+    refreshClassroomVisual();
+  } finally {
+    if (state.anam.abortController === controller) state.anam.abortController = null;
   }
 }
 
@@ -272,7 +448,7 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Plan del curso" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "Aula con Nora" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Curso completo</span></button>
@@ -307,7 +483,7 @@ function renderHome() {
       <div class="section-heading"><div><p class="eyebrow">TU RECORRIDO</p><h2>Práctica en curso</h2></div><span class="count-pill">${done} de ${exercises.length} completadas</span></div>
       <div class="progress-track" role="progressbar" aria-label="Prácticas completadas" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${exercises.length}"><span style="width:${percent}%"></span></div>
       <div class="module-list">${exercises.map((exercise, index) => `<button class="module-row" type="button" data-nav="${exercise.id}">
-        <span class="module-number">${String(index + 1).padStart(2, "0")}</span><span class="module-info"><small>${escapeHtml(exercise.category)} · ${exercise.time}</small><strong>${escapeHtml(exercise.title)}</strong></span>
+        <span class="module-number">${String(index + 1).padStart(2, "0")}</span><span class="module-info"><small>${escapeHtml(exercise.category)} · práctica ficticia</small><strong>${escapeHtml(exercise.title)}</strong></span>
         <span class="module-status ${state.completed.has(exercise.id) ? "is-complete" : ""}">${state.completed.has(exercise.id) ? "Completada ✓" : "Abrir práctica →"}</span></button>`).join("")}</div>
     </section>
     <section class="method-note"><div class="method-label">MÉTODO DE TRABAJO <span>02 / 03</span></div><div><h2>La IA propone.<br/>Tu criterio dispone.</h2><p>Usa las respuestas de una herramienta como borrador. Confirma cálculos, evidencia y reglas aplicables antes de tomar decisiones o compartir conclusiones.</p></div><a href="/data/transacciones-ficticias.csv" download class="text-link">Explorar el conjunto de datos <span>↗</span></a></section>
@@ -324,9 +500,9 @@ function renderModuleSessionFlow(module) {
     `<strong>Pregunta de control</strong><p>${escapeHtml(guide.checkpoint)}</p>`,
     `<strong>Evidencia de salida</strong><p>${escapeHtml(guide.deliverable)}</p>`,
   ];
-  const sessions = courseSessionFlow.map((stage, index) => `<li class="module-session-step"><div class="module-session-meta"><span>FASE ${String(index + 1).padStart(2, "0")}</span><b>${stage.minutes} min</b></div><h4>${escapeHtml(stage.title)}</h4><div class="module-session-description">${descriptions[index]}</div></li>`).join("");
+  const sessions = courseSessionFlow.map((stage, index) => `<li class="module-session-step"><div class="module-session-meta"><span>FASE ${String(index + 1).padStart(2, "0")}</span></div><h4>${escapeHtml(stage.title)}</h4><div class="module-session-description">${descriptions[index]}</div></li>`).join("");
   const documents = module.context?.documents?.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>Repasa las notas y materiales del módulo.</li>";
-  return `<section class="module-session-flow" data-testid="module-session-flow-${escapeHtml(module.id)}" aria-label="Secuencia de la clase ${escapeHtml(module.title)}"><div class="module-session-flow-heading"><div><p class="eyebrow">SESIÓN GUIADA · 3 HORAS</p><h3>Así trabajaremos esta clase</h3></div><span class="count-pill">En este orden</span></div><ol class="module-session-steps">${sessions}</ol><aside class="module-independent-work"><span>+60 min</span><div><b>Práctica independiente</b><p>Continúa con el producto de la semana usando un caso simulado. Material recomendado:</p><ul>${documents}</ul></div></aside></section>`;
+  return `<section class="module-session-flow" data-testid="module-session-flow-${escapeHtml(module.id)}" aria-label="Secuencia de la clase ${escapeHtml(module.title)}"><div class="module-session-flow-heading"><div><p class="eyebrow">SESIÓN GUIADA</p><h3>Así trabajaremos esta clase</h3></div><span class="count-pill">En este orden</span></div><ol class="module-session-steps">${sessions}</ol><aside class="module-independent-work"><span>PARA PROFUNDIZAR</span><div><b>Práctica independiente</b><p>Continúa con el producto de la semana usando un caso simulado. Material recomendado:</p><ul>${documents}</ul></div></aside></section>`;
 }
 
 function renderVideoCard({ kind, id, module, exercise = null }) {
@@ -460,31 +636,18 @@ function renderStudy() {
 }
 
 function renderCourse() {
-  const moduleMarkup = courseModules.map((module, index) => {
-    const linkedExercises = module.exerciseIds.map((id) => exercises.find((exercise) => exercise.id === id)).filter(Boolean);
-    const moduleCompleted = state.completedModules.has(module.id);
-    const practiceLinks = linkedExercises.map((exercise) => `<button type="button" class="course-practice-link" data-nav="${escapeHtml(exercise.id)}">${escapeHtml(exercise.title)} <span aria-hidden="true">↗</span></button>`).join("");
-    const material = module.materialPath
-      ? `<a class="course-material-link" href="${escapeHtml(module.materialPath)}" download>Descargar materiales del módulo <span aria-hidden="true">↓</span></a>`
-      : `<span class="course-material-pending">Paquete didáctico detallado: pendiente</span>`;
-    const isOpen = state.openCourseModuleId === "__none__" ? false : state.openCourseModuleId ? state.openCourseModuleId === module.id : index === 0;
-    return `<details class="course-module-card" data-course-module="${escapeHtml(module.id)}" ${isOpen ? "open" : ""}>
-      <summary><span class="course-module-number">${String(module.week).padStart(2, "0")}</span><span class="course-module-heading"><small>SEMANA ${module.week} · ${module.hours} HORAS</small><strong>${escapeHtml(module.title)}</strong></span><span class="course-module-toggle" aria-hidden="true">＋</span></summary>
-      <div class="course-module-body"><p><b>Enfoque:</b> ${escapeHtml(module.focus)}</p><p><b>Resultado de aprendizaje:</b> ${escapeHtml(module.outcome)}</p>${renderModuleGuide(module)}${renderVideoCard({ kind: "module", id: module.id, module })}<div class="course-links-block"><b>Práctica vinculada</b><div class="course-practice-links">${practiceLinks}</div></div><div class="course-resource-row">${material}<button type="button" class="module-progress-toggle" data-module-toggle="${escapeHtml(module.id)}" aria-pressed="${moduleCompleted}">${moduleCompleted ? "Módulo completado ✓" : "Marcar módulo completado"}</button></div></div>
-    </details>`;
-  }).join("");
-
-  return `<main id="contenido" class="content course-content" tabindex="-1">
-    <div class="hero-kicker"><span class="kicker-rule"></span><span>SECCIÓN 01 · RUTA DE APRENDIZAJE</span></div>
-    <section class="course-hero"><div class="course-hero-copy"><p class="eyebrow">${COURSE.hours} HORAS · ${COURSE.weeks} SEMANAS · MÉXICO</p><h1>IA para contaduría,<br/><em>con criterio verificable.</em></h1><p>Un recorrido paso a paso: Nora te acompaña desde los fundamentos hasta el proyecto integrador. Cada semana combina una clase guiada, práctica ficticia y revisión.</p><div class="course-hero-actions"><button class="button button-primary" type="button" data-action="tutor-open">Comenzar con Nora <span aria-hidden="true">→</span></button><details class="course-more-actions"><summary>Más herramientas</summary><div><a class="text-link" href="/docs/curso/plan-trabajo-curso-ia-contaduria.md" download>Plan de trabajo ↓</a><button type="button" class="text-link" data-action="download-portfolio">Descargar portafolio ↓</button><button type="button" class="text-link" data-section="lab">Ir al laboratorio →</button></div></details></div></div><div class="course-hero-stamp" aria-label="40 horas en 10 módulos"><span>RECORRIDO</span><strong>01—10</strong><i>3 h guiadas<br/>+ 1 h independiente</i></div></section>
-    ${renderOnboarding()}
-    <div class="course-stat-row"><div><b>${COURSE.hours}</b><span>horas de trabajo</span></div><div><b>${state.completedModules.size}/${courseModules.length}</b><span>módulos completados</span></div><div><b>${state.completed.size}/${exercises.length}</b><span>prácticas completadas</span></div></div>
-    <p class="progress-storage-note" role="status">${escapeHtml(state.storageWarning || "Solo se guardan en este navegador los módulos, prácticas completados y tu ruta inicial; nunca tus respuestas ni selecciones.")}</p>
-    <section class="course-outcomes"><div><p class="eyebrow">AL FINAL DEL RECORRIDO</p><h2>Aprender a proponer y, sobre todo, a verificar.</h2></div><ul><li>Redactar instrucciones claras, acotadas y verificables.</li><li>Usar IA como apoyo para clasificar, conciliar, analizar y comunicar.</li><li>Proteger datos y reconocer cuándo falta evidencia.</li><li>Tratar una anomalía como señal de revisión, no como conclusión.</li></ul></section>
-    <section class="course-curriculum"><div class="section-heading"><div><p class="eyebrow">40 HORAS · 10 MÓDULOS</p><h2>El plan de trabajo</h2></div><span class="count-pill">3 h guiadas + 1 h independiente / semana</span></div><div class="course-module-list">${moduleMarkup}</div></section>
-    ${renderGlossaryIndex()}
-    <p class="course-disclaimer"><strong>Alcance educativo.</strong> Los casos del laboratorio son ficticios. Los módulos fiscales no determinan obligaciones ni sustituyen la revisión de fuentes vigentes y de una persona profesional calificada.</p>
-  </main>`;
+  return renderClassroom({
+    modules: courseModules,
+    exercises,
+    state,
+    onboarding: renderOnboarding(),
+    glossary: renderGlossaryIndex(),
+    tutorPanel: renderTutorPanel(getTutorContext(), { embedded: true }),
+    assetPath,
+    avatarLabel: tutorAvatarLabel(),
+    voiceSupported: tutorSpeaker.supported,
+    anam: state.anam,
+  });
 }
 
 function renderTable(title, rows) {
@@ -537,7 +700,7 @@ function renderExercise(exercise) {
   const nextExercise = exercises[previousIndex + 1];
   return `<main id="contenido" class="content exercise-content" tabindex="-1">
     <div class="exercise-topline"><button class="back-link" type="button" data-nav="home">← Volver al recorrido</button><span class="exercise-count">PRÁCTICA ${String(previousIndex + 1).padStart(2, "0")} <i>/</i> ${String(exercises.length).padStart(2, "0")}</span></div>
-    <div class="exercise-heading"><div class="exercise-number">${String(previousIndex + 1).padStart(2, "0")}</div><div><p class="eyebrow">${escapeHtml(exercise.category)} · ${exercise.time}</p><h1>${escapeHtml(exercise.title)}</h1><p class="exercise-intro">${escapeHtml(exercise.intro)}</p></div><span class="case-tag">PRÁCTICA</span></div>
+    <div class="exercise-heading"><div class="exercise-number">${String(previousIndex + 1).padStart(2, "0")}</div><div><p class="eyebrow">${escapeHtml(exercise.category)} · caso ficticio</p><h1>${escapeHtml(exercise.title)}</h1><p class="exercise-intro">${escapeHtml(exercise.intro)}</p></div><span class="case-tag">PRÁCTICA</span></div>
     ${scenario}${tables}${stageProgress}${renderVideoCard({ kind: "exercise", id: exercise.id, module: linkedModule, exercise })}
     <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions">
       <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
@@ -551,9 +714,19 @@ function renderExercise(exercise) {
 }
 
 function render() {
+  const persistentVideo = state.section === "course" && state.anam.status === "live"
+    ? app.querySelector("[data-anam-video]")
+    : null;
+  if (persistentVideo) persistentVideo.remove();
+  else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = state.section === "course" ? renderCourse() : state.section === "study" ? renderStudy() : exercise ? renderExercise(exercise) : renderHome();
-  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div>${renderTutorPanel(getTutorContext())}</div>`;
+  app.innerHTML = `<div class="app-shell">${sidebar()}<div class="main-shell">${topbar()}${content}</div>${state.section === "course" ? "" : renderTutorPanel(getTutorContext())}</div>`;
+  if (persistentVideo) {
+    const placeholder = app.querySelector("[data-anam-video]");
+    if (placeholder) placeholder.replaceWith(persistentVideo);
+    persistentVideo.hidden = false;
+  }
 }
 
 async function initializeTutorConfig() {
@@ -617,6 +790,25 @@ app.addEventListener("click", (event) => {
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const classroomModule = event.target.closest("[data-class-module]");
+  if (classroomModule) {
+    const moduleId = classroomModule.dataset.classModule;
+    if (!courseModules.some(({ id }) => id === moduleId)) return;
+    resetTutor();
+    state.activeModuleId = moduleId;
+    state.coursePhaseIndex = 0;
+    render();
+    return;
+  }
+  const classroomPhase = event.target.closest("[data-class-phase]");
+  if (classroomPhase) {
+    const phaseIndex = Number(classroomPhase.dataset.classPhase);
+    if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length) return;
+    resetTutor();
+    state.coursePhaseIndex = phaseIndex;
+    render();
     return;
   }
   const glossaryTerm = event.target.closest("[data-glossary-term]");
@@ -720,8 +912,45 @@ app.addEventListener("click", (event) => {
     state.tutor.abortController?.abort();
     return;
   }
-  if (action.dataset.action === "tutor-voice") {
+    if (action.dataset.action === "tutor-voice") {
     state.tutor.voiceEnabled = tutorSpeaker.setEnabled(!state.tutor.voiceEnabled);
+    render();
+    return;
+  }
+  if (action.dataset.action === "classroom-narrate") {
+    if (tutorSpeaker.enabled && state.tutor.avatarState === "explaining") {
+      tutorSpeaker.stop();
+      state.tutor.avatarState = "idle";
+    } else {
+      const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
+      const narration = buildClassroomScene(module, state.coursePhaseIndex).narration;
+      if (state.anam.status === "live" && state.anam.client) {
+        const talkStream = state.anam.client.createTalkMessageStream();
+        state.anam.activity = "Nora está narrando esta escena.";
+        void talkStream.streamMessageChunk(narration, true).catch(() => {
+          state.anam.activity = "No se pudo enviar la narración al avatar; puedes seguir con el texto y el chat.";
+          refreshClassroomVisual();
+        });
+      } else {
+        state.tutor.voiceEnabled = tutorSpeaker.setEnabled(true);
+        tutorSpeaker.say(narration);
+      }
+    }
+    refreshTutorPanel();
+    return;
+  }
+  if (action.dataset.action === "anam-toggle") {
+    if (state.anam.status === "live" || state.anam.status === "connecting") void stopAnamSession();
+    else void startAnamSession();
+    return;
+  }
+  if (action.dataset.action === "classroom-complete") {
+    const moduleId = action.dataset.moduleId;
+    if (!courseModules.some(({ id }) => id === moduleId)) return;
+    state.completedModules.add(moduleId);
+    state.activeModuleId = moduleId;
+    state.tutor.avatarState = "celebrating";
+    persistProgress();
     render();
     return;
   }
@@ -867,3 +1096,4 @@ app.addEventListener("change", (event) => {
 render();
 initializeTutorConfig();
 initializeStudyDatabase();
+window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });

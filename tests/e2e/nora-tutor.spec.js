@@ -25,7 +25,7 @@ async function openFirstExercise(page, replies) {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole("button", { name: /laboratorio práctico/i }).click();
+  await page.locator('[data-section="lab"]').first().click();
   await page
     .getByRole("button", { name: /redacta un prompt contable útil/i })
     .first()
@@ -36,25 +36,14 @@ async function openFirstExercise(page, replies) {
 }
 
 test.describe("Panel de Nora", () => {
-  test("presenta una guía específica para cada uno de los diez módulos", async ({ page }) => {
+  test("presenta el aula guiada con las diez clases y fases navegables", async ({ page }) => {
     await page.goto("/");
-    const guides = page.locator("[data-testid^='module-nora-']");
-
-    await expect(guides).toHaveCount(10);
-    await expect(guides.first()).toContainText("NORA · GUÍA DEL MÓDULO");
-    await expect(guides.first()).toContainText("Aprende primero");
-    await expect(guides.first()).toContainText("Prompt");
-    await expect(guides.first()).toContainText("Ejemplo sencillo");
-    await expect(guides.first()).toContainText("Herramientas para practicar");
-    await expect(guides.first()).toContainText("NotebookLM");
-    await expect(guides.first()).toContainText("Claude");
-    await expect(guides.first()).toContainText("datos ficticios");
-    await expect(guides.first()).toContainText("Ruta en 3 pasos");
-    await expect(guides.first()).toContainText("Pregunta de control");
-    await expect(guides.first()).toContainText("Evidencia de salida");
-    await expect(guides.first()).toContainText("Contexto que puedes aportar");
-    await expect(guides.first()).toContainText("Debe contener");
-    await expect(guides.first()).toContainText("tus notas locales");
+    await expect(page.getByTestId("classroom-stage")).toContainText("Empecemos por una pregunta");
+    await expect(page.locator("[data-class-module]")).toHaveCount(10);
+    await expect(page.locator(".classroom-phase-nav [data-class-phase]")).toHaveCount(5);
+    await expect(page.getByTestId("nora-panel")).toBeVisible();
+    await expect(page.getByTestId("nora-panel")).toContainText("Aula · Activación");
+    await expect(page.locator("body")).not.toContainText(/\b(?:horas?|minutos?)\b/i);
   });
 
   test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {
@@ -68,15 +57,14 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("onboarding-complete")).toContainText("Voy empezando");
   });
 
-  test("permite consultar un concepto y ver a Nora demostrarlo", async ({ page }) => {
+  test("permite cambiar de concepto a práctica con una demostración visual", async ({ page }) => {
     await page.goto("/");
-    const firstGuide = page.locator("[data-testid='module-nora-modulo-01']");
-    await firstGuide.getByRole("button", { name: /Prompt/i }).click();
-    await expect(firstGuide.locator(".glossary-definition")).toContainText("Prompt");
-
-    await firstGuide.getByRole("button", { name: /Nora demuestra/i }).click();
-    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("Antes");
-    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("Después");
+    const stage = page.getByTestId("classroom-stage");
+    await stage.locator('.classroom-phase-nav [data-class-phase="1"]').click();
+    await expect(stage).toContainText("Una idea, un ejemplo");
+    await stage.locator('.classroom-phase-nav [data-class-phase="2"]').click();
+    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("ANTES");
+    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("PROPUESTA");
   });
 
   test("abre el índice del glosario y muestra definición, ejemplo y comprobación", async ({ page }) => {
@@ -93,16 +81,15 @@ test.describe("Panel de Nora", () => {
   test("Nora acompaña hasta el proyecto integrador del módulo 10", async ({ page }) => {
     const requests = await mockTutor(page, ["Para tu proyecto, define primero entradas, validaciones y puntos de revisión humana."]);
     await page.goto("/");
-    const finalModule = page.locator("details[data-course-module='modulo-10']");
-    await finalModule.locator("summary").click();
+    await page.locator('[data-class-module="modulo-10"]').click();
+    const finalModule = page.getByTestId("classroom-stage");
     await expect(finalModule).toContainText("Asistentes, gobernanza y proyecto integrador");
-    await expect(finalModule).toContainText("Evidencia de salida");
-    await expect(finalModule).toContainText("Práctica independiente");
-    await page.getByTestId("nora-toggle").click();
+    await finalModule.locator('.classroom-phase-nav [data-class-phase="4"]').click();
+    await expect(finalModule).toContainText("evidencia de aprendizaje");
     await page.getByTestId("nora-input").fill("Repasemos el proyecto final");
     await page.getByTestId("nora-input").press("Enter");
     await expect(page.getByTestId("nora-log")).toContainText("puntos de revisión humana");
-    expect(requests[0].context).toMatchObject({ section: "course", moduleId: "modulo-10" });
+    expect(requests[0].context).toMatchObject({ section: "course", moduleId: "modulo-10", coursePhase: "close" });
   });
 
   test("está disponible desde el curso y puede abrirse", async ({ page }) => {
@@ -110,7 +97,7 @@ test.describe("Panel de Nora", () => {
     await page.goto("/");
     await expect(page.getByTestId("nora-panel")).toBeVisible();
     await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
-    await page.getByRole("button", { name: /laboratorio práctico/i }).click();
+    await page.locator('[data-section="lab"]').first().click();
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await expect(page.getByTestId("nora-panel")).toBeVisible();
   });
@@ -209,7 +196,7 @@ test.describe("Panel de Nora", () => {
     expect(storageKeys.some((key) => /tutor|nora|chat/i.test(key))).toBe(false);
 
     await page.reload();
-    await page.getByRole("button", { name: /laboratorio práctico/i }).click();
+    await page.locator('[data-section="lab"]').first().click();
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await page.getByTestId("nora-toggle").click();
 

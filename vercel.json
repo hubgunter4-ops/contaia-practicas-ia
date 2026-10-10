@@ -6,6 +6,9 @@
   "functions": {
     "api/tutor/stream.js": {
       "maxDuration": 30
+    },
+    "api/tutor/anam-session.js": {
+      "maxDuration": 15
     }
   }
 }

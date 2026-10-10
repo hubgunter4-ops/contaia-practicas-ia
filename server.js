@@ -4,6 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleTutorConfig, handleTutorStream } from "./src/tutor/server.js";
+import { handleAnamSession } from "./src/tutor/anam-session.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const allowedRoot = path.resolve(root);
@@ -43,6 +44,7 @@ function resolvePublicPath(pathname) {
   let relative;
   if (decoded === "/") relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
+  else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
   else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";
   else if (decoded.startsWith("/assets/")) relative = `public${decoded}`;
   else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);
@@ -71,6 +73,7 @@ const server = createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
   if (pathname === "/api/tutor/config") return handleTutorConfig(request, response);
   if (pathname === "/api/tutor/stream") return handleTutorStream(request, response);
+  if (pathname === "/api/tutor/anam-session") return handleAnamSession(request, response);
   const filePath = resolvePublicPath(pathname);
   if (!filePath || !["GET", "HEAD"].includes(request.method ?? "GET")) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff" });
