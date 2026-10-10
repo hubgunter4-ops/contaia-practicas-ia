@@ -41,6 +41,8 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("classroom-stage")).toContainText("Empecemos por una pregunta");
     await expect(page.locator("[data-class-module]")).toHaveCount(10);
     await expect(page.locator(".classroom-phase-nav [data-class-phase]")).toHaveCount(5);
+    await expect(page.locator('.classroom-phase-nav [data-class-phase="1"]')).toBeDisabled();
+    await expect(page.getByRole("heading", { name: /Una acción/ })).toBeVisible();
     await expect(page.getByTestId("nora-panel")).toBeVisible();
     await expect(page.getByTestId("nora-panel")).toContainText("Aula · Activación");
     await expect(page.locator("body")).not.toContainText(/\b(?:horas?|minutos?)\b/i);
@@ -57,14 +59,46 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("onboarding-complete")).toContainText("Voy empezando");
   });
 
-  test("permite cambiar de concepto a práctica con una demostración visual", async ({ page }) => {
+  test("presenta la demostración antes de la práctica y la práctica muestra una sola consigna", async ({ page }) => {
     await page.goto("/");
     const stage = page.getByTestId("classroom-stage");
-    await stage.locator('.classroom-phase-nav [data-class-phase="1"]').click();
+    await stage.locator('[data-action="classroom-next-phase"]').click();
     await expect(stage).toContainText("Una idea, un ejemplo");
-    await stage.locator('.classroom-phase-nav [data-class-phase="2"]').click();
     await expect(page.getByTestId("module-demo-modulo-01")).toContainText("ANTES");
     await expect(page.getByTestId("module-demo-modulo-01")).toContainText("PROPUESTA");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await expect(stage).toContainText("Tu instrucción");
+    await expect(stage.getByTestId("classroom-current-instruction")).toContainText("Conoce la diferencia");
+    await expect(stage.locator('[data-class-phase="3"]')).toBeDisabled();
+    await expect(page.getByTestId("module-demo-modulo-01")).toHaveCount(0);
+  });
+
+  test("Nora espera la confirmación del estudiante antes de cada acción y de revisión", async ({ page }) => {
+    await page.goto("/");
+    const stage = page.getByTestId("classroom-stage");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    const instruction = page.getByTestId("classroom-current-instruction");
+    await expect(instruction).toContainText("Conoce la diferencia");
+    await expect(stage.locator('.classroom-phase-nav [data-class-phase="3"]')).toBeDisabled();
+    await stage.locator('[data-action="classroom-practice-step-done"]').click();
+    await expect(instruction).toContainText("Aprende que un prompt");
+    await stage.locator('[data-action="classroom-practice-step-done"]').click();
+    await expect(instruction).toContainText("Prueba una petición simple");
+    await stage.locator('[data-action="classroom-practice-step-done"]').click();
+    await expect(stage).toContainText("Verifica antes de aceptar una respuesta");
+    await expect(stage.locator('.classroom-phase-nav [data-class-phase="3"]')).toBeEnabled();
+    await expect(page.getByTestId("module-demo-modulo-01")).toContainText("PROPUESTA");
+  });
+
+  test("las acciones de práctica las realiza la persona y no se ejecutan automáticamente", async ({ page }) => {
+    await page.goto("/");
+    const stage = page.getByTestId("classroom-stage");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await expect(stage).toContainText("no abre herramientas ni ejecuta la actividad por ti");
+    await expect(stage.locator('[data-action="classroom-practice-step-done"]')).toContainText("Lo hice");
+    await expect(stage.locator('[data-class-phase="3"]')).toBeDisabled();
   });
 
   test("abre el índice del glosario y muestra definición, ejemplo y comprobación", async ({ page }) => {
@@ -84,7 +118,13 @@ test.describe("Panel de Nora", () => {
     await page.locator('[data-class-module="modulo-10"]').click();
     const finalModule = page.getByTestId("classroom-stage");
     await expect(finalModule).toContainText("Asistentes, gobernanza y proyecto integrador");
-    await finalModule.locator('.classroom-phase-nav [data-class-phase="4"]').click();
+    await finalModule.locator('[data-action="classroom-next-phase"]').click();
+    await finalModule.locator('[data-action="classroom-next-phase"]').click();
+    await finalModule.locator('[data-action="classroom-practice-step-done"]').click();
+    await finalModule.locator('[data-action="classroom-practice-step-done"]').click();
+    await finalModule.locator('[data-action="classroom-practice-step-done"]').click();
+    await finalModule.locator('[data-action="classroom-next-phase"]').click();
+    await expect(finalModule).toContainText("Cierra con una evidencia de aprendizaje");
     await expect(finalModule).toContainText("evidencia de aprendizaje");
     await page.getByTestId("nora-input").fill("Repasemos el proyecto final");
     await page.getByTestId("nora-input").press("Enter");

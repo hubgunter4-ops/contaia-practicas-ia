@@ -29,6 +29,8 @@ const state = {
   anam: { status: "idle", error: "", activity: "", client: null, abortController: null, lastUserMessageId: "", pendingTranscript: "" },
   activeModuleId: "modulo-01",
   coursePhaseIndex: 0,
+  highestUnlockedPhase: 0,
+  practiceStepIndex: 0,
   onboardingLevel: "",
   onboardingDraft: "",
   demoModuleId: null,
@@ -124,6 +126,64 @@ function resetTutor() {
   state.tutor.avatarState = "idle";
 }
 
+function narrateClassroomInstruction({ browserFallback = false } = {}) {
+  const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
+  const narration = buildClassroomScene(module, state.coursePhaseIndex, state.practiceStepIndex).narration;
+  const liveClient = state.anam.status === "live" ? state.anam.client : null;
+  if (liveClient) {
+    state.anam.activity = "Nora dicta la consigna. Tú realizas la acción y confirmas cuando termines.";
+    refreshClassroomVisual();
+    const stream = liveClient.createTalkMessageStream();
+    void stream.streamMessageChunk(narration, true).catch(() => {
+      state.anam.activity = "No se pudo reproducir la consigna. Puedes leerla o usar el chat.";
+      refreshClassroomVisual();
+    });
+    return true;
+  }
+  if (browserFallback && tutorSpeaker.supported) {
+    state.tutor.voiceEnabled = tutorSpeaker.setEnabled(true);
+    tutorSpeaker.say(narration);
+    return true;
+  }
+  return false;
+}
+
+function advanceClassroomPhase() {
+  if (state.section !== "course" || state.coursePhaseIndex >= CLASSROOM_PHASES.length - 1 || state.coursePhaseIndex === 2) return;
+  const nextPhase = state.coursePhaseIndex + 1;
+  state.highestUnlockedPhase = Math.max(state.highestUnlockedPhase, nextPhase);
+  state.coursePhaseIndex = nextPhase;
+  if (nextPhase === 2) state.practiceStepIndex = 0;
+  resetTutor();
+  render();
+  narrateClassroomInstruction();
+}
+
+function completePracticeInstruction() {
+  if (state.section !== "course" || state.coursePhaseIndex !== 2) return;
+  const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
+  const steps = Array.isArray(module.guide?.steps) ? module.guide.steps : [];
+  if (state.practiceStepIndex + 1 < steps.length) {
+    state.practiceStepIndex += 1;
+  } else {
+    state.highestUnlockedPhase = Math.max(state.highestUnlockedPhase, 3);
+    state.coursePhaseIndex = 3;
+  }
+  resetTutor();
+  render();
+  narrateClassroomInstruction();
+}
+
+function handleAnamTranscript(transcript) {
+  const command = transcript.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const confirmation = /^(?:listo|hecho|ya termine|termine|lo hice|ya lo hice|siguiente paso)[.!?,\s]*$/i.test(command);
+  if (state.section === "course" && state.coursePhaseIndex === 2 && confirmation) {
+    completePracticeInstruction();
+    return;
+  }
+  void sendTutorMessage(transcript);
+}
+
 function tutorAvatarLabel() {
   return { thinking: "Nora está pensando.", explaining: "Nora está explicando.", celebrating: "Nora celebra el avance." }[state.tutor.avatarState] || "Nora está lista para ayudarte.";
 }
@@ -142,7 +202,13 @@ function getTutorContext() {
     }
   }
   if (state.section === "course") {
-    return { section: "course", moduleId: module.id, coursePhase: CLASSROOM_PHASES[state.coursePhaseIndex]?.id ?? CLASSROOM_PHASES[0].id };
+    const coursePhase = CLASSROOM_PHASES[state.coursePhaseIndex]?.id ?? CLASSROOM_PHASES[0].id;
+    return {
+      section: "course",
+      moduleId: module.id,
+      coursePhase,
+      ...(coursePhase === "practice" ? { courseInstruction: buildClassroomScene(module, state.coursePhaseIndex, state.practiceStepIndex).activeStep } : {}),
+    };
   }
   return { section: "study", moduleId: module.id };
 }
@@ -188,9 +254,11 @@ function refreshClassroomVisual() {
   }
   const voiceLabel = app.querySelector("[data-classroom-voice-label]");
   const voiceIcon = app.querySelector("[data-classroom-voice-icon]");
+  const classroomVoiceButton = app.querySelector("[data-classroom-voice-button]");
   const isSpeaking = state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled;
-  if (voiceLabel) voiceLabel.textContent = isSpeaking ? "Detener narración" : "Escuchar esta escena";
+  if (voiceLabel) voiceLabel.textContent = isSpeaking ? "Detener narración" : "Repetir consigna";
   if (voiceIcon) voiceIcon.textContent = isSpeaking ? "Ⅱ" : "▶";
+  if (classroomVoiceButton) classroomVoiceButton.disabled = !tutorSpeaker.supported && !live;
 }
 
 const tutorSpeaker = createSpeechSpeaker({
@@ -290,7 +358,7 @@ async function sendTutorMessage(text) {
     app.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
     const pendingTranscript = state.anam.pendingTranscript;
     state.anam.pendingTranscript = "";
-    if (pendingTranscript && state.anam.status === "live") queueMicrotask(() => void sendTutorMessage(pendingTranscript));
+    if (pendingTranscript && state.anam.status === "live") queueMicrotask(() => handleAnamTranscript(pendingTranscript));
   }
 }
 
@@ -335,15 +403,9 @@ async function startAnamSession() {
     client.addListener(AnamEvent.CONNECTION_ESTABLISHED, () => {
       if (state.anam.client !== client) return;
       state.anam.status = "live";
-      state.anam.activity = "Nora está abriendo la escena.";
+      state.anam.activity = "Nora está preparando la primera consigna.";
       refreshClassroomVisual();
-      const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
-      const opening = buildClassroomScene(module, state.coursePhaseIndex).narration;
-      const openingStream = client.createTalkMessageStream();
-      void openingStream.streamMessageChunk(opening, true).catch(() => {
-        state.anam.activity = "En vivo · puedes hablar cuando quieras.";
-        refreshClassroomVisual();
-      });
+      narrateClassroomInstruction();
     });
     client.addListener(AnamEvent.MESSAGE_HISTORY_UPDATED, (messages) => {
       if (state.anam.client !== client || state.section !== "course" || !Array.isArray(messages)) return;
@@ -360,7 +422,7 @@ async function startAnamSession() {
         state.anam.pendingTranscript = transcript;
         state.tutor.abortController?.abort();
       } else {
-        void sendTutorMessage(transcript);
+        handleAnamTranscript(transcript);
       }
     });
     client.addListener(AnamEvent.USER_SPEECH_STARTED, () => {
@@ -799,16 +861,20 @@ app.addEventListener("click", (event) => {
     resetTutor();
     state.activeModuleId = moduleId;
     state.coursePhaseIndex = 0;
+    state.highestUnlockedPhase = 0;
+    state.practiceStepIndex = 0;
     render();
+    narrateClassroomInstruction();
     return;
   }
   const classroomPhase = event.target.closest("[data-class-phase]");
   if (classroomPhase) {
     const phaseIndex = Number(classroomPhase.dataset.classPhase);
-    if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length) return;
+    if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length || phaseIndex > state.highestUnlockedPhase) return;
     resetTutor();
     state.coursePhaseIndex = phaseIndex;
     render();
+    narrateClassroomInstruction();
     return;
   }
   const glossaryTerm = event.target.closest("[data-glossary-term]");
@@ -918,25 +984,23 @@ app.addEventListener("click", (event) => {
     return;
   }
   if (action.dataset.action === "classroom-narrate") {
-    if (tutorSpeaker.enabled && state.tutor.avatarState === "explaining") {
+    if (state.anam.status === "live" && state.anam.client) {
+      narrateClassroomInstruction();
+    } else if (tutorSpeaker.enabled && state.tutor.avatarState === "explaining") {
       tutorSpeaker.stop();
       state.tutor.avatarState = "idle";
     } else {
-      const module = courseModules.find(({ id }) => id === state.activeModuleId) ?? courseModules[0];
-      const narration = buildClassroomScene(module, state.coursePhaseIndex).narration;
-      if (state.anam.status === "live" && state.anam.client) {
-        const talkStream = state.anam.client.createTalkMessageStream();
-        state.anam.activity = "Nora está narrando esta escena.";
-        void talkStream.streamMessageChunk(narration, true).catch(() => {
-          state.anam.activity = "No se pudo enviar la narración al avatar; puedes seguir con el texto y el chat.";
-          refreshClassroomVisual();
-        });
-      } else {
-        state.tutor.voiceEnabled = tutorSpeaker.setEnabled(true);
-        tutorSpeaker.say(narration);
-      }
+      narrateClassroomInstruction({ browserFallback: true });
     }
     refreshTutorPanel();
+    return;
+  }
+  if (action.dataset.action === "classroom-next-phase") {
+    advanceClassroomPhase();
+    return;
+  }
+  if (action.dataset.action === "classroom-practice-step-done") {
+    completePracticeInstruction();
     return;
   }
   if (action.dataset.action === "anam-toggle") {

@@ -21,6 +21,35 @@ test("cada módulo puede renderizar una escena con texto y narración para cada 
   }
 });
 
+test("el concepto se enseña completo con definiciones y demostración antes de pedir práctica", () => {
+  for (const module of courseModules) {
+    const scene = buildClassroomScene(module, 1);
+    for (const [term, meaning] of module.teachFirst.concepts) {
+      assert.ok(scene.narration.includes(term), `${module.id} debe narrar el concepto ${term}`);
+      assert.ok(scene.narration.includes(meaning), `${module.id} debe explicar ${term}`);
+    }
+    assert.ok(scene.narration.includes(module.demonstration.before), `${module.id} debe presentar el punto de partida`);
+    assert.ok(scene.narration.includes(module.demonstration.after), `${module.id} debe explicar la propuesta de referencia`);
+  }
+});
+
+test("la práctica presenta una sola instrucción activa y exige confirmación manual", () => {
+  for (const module of courseModules) {
+    const first = buildClassroomScene(module, 2, 0);
+    assert.equal(first.activeStep, module.guide.steps[0]);
+    assert.equal(first.stepIndex, 0);
+    assert.equal(first.stepCount, module.guide.steps.length);
+    assert.match(first.narration, /Haz solo esta acción tú/);
+    assert.match(first.narration, /di «Listo» o confirma en la pantalla/i);
+    assert.match(first.narration, /No voy a ejecutar la tarea por ti/);
+    assert.ok(first.narration.includes(module.context.documents[0]));
+    assert.ok(first.narration.includes(module.guide.deliverable));
+    const second = buildClassroomScene(module, 2, 1);
+    assert.equal(second.activeStep, module.guide.steps[1]);
+    assert.equal(second.stepIndex, 1);
+  }
+});
+
 test("limita índices de fase fuera de rango a la primera o última escena", () => {
   assert.equal(buildClassroomScene(courseModules[0], -5).phase.id, "activate");
   assert.equal(buildClassroomScene(courseModules.at(-1), 99).phase.id, "close");

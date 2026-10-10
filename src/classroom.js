@@ -15,7 +15,7 @@ function normalizePhaseIndex(index) {
   return Math.min(Math.max(parsed, 0), CLASSROOM_PHASES.length - 1);
 }
 
-export function buildClassroomScene(module, phaseIndex = 0) {
+export function buildClassroomScene(module, phaseIndex = 0, practiceStepIndex = 0) {
   if (!module) throw new TypeError("Se requiere un módulo para construir la escena del aula.");
   const phase = CLASSROOM_PHASES[normalizePhaseIndex(phaseIndex)];
   const guide = module.guide ?? {};
@@ -23,6 +23,8 @@ export function buildClassroomScene(module, phaseIndex = 0) {
   const demonstration = module.demonstration ?? {};
   const concepts = Array.isArray(foundation.concepts) ? foundation.concepts : [];
   const steps = Array.isArray(guide.steps) ? guide.steps : [];
+  const activeStepIndex = steps.length ? Math.min(Math.max(Number.isInteger(practiceStepIndex) ? practiceStepIndex : 0, 0), steps.length - 1) : 0;
+  const activeStep = steps[activeStepIndex] ?? "Revisa el ejemplo ficticio y anota qué comprobarías.";
   let scene;
 
   if (phase.id === "activate") {
@@ -32,7 +34,7 @@ export function buildClassroomScene(module, phaseIndex = 0) {
       lead: guide.opening || module.focus,
       calloutLabel: "OBJETIVO DE APRENDIZAJE",
       callout: module.outcome || module.focus,
-      narration: `${guide.opening || module.focus} La meta de esta clase es: ${module.outcome || module.focus}`,
+      narration: `${guide.opening || module.focus} La meta es ${module.outcome || module.focus} Antes de avanzar, piensa o dime en voz alta qué sabes ya de ${module.title.toLowerCase()} y qué te gustaría poder hacer al terminar.`,
     };
   } else if (phase.id === "concept") {
     scene = {
@@ -41,18 +43,26 @@ export function buildClassroomScene(module, phaseIndex = 0) {
       lead: foundation.why || module.focus,
       concepts,
       example: foundation.example || demonstration.after || "Trabaja solo con la información ficticia del ejercicio.",
-      narration: `${foundation.why || module.focus} Ejemplo: ${foundation.example || demonstration.after || module.outcome}`,
+      before: demonstration.before,
+      after: demonstration.after,
+      why: demonstration.why,
+      narration: `${foundation.why || module.focus} Vamos por partes. ${concepts.map(([term, meaning]) => `${term}: ${meaning}`).join(" ")} Ejemplo sencillo: ${foundation.example || demonstration.after || module.outcome} Observa este cambio. Antes: ${demonstration.before || "una petición ambigua"}. Propuesta: ${demonstration.after || module.outcome}. Lo importante es: ${demonstration.why || "revisar la evidencia antes de aceptar el resultado"}. La meta de aprendizaje es ${module.outcome || module.focus}`,
     };
   } else if (phase.id === "practice") {
     scene = {
       id: phase.id,
       title: "Ahora lo intentas tú",
-      lead: "Avanza por partes. Nora puede orientar el razonamiento, pero tu criterio y la evidencia deciden el resultado.",
+      lead: "Nora da una instrucción por vez. Tú haces el trabajo en tu material ficticio y confirmas cuando termines; Nora no ejecuta acciones por ti.",
       steps,
+      activeStep,
+      stepIndex: activeStepIndex,
+      stepCount: Math.max(steps.length, 1),
       before: demonstration.before,
       after: demonstration.after,
       why: demonstration.why,
-      narration: `Vamos a practicar. ${steps.join(" ")} ${demonstration.why || "Si falta información, déjala como pendiente en lugar de adivinar."}`,
+      material: module.context?.documents?.[0] || "el caso ficticio del módulo",
+      deliverable: guide.deliverable || module.outcome || module.focus,
+      narration: `Vamos a practicar. Instrucción ${activeStepIndex + 1} de ${Math.max(steps.length, 1)}: ${activeStep} Empieza con este material: ${module.context?.documents?.[0] || "el caso ficticio del módulo"}. Haz solo esta acción tú; el producto final será ${guide.deliverable || module.outcome || module.focus}. Cuando termines, di «Listo» o confirma en la pantalla y te daré la siguiente instrucción. No voy a ejecutar la tarea por ti. ${demonstration.why || "Si falta información, déjala como pendiente en lugar de adivinar."}`,
     };
   } else if (phase.id === "review") {
     scene = {
@@ -62,7 +72,10 @@ export function buildClassroomScene(module, phaseIndex = 0) {
       calloutLabel: "PREGUNTA DE CONTROL",
       callout: guide.checkpoint || module.outcome,
       guardrail: module.context?.protect || demonstration.why || "Distingue los hechos comprobados de los supuestos y solicita revisión humana cuando falte evidencia.",
-      narration: `${guide.checkpoint || module.outcome} ${module.context?.protect || demonstration.why || "Contrasta la propuesta con la evidencia antes de aceptarla."}`,
+      before: demonstration.before,
+      after: demonstration.after,
+      why: demonstration.why,
+      narration: `Ahora revisa tu resultado. ${guide.checkpoint || module.outcome} Compáralo con la evidencia disponible y separa lo que comprobaste de lo que todavía es una hipótesis. ${module.context?.protect || demonstration.why || "Si falta evidencia, registra la duda y no la completes por intuición."}`,
     };
   } else {
     scene = {
@@ -72,7 +85,7 @@ export function buildClassroomScene(module, phaseIndex = 0) {
       calloutLabel: "PRODUCTO DE SALIDA",
       callout: guide.deliverable || module.outcome,
       summary: module.outcome || module.focus,
-      narration: `Para cerrar, registra: ${guide.deliverable || module.outcome}. Recuerda: ${module.outcome || module.focus}`,
+      narration: `Para cerrar, prepara tú la evidencia de aprendizaje: ${guide.deliverable || module.outcome}. Dime en tus palabras qué aprendiste y qué revisarías antes de usarlo en un caso real. La clase solo se marca completa cuando tú lo confirmes. ${module.outcome || module.focus}`,
     };
   }
 
@@ -80,22 +93,26 @@ export function buildClassroomScene(module, phaseIndex = 0) {
 }
 
 function renderSceneContent(scene, module) {
+  const demonstration = scene.before || scene.after
+    ? `<div class="classroom-demonstration" data-testid="module-demo-${escapeHtml(module.id)}"><article><span>ANTES</span><p>${escapeHtml(scene.before || "—")}</p></article><article><span>PROPUESTA DE REFERENCIA</span><p>${escapeHtml(scene.after || "—")}</p></article>${scene.why ? `<p class="classroom-demo-why"><b>Qué observar:</b> ${escapeHtml(scene.why)}</p>` : ""}</div>`
+    : "";
   if (scene.id === "activate" || scene.id === "review" || scene.id === "close") {
-    return `<div class="classroom-callout"><span>${escapeHtml(scene.calloutLabel)}</span><p>${escapeHtml(scene.callout)}</p></div>${scene.guardrail ? `<p class="classroom-guardrail"><b>Recuerda:</b> ${escapeHtml(scene.guardrail)}</p>` : ""}`;
+    return `<div class="classroom-callout"><span>${escapeHtml(scene.calloutLabel)}</span><p>${escapeHtml(scene.callout)}</p></div>${scene.guardrail ? `<p class="classroom-guardrail"><b>Recuerda:</b> ${escapeHtml(scene.guardrail)}</p>` : ""}${scene.id === "review" ? demonstration : ""}`;
   }
   if (scene.id === "concept") {
     const concepts = scene.concepts.length
       ? `<ul class="classroom-concepts">${scene.concepts.map(([term, meaning]) => `<li><b>${escapeHtml(term)}</b><span>${escapeHtml(meaning)}</span></li>`).join("")}</ul>`
       : "";
-    return `${concepts}<div class="classroom-example"><span>EJEMPLO SENCILLO</span><p>${escapeHtml(scene.example)}</p></div>`;
+    return `${concepts}<div class="classroom-example"><span>EJEMPLO SENCILLO</span><p>${escapeHtml(scene.example)}</p></div>${demonstration}`;
   }
-  const steps = scene.steps.length
-    ? `<ol class="classroom-steps">${scene.steps.map((step, index) => `<li><span>${String(index + 1).padStart(2, "0")}</span>${escapeHtml(step)}</li>`).join("")}</ol>`
-    : `<p class="classroom-guardrail">${escapeHtml(module.focus)}</p>`;
-  const demonstration = scene.before || scene.after
-    ? `<div class="classroom-demonstration" data-testid="module-demo-${escapeHtml(module.id)}"><article><span>ANTES</span><p>${escapeHtml(scene.before || "—")}</p></article><article><span>PROPUESTA</span><p>${escapeHtml(scene.after || "—")}</p></article>${scene.why ? `<p class="classroom-demo-why"><b>Qué observar:</b> ${escapeHtml(scene.why)}</p>` : ""}</div>`
-    : "";
-  return `${steps}${demonstration}`;
+  if (scene.id === "practice") {
+    const material = module.context?.documents?.[0] || "el caso ficticio del módulo";
+    const deliverable = module.guide?.deliverable || module.outcome || module.focus;
+    const tool = module.toolkit?.[0];
+    const toolHelp = tool ? `<p class="classroom-action-tool"><b>Opción para practicar:</b> ${escapeHtml(tool.name)} · ${escapeHtml(tool.activity)} <span>${escapeHtml(tool.guardrail)}</span></p>` : "";
+    return `<section class="classroom-action-card" aria-labelledby="classroom-action-title"><p class="classroom-action-counter">ACCIÓN ${String(scene.stepIndex + 1).padStart(2, "0")} / ${String(scene.stepCount).padStart(2, "0")} · LA HACES TÚ</p><h4 id="classroom-action-title">Tu instrucción</h4><p class="classroom-action-instruction" data-testid="classroom-current-instruction">${escapeHtml(scene.activeStep)}</p><div class="classroom-action-how"><b>Cómo ejecutarla</b><ol><li>Abre una nota local o una herramienta que tú elijas.</li><li>Usa este material ficticio: ${escapeHtml(material)}</li><li>Haz la acción indicada y conserva el resultado contigo. Tu producto final será: ${escapeHtml(deliverable)}</li></ol>${toolHelp}</div><p class="classroom-action-hint">No uses datos reales. ContaIA no abre herramientas ni ejecuta la actividad por ti.</p><button type="button" class="button button-primary classroom-action-done" data-action="classroom-practice-step-done">Lo hice · siguiente instrucción <span aria-hidden="true">→</span></button></section>`;
+  }
+  return `<p class="classroom-guardrail">${escapeHtml(module.focus)}</p>`;
 }
 
 function renderResources(module) {
@@ -116,7 +133,7 @@ function renderResources(module) {
 export function renderClassroom({ modules, exercises, state, onboarding = "", glossary = "", tutorPanel = "", assetPath = (file) => file, avatarLabel = "Nora está lista.", voiceSupported = false, anam = { status: "idle", error: "" } }) {
   const moduleIndex = Math.max(0, modules.findIndex(({ id }) => id === state.activeModuleId));
   const module = modules[moduleIndex] ?? modules[0];
-  const scene = buildClassroomScene(module, state.coursePhaseIndex);
+  const scene = buildClassroomScene(module, state.coursePhaseIndex, state.practiceStepIndex);
   const exercise = exercises.find(({ id }) => module.exerciseIds?.includes(id));
   const completedCount = state.completedModules.size;
   const percent = Math.round((completedCount / modules.length) * 100);
@@ -125,14 +142,17 @@ export function renderClassroom({ modules, exercises, state, onboarding = "", gl
     const completed = state.completedModules.has(item.id);
     return `<li><button type="button" class="classroom-module-button ${selected ? "is-active" : ""} ${completed ? "is-complete" : ""}" data-class-module="${escapeHtml(item.id)}" aria-current="${selected ? "step" : "false"}" aria-label="Clase ${String(index + 1).padStart(2, "0")}: ${escapeHtml(item.title)}${completed ? ", completada" : ""}"><span class="classroom-module-number">${String(index + 1).padStart(2, "0")}</span><span class="classroom-module-title">${escapeHtml(item.title)}</span><span class="classroom-module-mark" aria-hidden="true">${completed ? "✓" : ""}</span></button></li>`;
   }).join("");
-  const phaseButtons = CLASSROOM_PHASES.map((phase, index) => `<button type="button" class="classroom-phase-button ${scene.phaseIndex === index ? "is-active" : ""} ${scene.phaseIndex > index ? "is-past" : ""}" data-class-phase="${index}" aria-current="${scene.phaseIndex === index ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(phase.label)}</b></button>`).join("");
+  const highestUnlockedPhase = state.highestUnlockedPhase ?? 0;
+  const phaseButtons = CLASSROOM_PHASES.map((phase, index) => `<button type="button" class="classroom-phase-button ${scene.phaseIndex === index ? "is-active" : ""} ${scene.phaseIndex > index ? "is-past" : ""}" data-class-phase="${index}" aria-current="${scene.phaseIndex === index ? "step" : "false"}" ${index > highestUnlockedPhase ? "disabled" : ""}><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(phase.label)}</b></button>`).join("");
   const nextModule = modules[moduleIndex + 1];
   const phasePrevious = scene.phaseIndex > 0
     ? `<button type="button" class="classroom-step-control" data-class-phase="${scene.phaseIndex - 1}">← ${escapeHtml(CLASSROOM_PHASES[scene.phaseIndex - 1].short)}</button>`
     : `<span class="classroom-control-spacer"></span>`;
-  const phaseNext = scene.phaseIndex < CLASSROOM_PHASES.length - 1
-    ? `<button type="button" class="button button-primary" data-class-phase="${scene.phaseIndex + 1}">Siguiente fase <span aria-hidden="true">→</span></button>`
-    : `<button type="button" class="button button-primary" data-action="classroom-complete" data-module-id="${escapeHtml(module.id)}">${state.completedModules.has(module.id) ? "Clase completada ✓" : "Marcar clase completada"}</button>`;
+  const phaseNext = scene.phaseIndex === 2
+    ? ""
+    : scene.phaseIndex < CLASSROOM_PHASES.length - 1
+      ? `<button type="button" class="button button-primary classroom-phase-next" data-action="classroom-next-phase">${scene.phaseIndex === 0 ? "Listo · ver el concepto" : scene.phaseIndex === 1 ? "Ya revisé el ejemplo · iniciar práctica" : "Ya verifiqué · ir al cierre"} <span aria-hidden="true">→</span></button>`
+      : `<button type="button" class="button button-primary" data-action="classroom-complete" data-module-id="${escapeHtml(module.id)}">${state.completedModules.has(module.id) ? "Clase completada ✓" : "Confirmar clase completada"}</button>`;
   const linkedExercise = exercise
     ? `<button type="button" class="classroom-practice-link" data-nav="${escapeHtml(exercise.id)}">Abrir práctica: ${escapeHtml(exercise.title)} <span aria-hidden="true">↗</span></button>`
     : "";
@@ -145,15 +165,15 @@ export function renderClassroom({ modules, exercises, state, onboarding = "", gl
     : "";
 
   return `<main id="contenido" class="content classroom-content" tabindex="-1">
-    <header class="classroom-heading"><div><p class="eyebrow">AULA GUIADA · CON NORA</p><h1>Aprender, practicar<br/><em>y verificar.</em></h1><p>Un recorrido por diez clases. Cambia de escena, pregunta a Nora y avanza a tu ritmo; conserva el criterio profesional en cada decisión.</p></div><div class="classroom-course-progress"><span>AVANCE DEL RECORRIDO</span><b>${completedCount}<small> / ${modules.length} clases</small></b><div class="progress-track" role="progressbar" aria-label="Clases completadas" aria-valuenow="${completedCount}" aria-valuemin="0" aria-valuemax="${modules.length}"><span style="width:${percent}%"></span></div><button type="button" class="classroom-portfolio-link" data-action="download-portfolio">Descargar portafolio ↓</button></div></header>
+    <header class="classroom-heading"><div><p class="eyebrow">AULA GUIADA · CON NORA</p><h1>Una acción<br/><em>a la vez.</em></h1><p>Nora te explica, te da una instrucción y espera. Tú ejecutas cada paso con el caso ficticio y decides cuándo continuar.</p></div><div class="classroom-course-progress"><span>AVANCE DEL RECORRIDO</span><b>${completedCount}<small> / ${modules.length} clases</small></b><div class="progress-track" role="progressbar" aria-label="Clases completadas" aria-valuenow="${completedCount}" aria-valuemin="0" aria-valuemax="${modules.length}"><span style="width:${percent}%"></span></div><button type="button" class="classroom-portfolio-link" data-action="download-portfolio">Descargar portafolio ↓</button></div></header>
     <div class="classroom-layout">
       <aside class="classroom-rail" aria-label="Índice del curso"><div class="classroom-rail-heading"><p class="eyebrow">TU RECORRIDO</p><h2>Clases</h2><span>${String(moduleIndex + 1).padStart(2, "0")} / ${String(modules.length).padStart(2, "0")}</span></div><nav aria-label="Seleccionar clase"><ol class="classroom-module-list">${moduleButtons}</ol></nav><div class="classroom-rail-footer"><b>CASOS FICTICIOS</b><p>Usa ejemplos simulados. No compartas datos reales, personales o confidenciales.</p><button type="button" class="classroom-rail-link" data-section="lab">Ver prácticas simuladas ↗</button></div></aside>
       <section class="classroom-stage" data-testid="classroom-stage" aria-labelledby="classroom-module-title">
-        <header class="classroom-stage-heading"><div><p class="eyebrow">CLASE ${String(module.week).padStart(2, "0")} · ESCENA ${String(scene.phaseIndex + 1).padStart(2, "0")}</p><h2 id="classroom-module-title">${escapeHtml(module.title)}</h2></div><span class="classroom-outcome">${state.completedModules.has(module.id) ? "COMPLETADA ✓" : "EN CURSO"}</span></header>
+        <header class="classroom-stage-heading"><div><p class="eyebrow">CLASE ${String(module.week).padStart(2, "0")} · FASE ${String(scene.phaseIndex + 1).padStart(2, "0")} DE ${CLASSROOM_PHASES.length}</p><h2 id="classroom-module-title">${escapeHtml(module.title)}</h2></div><span class="classroom-outcome">${state.completedModules.has(module.id) ? "COMPLETADA ✓" : "EN CURSO"}</span></header>
         <nav class="classroom-phase-nav" aria-label="Fases de la clase">${phaseButtons}</nav>
-        <section class="classroom-scene" data-scene="${escapeHtml(scene.id)}" aria-live="polite"><div class="classroom-scene-copy"><p class="classroom-scene-kicker">${escapeHtml(scene.phase.label.toUpperCase())}</p><h3>${escapeHtml(scene.title)}</h3><p class="classroom-scene-lead">${escapeHtml(scene.lead)}</p>${renderSceneContent(scene, module)}</div><figure class="classroom-character ${state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled ? "is-speaking" : ""} ${liveActive ? "is-live" : ""}" data-classroom-character role="img" aria-label="${escapeHtml(liveActive ? "Nora está impartiendo la clase en vivo." : avatarLabel)}"><div class="classroom-character-glow" aria-hidden="true"></div><img src="${escapeHtml(assetPath(`nora-${state.tutor.avatarState}.webp`))}" alt="" width="600" height="800" fetchpriority="low" ${liveActive ? "hidden" : ""}/><video id="nora-live-video" class="classroom-live-video" data-anam-video autoplay playsinline ${liveActive ? "" : "hidden"} aria-label="Video en vivo de Nora"></video><figcaption><span class="classroom-character-status" data-classroom-avatar-status>${escapeHtml(liveActive ? "Nora está en vivo." : avatarLabel)}</span><b>Nora · tutora de ContaIA</b></figcaption></figure></section>
-        <div class="classroom-stage-controls"><button type="button" class="classroom-live-button" data-action="anam-toggle" data-testid="anam-toggle" aria-pressed="${liveActive}" ${liveConnecting ? "disabled" : ""}>${escapeHtml(liveButtonLabel)} <span aria-hidden="true">${liveActive ? "Ⅱ" : liveConnecting ? "…" : "◉"}</span></button><span class="classroom-live-status" data-anam-status role="status" aria-live="polite">${escapeHtml(liveStatus)}</span><button type="button" class="classroom-narrate-button" data-action="classroom-narrate" data-classroom-voice-button ${voiceSupported ? "" : "disabled"}><span data-classroom-voice-label>${state.tutor.voiceEnabled && state.tutor.avatarState === "explaining" ? "Detener narración" : "Escuchar esta escena"}</span> <span aria-hidden="true" data-classroom-voice-icon>${state.tutor.voiceEnabled && state.tutor.avatarState === "explaining" ? "Ⅱ" : "▶"}</span></button>${linkedExercise}</div>
-        <p class="classroom-live-privacy">El audio se procesa en Anam para la transcripción y el video. Nora responde desde el backend de ContaIA; no se envían tu progreso, notas ni respuestas guardadas.</p>
+        <section class="classroom-scene" data-scene="${escapeHtml(scene.id)}" aria-live="polite"><figure class="classroom-character ${state.tutor.avatarState === "explaining" && state.tutor.voiceEnabled ? "is-speaking" : ""} ${liveActive ? "is-live" : ""}" data-classroom-character role="img" aria-label="${escapeHtml(liveActive ? "Nora está impartiendo la clase en vivo." : avatarLabel)}"><div class="classroom-character-glow" aria-hidden="true"></div><img src="${escapeHtml(assetPath(`nora-${state.tutor.avatarState}.webp`))}" alt="" width="600" height="800" fetchpriority="low" ${liveActive ? "hidden" : ""}/><video id="nora-live-video" class="classroom-live-video" data-anam-video autoplay playsinline ${liveActive ? "" : "hidden"} aria-label="Video en vivo de Nora"></video><figcaption><span class="classroom-character-status" data-classroom-avatar-status>${escapeHtml(liveActive ? "Nora está en vivo." : avatarLabel)}</span><b>Nora · tutora de ContaIA</b></figcaption></figure><div class="classroom-scene-copy"><p class="classroom-scene-kicker">${escapeHtml(scene.phase.label.toUpperCase())}</p><h3>${escapeHtml(scene.title)}</h3><p class="classroom-scene-lead">${escapeHtml(scene.lead)}</p>${renderSceneContent(scene, module)}</div></section>
+        <div class="classroom-stage-controls"><button type="button" class="classroom-live-button" data-action="anam-toggle" data-testid="anam-toggle" aria-pressed="${liveActive}" ${liveConnecting ? "disabled" : ""}>${escapeHtml(liveButtonLabel)} <span aria-hidden="true">${liveActive ? "Ⅱ" : liveConnecting ? "…" : "◉"}</span></button><span class="classroom-live-status" data-anam-status role="status" aria-live="polite">${escapeHtml(liveStatus)}</span><button type="button" class="classroom-narrate-button" data-action="classroom-narrate" data-classroom-voice-button ${(voiceSupported || liveActive) ? "" : "disabled"}><span data-classroom-voice-label>${state.tutor.voiceEnabled && state.tutor.avatarState === "explaining" ? "Detener voz" : "Repetir consigna"}</span> <span aria-hidden="true" data-classroom-voice-icon>${state.tutor.voiceEnabled && state.tutor.avatarState === "explaining" ? "Ⅱ" : "▶"}</span></button>${linkedExercise}</div>
+        <p class="classroom-live-privacy">Nora dicta la consigna; tú realizas cada acción. El micrófono se usa para conversación en vivo. No se envían tus notas ni el progreso guardado.</p>
         <div class="classroom-phase-controls">${phasePrevious}${phaseNext}${nextClass}</div>
         ${renderResources(module)}
         <p class="classroom-storage-note" role="status">${escapeHtml(state.storageWarning || "Tu progreso de clases y prácticas se guarda localmente; el chat y tus respuestas no se almacenan.")}</p>
