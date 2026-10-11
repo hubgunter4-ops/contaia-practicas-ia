@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleTutorConfig, handleTutorStream } from "./src/tutor/server.js";
 import { handleAnamSession } from "./src/tutor/anam-session.js";
+import { handleCfdiConfig } from "./src/cfdi/server.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const allowedRoot = path.resolve(root);
@@ -47,6 +48,8 @@ function resolvePublicPath(pathname) {
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
   else if (decoded === "/vendor/document-reader.js") relative = "dist/vendor/document-reader.js";
+  else if (decoded === "/vendor/cfdi-parser.js") relative = "dist/vendor/cfdi-parser.js";
+  else if (decoded === "/vendor/supabase.js") relative = "dist/vendor/supabase.js";
   else if (decoded === "/vendor/pdf.worker.mjs") relative = "dist/vendor/pdf.worker.mjs";
   else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";
   else if (decoded.startsWith("/assets/")) relative = `public${decoded}`;
@@ -75,6 +78,7 @@ function resolvePublicPath(pathname) {
 const server = createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
   if (pathname === "/api/tutor/config") return handleTutorConfig(request, response);
+  if (pathname === "/api/cfdi/config") return handleCfdiConfig(request, response);
   if (pathname === "/api/tutor/stream") return handleTutorStream(request, response);
   if (pathname === "/api/tutor/anam-session") return handleAnamSession(request, response);
   const filePath = resolvePublicPath(pathname);

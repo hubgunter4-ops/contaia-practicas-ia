@@ -9,6 +9,9 @@
     },
     "api/tutor/anam-session.js": {
       "maxDuration": 15
+    },
+    "api/cfdi/config.js": {
+      "maxDuration": 5
     }
   }
 }

@@ -9,6 +9,7 @@ import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
+import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -31,7 +32,7 @@ const state = {
   openAssistant: {
     messages: [{ role: "assistant", text: "Hola, soy Nora. Podemos repasar conceptos, explorar un procedimiento o razonar sobre una situación de tu entorno. Cuéntame qué necesitas; mi base es México y, si la duda es fiscal o normativa, dime el ejercicio o periodo." }],
     pending: false, abortController: null, documentText: "", documentName: "", documentTruncated: false,
-    documentPageCount: null, documentError: "", documentLoading: false,
+    documentPageCount: null, documentError: "", documentLoading: false, cfdiContext: null, draft: "",
   },
   anam: { status: "idle", error: "", activity: "", client: null, abortController: null, lastUserMessageId: "", pendingTranscript: "" },
   activeModuleId: "modulo-01",
@@ -356,14 +357,16 @@ function renderOpenAssistant() {
   const liveButtonLabel = live ? "Desconectar avatar" : connecting ? "Conectando…" : "Conectar avatar Anam";
   const liveStatus = state.anam.error || state.anam.activity || (live ? "En vivo · puedes hablar o escribir." : connecting ? "Conectando con Nora…" : "El micrófono solo se solicita al conectar.");
   const voiceLabel = state.tutor.voiceEnabled ? "Voz activada" : "Activar voz";
+  const cfdiContextNotice = state.openAssistant.cfdiContext ? `<aside class="open-cfdi-context" role="status"><span>RESUMEN CFDI PREPARADO · AÚN NO ENVIADO</span><p>Nora recibirá solo conteos, importes y alertas sin identificadores cuando envíes tu pregunta.</p><button type="button" data-action="cfdi-context-clear">Quitar resumen</button></aside>` : "";
   return `<main id="contenido" class="content open-assistant-content" data-open-assistant tabindex="-1">
     <header class="open-assistant-heading"><div><p class="eyebrow">CONVERSACIÓN ABIERTA · MÉXICO</p><h1>Resuelve tu duda<br/><em>con Nora.</em></h1><p>Repasa un concepto, explora un procedimiento o encuentra pasos concretos para una situación de tu entorno contable.</p></div><aside class="open-jurisdiction-card"><span>JURISDICCIÓN BASE</span><strong><i aria-hidden="true">MX</i> México</strong><small>Si tu consulta corresponde a otro país, indícalo.</small></aside></header>
     <section class="open-assistant-layout" aria-label="Chat abierto y avatar de Nora">
       <section class="open-chat-panel" aria-labelledby="open-chat-title">
         <header class="open-chat-header"><div><p class="eyebrow">CONTABILIDAD · ASESORÍA ABIERTA</p><h2 id="open-chat-title">Conversación con Nora</h2><span class="open-chat-status" data-open-status role="status" aria-live="polite">${escapeHtml(connectionStatus)}</span></div><div class="open-chat-controls">${providerPicker}<button class="tutor-control tutor-voice" type="button" data-action="tutor-voice" aria-label="${state.tutor.voiceEnabled ? "Desactivar voz de Nora" : "Activar voz de Nora"}" aria-pressed="${state.tutor.voiceEnabled}" ${tutorSpeaker.supported ? "" : "disabled"}>${voiceLabel}</button></div></header>
         <div class="open-chat-log" data-open-log data-testid="open-assistant-log" role="log" aria-live="polite" aria-relevant="additions text">${renderOpenAssistantMessages()}</div>
-        <div class="open-starters" aria-label="Ideas para iniciar"><button type="button" data-open-prompt="Explícame cómo revisar una conciliación bancaria y qué diferencias conviene investigar primero.">Revisar una conciliación</button><button type="button" data-open-prompt="Ayúdame a plantear un procedimiento contable para este proceso; primero pregúntame qué información necesitas.">Diseñar un procedimiento</button><button type="button" data-open-prompt="Tengo un descuadre entre estos totales. Ayúdame a calcular la diferencia y proponer verificaciones: ">Analizar un descuadre</button></div>
-        <form class="open-chat-form" data-tutor-form data-open-form><label class="sr-only" for="open-assistant-input">Pregunta abierta a Nora</label><input id="open-assistant-input" data-tutor-input data-open-input data-testid="open-assistant-input" maxlength="2000" autocomplete="off" placeholder="Escribe tu pregunta contable…" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}/><button class="button button-primary" type="submit" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button></form>
+        ${cfdiContextNotice}
+        <div class="open-starters" aria-label="Ideas para iniciar"><button type="button" data-open-prompt="Explícame cómo revisar una conciliación bancaria y qué diferencias conviene investigar primero.">Revisar una conciliación</button><button type="button" data-open-prompt="Ayúdame a plantear un procedimiento contable para este proceso; primero pregúntame qué información necesitas.">Diseñar un procedimiento</button><button type="button" data-open-prompt="Tengo un descuadre entre estos totales. Ayúdame a calcular la diferencia y proponer verificaciones: ">Analizar un descuadre</button><button type="button" data-section="cfdi">Abrir Analizador CFDI</button></div>
+        <form class="open-chat-form" data-tutor-form data-open-form><label class="sr-only" for="open-assistant-input">Pregunta abierta a Nora</label><input id="open-assistant-input" data-tutor-input data-open-input data-testid="open-assistant-input" maxlength="2000" autocomplete="off" value="${escapeHtml(state.openAssistant.draft || "")}" placeholder="Escribe tu pregunta contable…" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}/><button class="button button-primary" type="submit" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button></form>
         <section class="open-document-box" aria-label="Asesoría documental"><div class="open-document-heading"><div><b>CONSULTAR UN DOCUMENTO</b><span>PDF · TXT · CSV</span></div><label class="open-document-select" for="open-assistant-document">${state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentText ? "Cambiar archivo" : "Adjuntar archivo"}<input id="open-assistant-document" type="file" data-open-document accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv" ${busy || state.openAssistant.documentLoading ? "disabled" : ""}/></label></div><div data-open-document-summary>${openAssistantDocumentSummary()}</div><p>El archivo se procesa en tu navegador. Solo se envía el texto extraído cuando lo incluyes en una pregunta; el nombre del archivo no se comparte.</p><p data-open-document-error class="open-error" role="status" hidden></p></section>
         <p class="open-config-error" data-open-config-error role="status" ${state.tutor.configError ? "" : "hidden"}>${escapeHtml(state.tutor.configError)}</p>
         <button type="button" class="tutor-stop open-stop" data-action="tutor-cancel" ${busy ? "" : "hidden"}>Detener respuesta</button>
@@ -460,6 +463,21 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
   const question = text.trim();
   const conversation = activeTutorConversation(openMode);
   if (!question || tutorBusy()) return;
+  const asksForCfdiAnalysis = openMode && !state.openAssistant.cfdiContext
+    && /\b(?:cfdi|xml|complemento(?:s)? de pago|comprobante(?:s)?)\b/i.test(question)
+    && /\b(?:analiz\w*|concili\w*|valid\w*|proces\w*|relacion\w*|cruz\w*|carg\w*|sub\w*)\b/i.test(question);
+  if (asksForCfdiAnalysis) {
+    state.openAssistant.messages.push(
+      { role: "user", text: question },
+      { role: "assistant", text: "Esta solicitud requiere leer comprobantes. Abrí el Analizador CFDI: los XML se procesan en tu navegador y no se envían al chat. Cuando termine, podrás elegir si compartes con Nora un resumen numérico sin identificadores." },
+    );
+    state.openAssistant.messages = state.openAssistant.messages.slice(-20);
+    cfdiState.pendingRequest = question;
+    state.section = "cfdi";
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    return;
+  }
   if (!state.tutor.providers.length) {
     state.tutor.configError = "Configura un proveedor y su modelo en el servidor Vercel para habilitar las respuestas de Nora.";
     if (!openMode) state.tutor.collapsed = false;
@@ -487,6 +505,7 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
       context: openMode ? { section: "advisor" } : getTutorContext(),
       history,
       documentText: includeDocument ? conversation.documentText : "",
+      cfdiContext: openMode ? state.openAssistant.cfdiContext : undefined,
       provider: state.tutor.provider || state.tutor.defaultProvider,
       signal: controller.signal,
       onToken: (token) => {
@@ -675,14 +694,15 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
   const classOptions = courseModules.map((module, index) => `<button type="button" class="class-menu-item ${module.id === state.activeModuleId ? "is-active" : ""} ${state.completedModules.has(module.id) ? "is-complete" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${module.id === state.activeModuleId ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><i aria-hidden="true">${state.completedModules.has(module.id) ? "✓" : ""}</i></button>`).join("");
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Aula en vivo</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Seleccionar clase">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · estado local</p></div></details>
       <button class="section-tab ${state.section === "advisor" ? "is-active" : ""}" type="button" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}"><b>03</b><span>Asistente abierto</span></button>
-      ${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><b>04</b><span>Asesoría</span></button>`}
+      <button class="section-tab ${state.section === "cfdi" ? "is-active" : ""}" type="button" data-section="cfdi" aria-current="${state.section === "cfdi" ? "page" : "false"}"><b>04</b><span>Analizador CFDI</span></button>
+      ${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}
       <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>05</b><span>Laboratorio práctico</span></button>
       <button class="section-tab ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}"><b>06</b><span>Base de estudio</span></button>
     </nav>
@@ -952,10 +972,11 @@ function render() {
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
+      : state.section === "cfdi" ? renderCfdiWorkspace()
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
-  const tutorPanel = state.section === "advisor" ? "" : renderTutorPanel(getTutorContext());
+  const tutorPanel = ["advisor", "cfdi"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
   app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
@@ -1020,7 +1041,7 @@ function checkAnswer(exercise) {
 app.addEventListener("click", (event) => {
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = ["course", "lab", "study", "advisor"].includes(section.dataset.section) ? section.dataset.section : "course";
+    state.section = ["course", "lab", "study", "advisor", "cfdi"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     render();
@@ -1035,6 +1056,12 @@ app.addEventListener("click", (event) => {
       input.value = starterPrompt.dataset.openPrompt || "";
       input.focus({ preventScroll: true });
     }
+    return;
+  }
+  if (event.target.closest('[data-action="cfdi-context-clear"]')) {
+    state.openAssistant.cfdiContext = null;
+    state.openAssistant.draft = "";
+    render();
     return;
   }
   const classroomModule = event.target.closest("[data-class-module]");
@@ -1308,6 +1335,7 @@ app.addEventListener("submit", (event) => {
   const text = input?.value ?? "";
   if (!text.trim()) return;
   input.value = "";
+  if (form.hasAttribute("data-open-form")) state.openAssistant.draft = "";
   sendTutorMessage(text, { includeDocument: true, openMode: form.hasAttribute("data-open-form") });
 });
 
@@ -1384,6 +1412,19 @@ app.addEventListener("change", (event) => {
 render();
 app.addEventListener("pointerup", rememberTutorPanelSize, { passive: true });
 app.addEventListener("mouseup", rememberTutorPanelSize, { passive: true });
+bindCfdiWorkspace(app, {
+  onUpdate: () => { if (state.section === "cfdi") render(); },
+  onAskNora: (context, prompt) => {
+    state.openAssistant.cfdiContext = context;
+    state.openAssistant.draft = prompt;
+    state.openAssistant.messages.push({ role: "assistant", text: "Preparé un resumen CFDI para esta consulta. No se ha enviado; revisa la pregunta y pulsa Enviar cuando decidas compartirlo con Nora." });
+    state.openAssistant.messages = state.openAssistant.messages.slice(-20);
+    state.section = "advisor";
+    render();
+    app.querySelector("[data-open-input]")?.focus({ preventScroll: true });
+  },
+});
 initializeTutorConfig();
 initializeStudyDatabase();
+void initializeCfdiWorkspace();
 window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });

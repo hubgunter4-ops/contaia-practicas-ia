@@ -260,3 +260,34 @@ test("el modo abierto usa México como base, permite resolver situaciones reales
   assert.equal(gatewayBody.includes("estado privado del curso"), false);
   assert.equal(gatewayBody.includes("nota privada del usuario"), false);
 });
+
+test("el resumen CFDI solo se comparte desde Asistente abierto y el backend elimina identificadores no permitidos", async () => {
+  const cfdiContext = {
+    schemaVersion: "cfdi-summary-v1", status: "analyzed",
+    counts: { invoices: 2, payments: 3, concepts: 4, matchedPayments: 2, unmatchedPayments: 1, progress: "no compartir" },
+    checks: { duplicateUuids: 0, paymentBalanceDifferences: 1, paymentWithoutInvoice: 1, paymentsExceedingInvoice: 0, estimatedTaxPayments: 1 },
+    totalsByCurrency: [{ currency: "MXN", invoiced: 1160, paid: 500, remaining: 660, rfc: "RFC-PRIVADO" }],
+    samplePayments: [{ kind: "payment", amount: 500, priorBalance: 1160, remainingBalance: 660, arithmeticDifference: 0, relation: "matched", estimatedTax: false, currency: "MXN", uuid: "UUID-PRIVADO", rfc: "RFC-PRIVADO", rawXml: "XML-PRIVADO", fileName: "privado.xml" }],
+    rawXml: "NO ENVIAR", user_id: "NO ENVIAR",
+  };
+  const input = validateTutorInput({ message: "Explica las diferencias", context: { section: "advisor" }, cfdiContext }, gatewayEnv);
+  assert.equal(JSON.stringify(input.cfdiContext).includes("UUID-PRIVADO"), false);
+  assert.equal(JSON.stringify(input.cfdiContext).includes("RFC-PRIVADO"), false);
+  assert.equal(JSON.stringify(input.cfdiContext).includes("XML-PRIVADO"), false);
+  assert.equal(input.cfdiContext.totalsByCurrency[0].invoiced, 1160);
+  assert.throws(() => validateTutorInput({ message: "Ayúdame", context: { section: "course", moduleId: "modulo-01" }, cfdiContext }, gatewayEnv), /solo puede compartirse con Nora desde Asistente abierto/i);
+
+  let providerRequest;
+  const response = new MockResponse();
+  await handleTutorStream(request({ message: "Ayúdame a interpretar el pago", context: { section: "advisor" }, cfdiContext }, { ip: "127.0.6.1" }), response, {
+    env: gatewayEnv,
+    fetchImpl: async (_url, options) => { providerRequest = options; return chunkedReply(); },
+  });
+  const messages = JSON.parse(providerRequest.body).messages;
+  assert.match(messages[0].content, /no afirmes haber visto el XML/i);
+  const latest = messages.at(-1).content;
+  assert.match(latest, /"cfdiSummary"/);
+  assert.match(latest, /"invoiced":1160/);
+  assert.match(latest, /"paymentBalanceDifferences":1/);
+  for (const privateValue of ["UUID-PRIVADO", "RFC-PRIVADO", "XML-PRIVADO", "NO ENVIAR", "privado.xml"]) assert.equal(latest.includes(privateValue), false);
+});

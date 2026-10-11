@@ -41,5 +41,33 @@ await build({
   outfile: path.join(vendor, "document-reader.js"),
   logLevel: "warning",
 });
+await build({
+  stdin: {
+    contents: 'export { parseFiles, parsearXML, enriquecerPagosConFacturas, parserLimits } from "./src/cfdi/parser.js";\n',
+    resolveDir: root,
+    sourcefile: "cfdi-parser-entry.js",
+    loader: "js",
+  },
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  outfile: path.join(vendor, "cfdi-parser.js"),
+  logLevel: "warning",
+});
+await build({
+  stdin: {
+    contents: 'export { createClient } from "@supabase/supabase-js";\n',
+    resolveDir: root,
+    sourcefile: "supabase-client-entry.js",
+    loader: "js",
+  },
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  outfile: path.join(vendor, "supabase.js"),
+  logLevel: "warning",
+});
 cpSync(fileURLToPath(import.meta.resolve("pdfjs-dist/build/pdf.worker.mjs")), path.join(vendor, "pdf.worker.mjs"));
 console.log(`Sitio estático preparado en ${path.relative(root, output)}.`);

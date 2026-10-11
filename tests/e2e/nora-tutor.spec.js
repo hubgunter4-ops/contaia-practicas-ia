@@ -432,6 +432,23 @@ test.describe("Panel de Nora", () => {
 });
 
 
+async function mockCfdiConfig(page, config = { enabled: false }) {
+  await page.route("**/api/cfdi/config", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(config) }));
+}
+
+const facturaXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="4.0" Fecha="2026-09-01T10:00:00" Serie="A" Folio="7" TipoDeComprobante="I" SubTotal="1000" Moneda="MXN" Total="1160">
+  <cfdi:Emisor Rfc="AAA010101AAA" Nombre="EMISOR FICTICIO"/><cfdi:Receptor Rfc="BBB010101BBB" Nombre="RECEPTOR FICTICIO"/>
+  <cfdi:Conceptos><cfdi:Concepto ClaveProdServ="01010101" Cantidad="1" ClaveUnidad="E48" Descripcion="Servicio de prueba" ValorUnitario="1000" Importe="1000"><cfdi:Impuestos><cfdi:Traslados><cfdi:Traslado Base="1000" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="160"/></cfdi:Traslados></cfdi:Impuestos></cfdi:Concepto></cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="160"><cfdi:Traslados><cfdi:Traslado Base="1000" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="160"/></cfdi:Traslados></cfdi:Impuestos>
+  <cfdi:Complemento><tfd:TimbreFiscalDigital UUID="11111111-2222-3333-4444-555555555555"/></cfdi:Complemento>
+</cfdi:Comprobante>`;
+const pagoXml = `<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:pago20="http://www.sat.gob.mx/Pagos20" Version="4.0" Fecha="2026-09-02T10:00:00" TipoDeComprobante="P" SubTotal="0" Moneda="XXX" Total="0">
+  <cfdi:Emisor Rfc="AAA010101AAA" Nombre="EMISOR FICTICIO"/><cfdi:Receptor Rfc="BBB010101BBB" Nombre="RECEPTOR FICTICIO"/>
+  <cfdi:Complemento><tfd:TimbreFiscalDigital UUID="66666666-7777-8888-9999-000000000000"/><pago20:Pagos Version="2.0"><pago20:Pago FechaPago="2026-09-02T00:00:00" FormaDePagoP="03" MonedaP="MXN" Monto="580"><pago20:DoctoRelacionado IdDocumento="11111111-2222-3333-4444-555555555555" MonedaDR="MXN" NumParcialidad="1" ImpSaldoAnt="1160" ImpPagado="580" ImpSaldoInsoluto="580" ObjetoImpDR="02"><pago20:ImpuestosDR><pago20:TrasladosDR><pago20:TrasladoDR BaseDR="500" ImpuestoDR="002" TipoFactorDR="Tasa" TasaOCuotaDR="0.160000" ImporteDR="80"/></pago20:TrasladosDR></pago20:ImpuestosDR></pago20:DoctoRelacionado></pago20:Pago></pago20:Pagos></cfdi:Complemento>
+</cfdi:Comprobante>`;
+
 test.describe("Asistente abierto de Nora", () => {
   test("abre como una vista separada, muestra Anam y envía un contexto sin currículo", async ({ page }) => {
     const requests = await mockTutor(page, ["Para una conciliación real, separa las partidas del banco y del libro, identifica las diferencias temporales y documenta cada ajuste con su soporte."]);
@@ -478,5 +495,50 @@ test.describe("Asistente abierto de Nora", () => {
     expect(requests[0].documentText).toContain("Banco: 2500");
     expect(requests[0].documentText).toContain("Libros: 2450");
     expect(JSON.stringify(requests[0])).not.toContain("balance-anonimizado.txt");
+  });
+
+  test("redirige una solicitud de análisis XML al módulo CFDI sin enviar el mensaje al modelo", async ({ page }) => {
+    const requests = await mockTutor(page);
+    await mockCfdiConfig(page);
+    await page.goto("/");
+    await page.locator('[data-section="advisor"]').click();
+    await page.getByTestId("open-assistant-input").fill("Analiza mis XML CFDI y concilia los complementos de pago.");
+    await page.locator("[data-open-form] button[type=submit]").click();
+    await expect(page.locator("[data-cfdi-page]")).toBeVisible();
+    await expect(page.locator(".cfdi-origin-request")).toContainText("Analiza mis XML CFDI");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("lee XML localmente, relaciona pago y factura y comparte con Nora solo un resumen sin identificadores al enviar", async ({ page }) => {
+    const requests = await mockTutor(page, ["El pago coincide con el saldo anterior: 1160 menos 580 deja 580 pendientes."]);
+    await mockCfdiConfig(page);
+    await page.goto("/");
+    await page.locator('[data-section="cfdi"]').click();
+    await page.locator("[data-cfdi-files]").setInputFiles([
+      { name: "factura-privada.xml", mimeType: "application/xml", buffer: Buffer.from(facturaXml) },
+      { name: "pago-privado.xml", mimeType: "application/xml", buffer: Buffer.from(pagoXml) },
+    ]);
+    await expect(page.locator(".cfdi-metrics")).toContainText("Facturas");
+    await expect(page.locator(".cfdi-metrics article").nth(0)).toContainText("1");
+    await expect(page.locator(".cfdi-metrics article").nth(1)).toContainText("1 / 1");
+    await page.locator('[data-cfdi-tab="payments"]').click();
+    await expect(page.locator(".cfdi-table")).toContainText("Factura encontrada");
+    expect(requests).toHaveLength(0);
+
+    await page.locator("[data-cfdi-ask-nora]").click();
+    await expect(page.locator("[data-open-assistant]")).toBeVisible();
+    await expect(page.locator(".open-cfdi-context")).toContainText("AÚN NO ENVIADO");
+    expect(requests).toHaveLength(0);
+    await page.getByTestId("open-assistant-input").fill("Explica el saldo y qué revisaría después.");
+    await page.locator("[data-open-form] button[type=submit]").click();
+    await expect(page.getByTestId("open-assistant-log")).toContainText("1160 menos 580");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].cfdiContext).toMatchObject({
+      schemaVersion: "cfdi-summary-v1", status: "analyzed",
+      counts: { invoices: 1, payments: 1, matchedPayments: 1 },
+      totalsByCurrency: [{ currency: "MXN", invoiced: 1160, paid: 580, remaining: 580 }],
+    });
+    const serialized = JSON.stringify(requests[0]);
+    for (const privateValue of [facturaXml, pagoXml, "factura-privada.xml", "pago-privado.xml", "11111111-2222-3333-4444-555555555555", "AAA010101AAA", "BBB010101BBB"]) expect(serialized).not.toContain(privateValue);
   });
 });

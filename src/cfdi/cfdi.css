@@ -1,0 +1,190 @@
+/* Tema operativo AuditPro limitado al módulo CFDI; no cambia el chat ni Nora. */
+.content.cfdi-page {
+  width: min(100%, 1560px);
+  padding: 24px clamp(14px, 2.6vw, 38px) 52px;
+  color-scheme: dark;
+  color: #e8edf4;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+.cfdi-page *, .cfdi-page *::before, .cfdi-page *::after { box-sizing: border-box; }
+.cfdi-page .cfdi-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 182px;
+  margin: 0 0 15px;
+  padding: clamp(20px, 3vw, 34px);
+  overflow: hidden;
+  border: 1px solid #27384e;
+  border-radius: 13px;
+  background: radial-gradient(ellipse at 78% 12%, rgba(224, 168, 56, .13), transparent 38%), linear-gradient(124deg, #0b1422 0%, #101b2a 56%, #152337 100%);
+  box-shadow: 0 16px 36px rgba(11, 18, 30, .16);
+}
+.cfdi-hero > div { position: relative; z-index: 1; max-width: 790px; }
+.cfdi-page .cfdi-eyebrow, .cfdi-page .cfdi-section-title > div > span, .cfdi-upload-heading > div > span,
+.cfdi-page .cfdi-nora-handoff > div > span, .cfdi-origin-request span {
+  display: block;
+  margin: 0 0 8px;
+  color: #edbd51;
+  font: 9px/1.4 "DM Mono", Consolas, monospace;
+  letter-spacing: .13em;
+}
+.cfdi-page .cfdi-hero h1 { margin: 0; color: #f5f7fa; font-size: clamp(30px, 4vw, 49px); font-weight: 650; letter-spacing: -.045em; line-height: 1.02; }
+.cfdi-page .cfdi-hero h1 em { color: #f2c45c; font-style: normal; }
+.cfdi-page .cfdi-hero p:last-child { max-width: 730px; margin: 12px 0 0; color: #abb7c7; font-size: 13px; line-height: 1.55; }
+.cfdi-local-badge { flex: none; display: grid; grid-template-columns: 10px auto; align-items: center; gap: 4px 9px; padding: 12px 14px; border: 1px solid #345142; border-radius: 8px; background: rgba(16, 34, 36, .8); }
+.cfdi-local-pulse { width: 8px; height: 8px; border-radius: 50%; background: #54c690; box-shadow: 0 0 0 4px rgba(84, 198, 144, .12); }
+.cfdi-local-badge b { color: #a5e3c1; font: 9px "DM Mono", Consolas, monospace; letter-spacing: .05em; }
+.cfdi-local-badge small { grid-column: 2; color: #8ca99a; font-size: 10px; }
+.cfdi-page .cfdi-origin-request { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #536347; border-radius: 9px; background: #18251f; }
+.cfdi-origin-request span { color: #d1b269; }
+.cfdi-origin-request p { margin: 0; color: #e2e8e0; font-size: 12px; }
+.cfdi-origin-request button { flex: none; align-self: start; border: 1px solid #4c5c4c; background: transparent; color: #d1ddce; font-size: 18px; cursor: pointer; }
+.cfdi-page .cfdi-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(285px, 345px); align-items: start; gap: 14px; }
+.cfdi-workspace-main, .cfdi-storage-column { min-width: 0; }
+.cfdi-page .cfdi-upload-card, .cfdi-page .cfdi-storage, .cfdi-page .cfdi-results, .cfdi-page .cfdi-preflight {
+  border: 1px solid #27384b;
+  border-radius: 11px;
+  background: #101b2a;
+  box-shadow: 0 10px 26px rgba(9, 16, 27, .10);
+}
+.cfdi-page .cfdi-upload-card { padding: 17px; }
+.cfdi-upload-heading, .cfdi-section-title, .cfdi-history-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.cfdi-upload-heading h2, .cfdi-section-title h2 { margin: 0; color: #e8edf4; font-size: 16px; font-weight: 620; letter-spacing: -.015em; }
+.cfdi-format-pill { padding: 5px 8px; border: 1px solid #3a4654; border-radius: 999px; color: #bdc7d3; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-dropzone { position: relative; display: grid; justify-items: center; gap: 7px; margin: 16px 0 8px; padding: 19px 14px; border: 1px dashed #526479; border-radius: 8px; background: #0d1724; text-align: center; cursor: pointer; transition: border-color .16s ease, background-color .16s ease; }
+.cfdi-dropzone:hover, .cfdi-dropzone.is-dragging, .cfdi-dropzone:focus-within { border-color: #efc04f; background: #121d2b; }
+.cfdi-dropzone input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.cfdi-upload-icon { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #5b4b2f; border-radius: 7px; background: #2a251a; color: #f4c45a; font-size: 19px; }
+.cfdi-dropzone b { color: #e4eaf1; font-size: 12px; }
+.cfdi-dropzone small { color: #8997a8; font-size: 9px; line-height: 1.4; }
+.cfdi-file-count, .cfdi-page .cfdi-progress { margin: 7px 0 0; color: #9eabb9; font-size: 10px; }
+.cfdi-page .cfdi-progress { padding: 8px 10px; border: 1px solid #38475a; border-radius: 6px; background: #152234; }
+.cfdi-page .cfdi-progress.is-ready { border-color: #345b4a; background: #11261f; color: #a4ddbc; }
+.cfdi-page .cfdi-privacy-note { margin: 13px 0 0; padding: 10px 11px; border-left: 2px solid #b98d3c; background: #1a2025; color: #a9b2bd; font-size: 9px; line-height: 1.5; }
+.cfdi-privacy-note b { color: #e8c877; }
+.cfdi-page .cfdi-storage-column { position: sticky; top: 14px; }
+.cfdi-page .cfdi-storage { padding: 15px; }
+.cfdi-page .cfdi-section-title { margin: 0 0 12px; align-items: end; }
+.cfdi-page .cfdi-section-title > div > span { margin-bottom: 4px; color: #8797ab; font-size: 8px; }
+.cfdi-lock { padding: 4px 6px; border: 1px solid #3b4a5c; border-radius: 4px; color: #afbed0; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-db-status { margin: 0 0 12px; padding: 8px 9px; border: 1px solid #3c4651; border-radius: 6px; font-size: 9px; line-height: 1.45; }
+.cfdi-db-status.is-ready { border-color: #315844; background: #11251f; color: #a6ddbd; }
+.cfdi-db-status.is-offline { background: #182333; color: #b4c0cd; }
+.cfdi-auth-form, .cfdi-save-form { display: grid; gap: 8px; padding: 11px 0; border-top: 1px solid #263446; }
+.cfdi-auth-form > label, .cfdi-save-form > label:not(.cfdi-consent) { color: #c4ccd6; font-size: 10px; font-weight: 600; }
+.cfdi-auth-form > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.cfdi-page input[type="email"], .cfdi-save-form > input { width: 100%; min-width: 0; height: 36px; padding: 0 9px; border: 1px solid #3a485a; border-radius: 5px; background: #0d1724; color: #e8edf4; font: inherit; font-size: 10px; }
+.cfdi-auth-form button, .cfdi-save-form > button, .cfdi-history-head button, .cfdi-history-list button, .cfdi-auth-row button {
+  min-height: 34px; padding: 7px 9px; border: 1px solid #4a5563; border-radius: 5px; background: #1a2839; color: #dbe3ec; font-size: 9px; font-weight: 620; cursor: pointer;
+}
+.cfdi-auth-form button:hover:not(:disabled), .cfdi-save-form > button:hover:not(:disabled), .cfdi-history-list button:hover, .cfdi-history-head button:hover:not(:disabled) { border-color: #e3b54c; color: #f0cb70; }
+.cfdi-page button:disabled { opacity: .5; cursor: not-allowed; }
+.cfdi-auth-form > small { color: #8391a1; font-size: 8px; line-height: 1.45; }
+.cfdi-page .cfdi-consent { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; color: #aab6c4; font-size: 9px; line-height: 1.45; cursor: pointer; }
+.cfdi-consent input { margin: 1px 0 0; accent-color: #d9ad46; }
+.cfdi-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 10px; border-top: 1px solid #263446; color: #a8e0c0; font-size: 9px; }
+.cfdi-page .cfdi-history-head { padding-top: 11px; border-top: 1px solid #263446; color: #dbe3ed; font-size: 10px; }
+.cfdi-history-list { display: grid; gap: 7px; margin-top: 9px; }
+.cfdi-history-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 5px; padding: 8px; border: 1px solid #2a394c; border-radius: 6px; background: #0d1724; }
+.cfdi-history-list article > div { min-width: 0; display: grid; gap: 4px; }
+.cfdi-history-list article b { overflow: hidden; color: #d8e1eb; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.cfdi-history-list article small, .cfdi-history-empty { color: #8593a4; font-size: 8px; line-height: 1.4; }
+.cfdi-history-list button { min-height: 28px; padding: 5px 6px; font-size: 8px; }
+.cfdi-history-list button[data-cfdi-delete] { color: #dcaaa5; }
+.cfdi-page .cfdi-success-text, .cfdi-page .cfdi-error { margin: 5px 0; font-size: 9px; line-height: 1.45; }
+.cfdi-page .cfdi-success-text { color: #a2ddb9; }
+.cfdi-page .cfdi-error { color: #ffb9b1; }
+.cfdi-history-empty { margin: 9px 0; padding: 10px; border: 1px dashed #344255; border-radius: 6px; }
+.cfdi-page .cfdi-empty-large { min-height: 240px; }
+.cfdi-page .cfdi-empty-state { display: grid; align-content: center; justify-items: start; gap: 6px; padding: 15px; border: 1px dashed #37485c; border-radius: 8px; background: #0d1724; }
+.cfdi-page .cfdi-empty-state b { color: #e0e7ef; font-size: 11px; }
+.cfdi-page .cfdi-empty-state p { max-width: 660px; margin: 0; color: #9eacbd; font-size: 9px; line-height: 1.5; }
+.cfdi-empty-state > span { padding: 6px 8px; border: 1px solid #655332; border-radius: 5px; color: #f0c45e; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-page .cfdi-success { border-color: #315844; background: #12241f; }
+.cfdi-page .cfdi-workspace-main { display: grid; gap: 13px; }
+.cfdi-page .cfdi-preflight, .cfdi-page .cfdi-results { padding: 14px; }
+.cfdi-page .cfdi-results { display: grid; gap: 13px; }
+.cfdi-page .cfdi-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cfdi-metrics article { min-width: 0; display: grid; gap: 5px; padding: 12px; border: 1px solid #2a3b4f; border-radius: 7px; background: #152235; }
+.cfdi-metrics article > span { color: #98a6b7; font-size: 8px; }
+.cfdi-metrics article > b { color: #e9eef4; font: 18px "DM Mono", Consolas, monospace; }
+.cfdi-metrics article > small { color: #8594a6; font-size: 8px; line-height: 1.35; }
+.cfdi-metrics article.has-alert { border-color: #665331; background: #272419; }
+.cfdi-metrics article.has-alert > b { color: #f0c25a; }
+.cfdi-metrics article.is-ok { border-color: #315844; background: #14251e; }
+.cfdi-metrics article.is-ok > b { color: #9de0b9; }
+.cfdi-page .cfdi-total-block, .cfdi-page .cfdi-alert-list { display: grid; gap: 9px; }
+.cfdi-page .cfdi-total-block .cfdi-section-title small { color: #8c99a8; font-size: 8px; }
+.cfdi-currency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.cfdi-currency-grid article { display: grid; gap: 7px; padding: 11px; border: 1px solid #293a4d; border-radius: 7px; background: #0e1927; }
+.cfdi-currency-grid article > b { color: #efc45d; font: 9px "DM Mono", Consolas, monospace; }
+.cfdi-currency-grid article > div { display: flex; justify-content: space-between; gap: 8px; color: #8d9cad; font-size: 8px; }
+.cfdi-currency-grid article strong { color: #dce4ed; font: 9px "DM Mono", Consolas, monospace; white-space: nowrap; }
+.cfdi-page .cfdi-alert { display: flex; align-items: start; gap: 10px; padding: 10px; border: 1px solid #5a4930; border-radius: 7px; background: #262218; }
+.cfdi-alert > i { flex: none; width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: #d9a93d; color: #221b0e; font-style: normal; font-weight: 700; }
+.cfdi-alert > div b { color: #edcb7b; font-size: 9px; }
+.cfdi-alert > div p { margin: 4px 0 0; color: #a9a48f; font-size: 8px; }
+.cfdi-page .cfdi-result-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid #2b3b4d; }
+.cfdi-result-tabs button { flex: none; min-height: 34px; padding: 7px 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #91a0b1; font-size: 9px; cursor: pointer; }
+.cfdi-result-tabs button:hover, .cfdi-result-tabs button.is-active { border-bottom-color: #e3b64e; color: #f0c75f; }
+.cfdi-tab-panel { min-width: 0; }
+.cfdi-overview-grid { display: grid; grid-template-columns: 1fr; gap: 11px; }
+.cfdi-page .cfdi-table-wrap { max-width: 100%; overflow: auto; border: 1px solid #26374a; border-radius: 7px; background: #0d1724; }
+.cfdi-page .cfdi-table { width: 100%; min-width: 690px; border-collapse: collapse; color: #cad4df; font-size: 9px; }
+.cfdi-page .cfdi-table th { padding: 9px 8px; border-bottom: 1px solid #314156; background: #142235; color: #91a2b5; font: 8px "DM Mono", Consolas, monospace; letter-spacing: .04em; white-space: nowrap; }
+.cfdi-page .cfdi-table td { padding: 8px; border-bottom: 1px solid #1f2d3e; color: #c4cfdb; vertical-align: top; }
+.cfdi-page .cfdi-table tr:last-child td { border-bottom: 0; }
+.cfdi-page .cfdi-table td b { color: #e0e8f1; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-page .cfdi-table td small { display: block; margin-top: 3px; color: #8190a2; font-size: 8px; }
+.cfdi-page .cfdi-table td.numeric, .cfdi-page .cfdi-table th.numeric { text-align: right; white-space: nowrap; font-family: "DM Mono", Consolas, monospace; }
+.cfdi-status-tag { display: inline-block; padding: 4px 6px; border: 1px solid #3a4652; border-radius: 999px; color: #b7c4d1; font-size: 8px; white-space: nowrap; }
+.cfdi-status-tag.is-linked { border-color: #315844; background: #14251e; color: #a5dbb9; }
+.cfdi-status-tag.is-review { border-color: #645332; background: #282318; color: #edc970; }
+.cfdi-page .cfdi-nora-handoff { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px; border: 1px solid #715b31; border-radius: 8px; background: linear-gradient(110deg, #241f17, #1b2024); }
+.cfdi-nora-handoff > div { min-width: 0; }
+.cfdi-nora-handoff > div > span { color: #e0b950; font-size: 8px; }
+.cfdi-nora-handoff > div > b { display: block; color: #f1e2c1; font-size: 11px; }
+.cfdi-nora-handoff > div > p { max-width: 670px; margin: 5px 0 0; color: #a9a18f; font-size: 8px; line-height: 1.45; }
+.cfdi-nora-handoff > button { flex: none; min-height: 38px; padding: 8px 11px; border: 1px solid #e3b84e; border-radius: 5px; background: #dcb148; color: #211a0c; font-size: 9px; font-weight: 700; cursor: pointer; }
+.cfdi-nora-handoff > button:hover { background: #edc55e; }
+.cfdi-reset { justify-self: start; border: 0; padding: 3px 0; background: transparent; color: #98a6b4; font-size: 8px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.cfdi-page .cfdi-parse-error { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 10px; border: 1px solid #6b3e43; border-radius: 7px; background: #291a20; }
+.cfdi-parse-error b { color: #f3c4c0; font-size: 10px; }
+.cfdi-parse-error p { margin: 4px 0 0; color: #c8a8a7; font-size: 9px; }
+.cfdi-parse-error button { flex: none; padding: 7px 9px; border: 1px solid #85535a; border-radius: 5px; background: #3a2329; color: #f0d6d2; font-size: 8px; cursor: pointer; }
+.cfdi-page .cfdi-disclaimer { margin: 14px 0 0; padding: 11px 13px; border: 1px solid #ded5c5; border-radius: 7px; background: #f8f4eb; color: #4c4942; }
+.cfdi-disclaimer b { display: block; margin-bottom: 4px; color: #715b35; font: 8px "DM Mono", Consolas, monospace; letter-spacing: .07em; text-transform: uppercase; }
+.cfdi-disclaimer p { margin: 0; font-size: 9px; line-height: 1.45; }
+.cfdi-page button:focus-visible, .cfdi-page input:focus-visible { outline: 3px solid #f1c354; outline-offset: 2px; }
+.open-cfdi-context { margin: 9px 0; padding: 9px 10px; border: 1px solid #d8c28e; background: #f7f0df; }
+.open-cfdi-context > span { display: block; margin-bottom: 3px; color: #8a6a30; font: 8px "DM Mono", Consolas, monospace; letter-spacing: .06em; }
+.open-cfdi-context p { display: inline; margin: 0; color: #6e614a; font-size: 9px; }
+.open-cfdi-context button { margin-left: 8px; border: 0; background: transparent; color: #7a2e3a; font-size: 9px; font-weight: 650; text-decoration: underline; cursor: pointer; }
+@media (max-width: 1000px) {
+  .content.cfdi-page { padding-inline: 14px; }
+  .cfdi-page .cfdi-workspace { grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; }
+  .cfdi-page .cfdi-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .content.cfdi-page { padding: 15px 10px 38px; }
+  .cfdi-page .cfdi-hero { align-items: flex-start; flex-direction: column; gap: 14px; padding: 18px; }
+  .cfdi-page .cfdi-hero h1 { font-size: clamp(29px, 8vw, 39px); }
+  .cfdi-page .cfdi-workspace { grid-template-columns: minmax(0, 1fr); }
+  .cfdi-page .cfdi-storage-column { position: static; }
+  .cfdi-page .cfdi-nora-handoff { align-items: flex-start; flex-direction: column; }
+  .cfdi-page .cfdi-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cfdi-page .cfdi-results, .cfdi-page .cfdi-upload-card { padding: 11px; }
+}
+@media (max-width: 420px) {
+  .cfdi-page .cfdi-metrics { gap: 6px; }
+  .cfdi-metrics article { padding: 9px; }
+  .cfdi-metrics article > b { font-size: 15px; }
+  .cfdi-page .cfdi-auth-form > div { grid-template-columns: minmax(0, 1fr); }
+  .cfdi-page .cfdi-parse-error { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cfdi-dropzone { transition: none; }
+}

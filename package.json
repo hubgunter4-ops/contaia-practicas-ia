@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "node server.js",
+    "dev": "npm run build:vercel && node server.js",
     "build:vercel": "node scripts/build-site.js",
     "test": "node --test",
     "test:e2e": "playwright test",
@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@anam-ai/js-sdk": "^4.28.0",
+    "@supabase/supabase-js": "^2.117.3",
+    "jszip": "^3.10.2",
     "pdfjs-dist": "^6.4.299"
   }
 }
