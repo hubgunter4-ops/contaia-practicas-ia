@@ -12,7 +12,9 @@
     "build:vercel": "node scripts/build-site.js",
     "test": "node --test",
     "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:supabase:rls": "node scripts/supabase-rls-e2e.mjs",
+    "supabase:rls:accounts": "node scripts/provision-supabase-rls-users.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
