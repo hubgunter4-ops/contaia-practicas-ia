@@ -112,7 +112,7 @@ test.describe("Panel de Nora", () => {
 
     const toolsMenu = page.locator(".tools-menu");
     await toolsMenu.locator("summary").click();
-    await expect(toolsMenu.locator("[data-section]")).toHaveCount(4);
+    await expect(toolsMenu.locator("[data-section]")).toHaveCount(5);
     await expect(toolsMenu.locator('[data-section="advisor"]')).toBeVisible();
     await expect(toolsMenu.locator('[data-section="cfdi"]')).toBeVisible();
     await expect(toolsMenu.locator('[data-section="lab"]')).toBeVisible();

@@ -10,11 +10,14 @@ import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
+import { renderToolsPanel } from "./tools/panel.js";
+import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
 
 const app = document.querySelector("#app");
 const state = {
   section: "course",
   current: "home",
+  toolsNotice: "",
   attempted: new Set(),
   completed: new Set(),
   revealed: new Set(),
@@ -26,12 +29,12 @@ const state = {
     messages: [{ role: "assistant", text: "Hola, soy Nora. Te acompañaré desde los primeros conceptos hasta el proyecto final. ¿Qué te gustaría entender hoy?" }],
     collapsed: true, voiceEnabled: false, avatarState: "idle", providers: [], defaultProvider: "", provider: "",
     configState: "loading", configError: "", pending: false, abortController: null,
-    panelWidth: 430, panelHeight: 610, documentText: "", documentName: "", documentTruncated: false,
+    panelWidth: 430, panelHeight: 610, documentText: "", documentName: "", documentFile: null, documentTruncated: false,
     documentPageCount: null, documentError: "", documentLoading: false,
   },
   openAssistant: {
     messages: [{ role: "assistant", text: "Hola, soy Nora. Podemos repasar conceptos, explorar un procedimiento o razonar sobre una situación de tu entorno. Cuéntame qué necesitas; mi base es México y, si la duda es fiscal o normativa, dime el ejercicio o periodo." }],
-    pending: false, abortController: null, documentText: "", documentName: "", documentTruncated: false,
+    pending: false, abortController: null, documentText: "", documentName: "", documentFile: null, documentTruncated: false,
     documentPageCount: null, documentError: "", documentLoading: false, cfdiContext: null, draft: "",
   },
   anam: { status: "idle", error: "", activity: "", client: null, abortController: null, lastUserMessageId: "", pendingTranscript: "" },
@@ -337,13 +340,14 @@ function renderTutorPanel(context) {
 }
 
 function renderOpenAssistantMessages() {
-  return state.openAssistant.messages.map((message) => `<article class="open-message open-message-${message.role}" data-testid="open-assistant-message"><span class="open-message-label">${message.role === "assistant" ? "NORA" : "TÚ"}</span><p ${message.streaming ? 'data-open-stream="true"' : ""}>${escapeHtml(message.text || (message.streaming ? "Nora está pensando…" : ""))}</p></article>`).join("");
+  return state.openAssistant.messages.map((message, index) => `<article class="open-message open-message-${message.role}" data-testid="open-assistant-message"><span class="open-message-label">${message.role === "assistant" ? "NORA" : "TÚ"}</span><p ${message.streaming ? 'data-open-stream="true"' : ""}>${escapeHtml(message.text || (message.streaming ? "Nora está pensando…" : ""))}</p>${message.artifact ? `<button type="button" class="open-document-download" data-open-artifact="${index}">Descargar ${escapeHtml(message.artifact.name)}</button>` : ""}</article>`).join("");
 }
 
 function openAssistantDocumentSummary() {
   const doc = state.openAssistant;
-  if (!doc.documentText) return "";
-  return `<div class="open-document-ready"><span><b>${escapeHtml(doc.documentName)}</b> · ${doc.documentText.length.toLocaleString("es-MX")} caracteres${doc.documentPageCount ? ` · ${doc.documentPageCount} páginas` : ""}${doc.documentTruncated ? " · extracto limitado" : ""}</span><button type="button" data-action="open-document-remove" ${tutorBusy() ? "disabled" : ""}>Quitar</button></div>`;
+  if (!doc.documentFile) return "";
+  const details = doc.documentText ? ` · ${doc.documentText.length.toLocaleString("es-MX")} caracteres${doc.documentPageCount ? ` · ${doc.documentPageCount} páginas` : ""}${doc.documentTruncated ? " · extracto limitado" : ""}` : " · listo para leer, reparar o generar";
+  return `<div class="open-document-ready"><span><b>${escapeHtml(doc.documentName)}</b>${details}</span><button type="button" data-action="open-document-remove" ${tutorBusy() ? "disabled" : ""}>Quitar</button></div>`;
 }
 
 function renderOpenAssistant() {
@@ -369,7 +373,7 @@ function renderOpenAssistant() {
         ${cfdiContextNotice}
         <div class="open-starters" aria-label="Ideas para iniciar"><button type="button" data-open-prompt="Explícame cómo revisar una conciliación bancaria y qué diferencias conviene investigar primero.">Revisar una conciliación</button><button type="button" data-open-prompt="Ayúdame a plantear un procedimiento contable para este proceso; primero pregúntame qué información necesitas.">Diseñar un procedimiento</button><button type="button" data-open-prompt="Tengo un descuadre entre estos totales. Ayúdame a calcular la diferencia y proponer verificaciones: ">Analizar un descuadre</button><button type="button" data-section="cfdi">Abrir Analizador CFDI</button></div>
         <form class="open-chat-form" data-tutor-form data-open-form><label class="sr-only" for="open-assistant-input">Pregunta abierta a Nora</label><input id="open-assistant-input" data-tutor-input data-open-input data-testid="open-assistant-input" maxlength="2000" autocomplete="off" value="${escapeHtml(state.openAssistant.draft || "")}" placeholder="Escribe tu pregunta contable…" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}/><button class="button button-primary" type="submit" ${busy || !provider || state.openAssistant.documentLoading ? "disabled" : ""}>Enviar <span aria-hidden="true">→</span></button></form>
-        <section class="open-document-box" aria-label="Asesoría documental"><div class="open-document-heading"><div><b>CONSULTAR UN DOCUMENTO</b><span>PDF · TXT · CSV</span></div><label class="open-document-select" for="open-assistant-document">${state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentText ? "Cambiar archivo" : "Adjuntar archivo"}<input id="open-assistant-document" type="file" data-open-document accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv" ${busy || state.openAssistant.documentLoading ? "disabled" : ""}/></label></div><div data-open-document-summary>${openAssistantDocumentSummary()}</div><p>El archivo se procesa en tu navegador. Solo se envía el texto extraído cuando lo incluyes en una pregunta; el nombre del archivo no se comparte.</p><p data-open-document-error class="open-error" role="status" hidden></p></section>
+        <section class="open-document-box" aria-label="Asesoría documental"><div class="open-document-heading"><div><b>LEER · REPARAR · GENERAR</b><span>XML · CSV · XLSX · PDF · DOCX</span></div><label class="open-document-select" for="open-assistant-document">${state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentFile ? "Cambiar archivo" : "Adjuntar archivo"}<input id="open-assistant-document" type="file" data-open-document accept=".xml,.csv,.xlsx,.pdf,.docx,.txt,application/xml,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" ${busy || state.openAssistant.documentLoading ? "disabled" : ""}/></label></div><div data-open-document-summary>${openAssistantDocumentSummary()}</div><p>Adjunta un archivo y escribe una instrucción como “lee”, “repara” o “genera un XLSX”. El archivo solo se envía a la ruta de documentos cuando la instrucción pide una operación.</p><p data-open-document-error class="open-error" role="status" hidden></p></section>
         <p class="open-config-error" data-open-config-error role="status" ${state.tutor.configError ? "" : "hidden"}>${escapeHtml(state.tutor.configError)}</p>
         <button type="button" class="tutor-stop open-stop" data-action="tutor-cancel" ${busy ? "" : "hidden"}>Detener respuesta</button>
         <p class="open-chat-privacy">El chat y los documentos no se guardan en ContaIA. No compartas claves, identificadores personales ni datos confidenciales; puedes describir el proceso sin incluirlos. Tus notas y progreso del curso no se envían.</p>
@@ -404,7 +408,7 @@ function refreshOpenAssistant() {
   const fileInput = panel.querySelector("[data-open-document]");
   if (fileInput) fileInput.disabled = busy || state.openAssistant.documentLoading;
   const documentLabel = panel.querySelector(".open-document-select");
-  if (documentLabel) documentLabel.firstChild.textContent = state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentText ? "Cambiar archivo" : "Adjuntar archivo";
+  if (documentLabel) documentLabel.firstChild.textContent = state.openAssistant.documentLoading ? "Leyendo localmente…" : state.openAssistant.documentFile ? "Cambiar archivo" : "Adjuntar archivo";
   const documentSummary = panel.querySelector("[data-open-document-summary]");
   if (documentSummary) documentSummary.innerHTML = openAssistantDocumentSummary();
   const documentError = panel.querySelector("[data-open-document-error]");
@@ -432,18 +436,21 @@ async function loadTutorDocument(file, { openMode = false } = {}) {
   const conversation = openMode ? state.openAssistant : state.tutor;
   conversation.documentText = "";
   conversation.documentName = "";
+  conversation.documentFile = file;
   conversation.documentTruncated = false;
   conversation.documentPageCount = null;
   conversation.documentError = "";
   conversation.documentLoading = true;
   refreshTutorPanel();
   try {
-    const { extractDocumentText } = await import("/vendor/document-reader.js");
-    const extracted = await extractDocumentText(file);
-    conversation.documentText = extracted.text;
     conversation.documentName = String(file.name).slice(0, 160);
-    conversation.documentTruncated = extracted.truncated;
-    conversation.documentPageCount = extracted.pageCount;
+    if (["pdf", "txt", "csv"].includes(String(file.name).toLowerCase().split(".").pop())) {
+      const { extractDocumentText } = await import("/vendor/document-reader.js");
+      const extracted = await extractDocumentText(file);
+      conversation.documentText = extracted.text;
+      conversation.documentTruncated = extracted.truncated;
+      conversation.documentPageCount = extracted.pageCount;
+    }
   } catch (error) {
     conversation.documentError = error instanceof Error ? error.message : "No se pudo leer el archivo.";
   } finally {
@@ -451,6 +458,38 @@ async function loadTutorDocument(file, { openMode = false } = {}) {
     refreshTutorPanel();
   }
 }
+
+function documentOperationRequested(question) {
+  return /\b(?:lee|leer|extrae|resume|resumir|analiza|analizar|repara|reparar|corrige|corregir|arregla|arreglar|limpia|normaliza|genera|generar|crea|crear|elabora|exporta|exportar|convierte|convertir)\b/i.test(question);
+}
+
+async function processOpenAssistantDocument(question) {
+  const conversation = state.openAssistant;
+  const file = conversation.documentFile;
+  if (!file || !documentOperationRequested(question) || tutorBusy()) return false;
+  const assistantMessage = { role: "assistant", text: "Procesando el documento…", processingDocument: true };
+  conversation.messages.push({ role: "user", text: question }, assistantMessage);
+  conversation.messages = conversation.messages.slice(-20);
+  conversation.pending = true;
+  refreshTutorPanel();
+  try {
+    const payload = await processDocumentFile(file, question);
+    if (payload.result?.kind === "file") {
+      assistantMessage.text = `${payload.action === "repair" ? "Reparé" : "Generé"} ${payload.result.name}. Puedes descargarlo desde este mensaje.`;
+      assistantMessage.artifact = payload.result;
+    } else {
+      assistantMessage.text = `Lectura completada de ${payload.input?.name || file.name}:\n\n${payload.result?.text || "No se obtuvo texto legible."}${payload.result?.truncated ? "\n\n[El extracto fue limitado por seguridad.]" : ""}`;
+    }
+  } catch (error) {
+    assistantMessage.text = error instanceof Error ? error.message : "No se pudo procesar el documento.";
+  } finally {
+    assistantMessage.processingDocument = false;
+    conversation.pending = false;
+    refreshTutorPanel();
+  }
+  return true;
+}
+
 function rememberTutorPanelSize() {
   const panel = app.querySelector(".tutor-panel.is-open");
   if (!panel) return;
@@ -480,6 +519,7 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     return;
   }
+  if (openMode && await processOpenAssistantDocument(question)) return;
   if (!state.tutor.providers.length) {
     state.tutor.configError = "Configura un proveedor y su modelo en el servidor Vercel para habilitar las respuestas de Nora.";
     if (!openMode) state.tutor.collapsed = false;
@@ -696,7 +736,7 @@ function sidebar() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "tools" ? "Centro de herramientas" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
   const activeClassIndex = Math.max(0, courseModules.findIndex(({ id }) => id === state.activeModuleId));
   const activeClassComplete = state.completedModules.has(courseModules[activeClassIndex]?.id);
   const nextClassIndex = activeClassComplete
@@ -709,8 +749,9 @@ function topbar() {
     const actionLabel = isActive ? isComplete ? "Revisar clase" : "Continuar clase" : "Abrir";
     return `<button type="button" class="class-menu-item ${isActive ? "is-active" : ""} ${isComplete ? "is-complete" : ""} ${index === nextClassIndex ? "is-next" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${isActive ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><small class="class-menu-status">${status}</small><small class="class-menu-action">${actionLabel}</small><i aria-hidden="true">${isComplete ? "✓" : index === nextClassIndex ? "→" : ""}</i></button>`;
   }).join("");
-  const toolsActive = ["advisor", "cfdi", "lab", "study"].includes(state.section);
+  const toolsActive = ["tools", "advisor", "cfdi", "lab", "study"].includes(state.section);
   const tools = [
+    ["tools", "Centro de herramientas"],
     ["advisor", "Asistente abierto"],
     ["cfdi", "Analizador CFDI"],
     ["lab", "Laboratorio práctico"],
@@ -993,10 +1034,11 @@ function render() {
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
       : state.section === "cfdi" ? renderCfdiWorkspace()
+      : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
-  const tutorPanel = ["advisor", "cfdi"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
+  const tutorPanel = ["advisor", "cfdi", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
   app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
@@ -1041,9 +1083,27 @@ function checkAnswer(exercise) {
 app.addEventListener("click", (event) => {
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = ["course", "lab", "study", "advisor", "cfdi"].includes(section.dataset.section) ? section.dataset.section : "course";
+    state.section = ["course", "lab", "study", "advisor", "cfdi", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
+    if (state.section !== "tools") state.toolsNotice = "";
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const toolAction = event.target.closest("[data-tool-action]");
+  if (toolAction) {
+    const tool = toolAction.dataset.toolAction;
+    if (tool === "cfdi") {
+      state.section = "cfdi";
+      state.toolsNotice = "";
+    } else {
+      state.section = "tools";
+      state.toolsNotice = tool === "fiscal-profile"
+        ? "El perfil fiscal será el punto de entrada para RFC, régimen, domicilio y conexiones por empresa. La base de datos ya está preparada; falta activar el proyecto Supabase."
+        : "Esta herramienta está contemplada en la arquitectura, pero todavía requiere su conexión y reglas operativas antes de ejecutar acciones fiscales.";
+    }
     render();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1055,6 +1115,15 @@ app.addEventListener("click", (event) => {
     if (input) {
       input.value = starterPrompt.dataset.openPrompt || "";
       input.focus({ preventScroll: true });
+    }
+    return;
+  }
+  const artifactButton = event.target.closest("[data-open-artifact]");
+  if (artifactButton) {
+    const message = state.openAssistant.messages[Number(artifactButton.dataset.openArtifact)];
+    if (message?.artifact) {
+      try { downloadDocumentArtifact(message.artifact); }
+      catch { state.openAssistant.documentError = "No se pudo preparar la descarga."; refreshTutorPanel(); }
     }
     return;
   }
@@ -1200,6 +1269,7 @@ app.addEventListener("click", (event) => {
     if (tutorBusy()) return;
     state.openAssistant.documentText = "";
     state.openAssistant.documentName = "";
+    state.openAssistant.documentFile = null;
     state.openAssistant.documentTruncated = false;
     state.openAssistant.documentPageCount = null;
     state.openAssistant.documentError = "";
@@ -1210,6 +1280,7 @@ app.addEventListener("click", (event) => {
     if (state.tutor.pending) return;
     state.tutor.documentText = "";
     state.tutor.documentName = "";
+    state.tutor.documentFile = null;
     state.tutor.documentTruncated = false;
     state.tutor.documentPageCount = null;
     state.tutor.documentError = "";
