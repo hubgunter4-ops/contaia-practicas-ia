@@ -1893,3 +1893,13 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .class-menu-action { font-size: 8px; }
   .classroom-persistence-status { font-size: 10px; }
 }
+
+
+/* Fase 3 · feedback formativo en prácticas */
+.feedback-status-label { display: inline-flex; margin: 8px 0 0 !important; padding: 3px 7px; border: 1px solid currentColor; color: #514b42 !important; font-size: 11px !important; font-weight: 700; }
+.feedback-section { margin-top: 11px; padding-top: 9px; border-top: 1px solid rgba(60, 55, 48, .16); }
+.feedback-section h3 { margin: 0 0 5px; color: #403b34; font-size: 11px; }
+.feedback-section p, .feedback-section li { margin: 0; color: #514b42; font-size: 12px; line-height: 1.45; }
+.feedback-section ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+.feedback-next-step { border-left: 3px solid #85683c; padding: 8px 0 2px 10px; }
+.exercise-actions [data-action="mark-reviewed"] { min-height: 44px; }

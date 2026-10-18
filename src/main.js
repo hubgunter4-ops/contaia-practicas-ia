@@ -1,5 +1,5 @@
 import { categories, exercises } from "./exercises.js";
-import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "./logic.js";
+import { buildChoiceFeedback, buildWrittenFeedback, calculateDifference, evaluateChoice, getGuidedStage } from "./logic.js";
 import { courseModules, courseSessionFlow } from "./course.js";
 import { buildClassroomScene, CLASSROOM_PHASES, renderClassroom } from "./classroom.js";
 import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
@@ -935,9 +935,12 @@ function renderWritten(exercise) {
 function renderFeedback(exercise) {
   const feedback = state.feedback.get(exercise.id);
   if (!feedback) return `<div class="feedback-placeholder" aria-hidden="true"><span>✳</span><p>Tu retroalimentación aparecerá aquí cuando compruebes la respuesta.</p></div>`;
-  const style = feedback.correct ? "feedback-good" : feedback.status === "missing" ? "feedback-neutral" : "feedback-revise";
+  const style = feedback.status === "logrado" ? "feedback-good" : feedback.status === "incompleto" ? "feedback-neutral" : "feedback-revise";
   const checklist = feedback.checklist ? `<ul class="feedback-checklist">${feedback.checklist.map((item) => `<li class="${item.met ? "met" : "unmet"}"><span>${item.met ? "✓" : "○"}</span>${escapeHtml(item.label)}</li>`).join("")}</ul>` : "";
-  return `<div class="feedback-box ${style}" role="status" aria-live="polite"><div class="feedback-title"><span>${feedback.correct ? "✓" : feedback.status === "missing" ? "i" : "↻"}</span><strong>${escapeHtml(feedback.title)}</strong>${feedback.scoreText ? `<b>${escapeHtml(feedback.scoreText)}</b>` : ""}</div><p>${escapeHtml(feedback.message)}</p>${checklist}${feedback.explanation ? `<div class="explanation"><b>Por qué</b><p>${escapeHtml(feedback.explanation)}</p></div>` : ""}</div>`;
+  const strengths = feedback.strengths?.length ? `<section class="feedback-section"><h3>Puntos fuertes</h3><ul>${feedback.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>` : "";
+  const nextStep = feedback.nextStep ? `<section class="feedback-section feedback-next-step"><h3>Siguiente paso</h3><p>${escapeHtml(feedback.nextStep)}</p></section>` : "";
+  const statusLabel = { logrado: "Logrado en este caso", revisar: "Para revisar", incompleto: "Intento incompleto" }[feedback.status] ?? "Retroalimentación";
+  return `<div class="feedback-box ${style}" role="status" aria-live="polite"><div class="feedback-title"><span aria-hidden="true">${feedback.status === "logrado" ? "✓" : feedback.status === "incompleto" ? "i" : "↻"}</span><strong>${escapeHtml(feedback.title)}</strong></div><p class="feedback-status-label">Estado: ${statusLabel}</p><p>${escapeHtml(feedback.message)}</p>${strengths}${nextStep}${checklist}${feedback.explanation ? `<div class="explanation"><b>Por qué</b><p>${escapeHtml(feedback.explanation)}</p></div>` : ""}</div>`;
 }
 
 function renderGuidedProgress(stage) {
@@ -970,6 +973,7 @@ function renderExercise(exercise) {
     ${scenario}${tables}${stageProgress}${renderVideoCard({ kind: "exercise", id: exercise.id, module: linkedModule, exercise })}
     <div class="workbench"><section class="work-main" aria-label="Área de práctica">${form}<div class="exercise-actions">
       <button type="button" class="button button-primary" data-action="check" data-id="${exercise.id}">Comprobar mi respuesta <span aria-hidden="true">→</span></button>
+      ${isWritten && state.attempted.has(exercise.id) && state.feedback.get(exercise.id)?.status !== "incompleto" && !state.completed.has(exercise.id) ? `<button type="button" class="button button-quiet" data-action="mark-reviewed" data-id="${exercise.id}">Terminé de revisar esta práctica</button>` : ""}
       <button type="button" class="button button-quiet" data-action="hint" data-id="${exercise.id}" ${stage === "hint" ? "" : "disabled"}>${stage === "hint" ? "Pedir una pista" : showHint ? "Pista consultada" : "Pista después del intento"}</button>
       <button type="button" class="button button-quiet" data-action="solution" data-id="${exercise.id}" ${stage === "example" ? "" : "disabled"}>${stage === "example" ? "Ver ejemplo y comparar" : showSolution ? "Comparación visible" : "Ejemplo después de la pista"}</button>
       <button type="button" class="button button-quiet advisor-practice-button" data-action="tutor-open">Preguntar a Nora · tú haces el ejercicio</button>
@@ -1020,34 +1024,14 @@ async function initializeTutorConfig() {
 function checkAnswer(exercise) {
   if (exercise.kind === "prompt" || exercise.kind === "written") {
     const answer = state.answers.get(exercise.id) ?? "";
-    const result = scoreRubric(answer, exercise.rubric);
-    if (!answer.trim()) {
-      state.feedback.set(exercise.id, { status: "missing", title: "Aún no hay respuesta", message: "Escribe un borrador breve y después comprueba sus elementos." });
-    } else {
-      state.attempted.add(exercise.id);
-      const threshold = Math.ceil(result.total * 0.6);
-      const correct = result.score >= threshold;
-      if (correct) state.completed.add(exercise.id);
-      state.feedback.set(exercise.id, {
-        status: correct ? "correct" : "revise", correct,
-        title: correct ? "Buen borrador: ya tiene estructura" : "Hay elementos que puedes reforzar",
-        message: correct ? "La rúbrica reconoce varios elementos clave. Revisa la solución modelo y valida los hechos antes de usar un texto real." : "Usa las pistas para completar el contexto, la tarea, el formato o las verificaciones que hagan falta.",
-        scoreText: `${result.score} / ${result.total}`,
-        checklist: result.checklist,
-      });
-    }
+    if (answer.trim()) state.attempted.add(exercise.id);
+    state.feedback.set(exercise.id, buildWrittenFeedback(answer, exercise));
   } else {
     const selected = state.selections.get(exercise.id);
     const result = evaluateChoice(selected, exercise);
     if (selected) state.attempted.add(exercise.id);
     if (result.correct) state.completed.add(exercise.id);
-    state.feedback.set(exercise.id, {
-      status: result.status,
-      correct: result.correct,
-      title: result.status === "missing" ? "Selecciona una opción" : result.correct ? "Criterio bien aplicado" : "Revisa la pista y vuelve a intentar",
-      message: result.status === "missing" ? result.message : result.correct ? "Correcto. Antes de llevar esta idea a un caso real, verifica la evidencia y las reglas aplicables." : "Esta elección no es la más prudente con los datos disponibles. La solución sigue oculta hasta que la consultes.",
-      explanation: result.correct ? exercise.explanation : "",
-    });
+    state.feedback.set(exercise.id, buildChoiceFeedback(result, exercise));
   }
   state.tutor.avatarState = state.completed.has(exercise.id) ? "celebrating" : "explaining";
   persistProgress();
@@ -1328,6 +1312,14 @@ app.addEventListener("click", (event) => {
   const exercise = exercises.find((item) => item.id === action.dataset.id);
   if (!exercise) return;
   const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
+  if (action.dataset.action === "mark-reviewed") {
+    const feedback = state.feedback.get(exercise.id);
+    if (!["prompt", "written"].includes(exercise.kind) || !state.attempted.has(exercise.id) || feedback?.status === "incompleto") return;
+    state.completed.add(exercise.id);
+    persistProgress();
+    render();
+    return;
+  }
   if (action.dataset.action === "hint" && stage !== "hint") return;
   if (action.dataset.action === "solution" && stage !== "example") return;
   if (action.dataset.action === "check") checkAnswer(exercise);

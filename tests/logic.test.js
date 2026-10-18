@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "../src/logic.js";
+import { buildChoiceFeedback, buildWrittenFeedback, calculateDifference, evaluateChoice, getGuidedStage, scoreRubric } from "../src/logic.js";
 import { PROMPT_RUBRIC, exercises } from "../src/exercises.js";
 
 test("la rúbrica reconoce un prompt contable con contexto, tarea, formato y verificación", () => {
@@ -48,4 +48,39 @@ test("la práctica avanza por intento, pista, ejemplo y comparación", () => {
 test("una pista o solución sin intento no adelanta la etapa", () => {
   assert.equal(getGuidedStage({ attempted: false, hintSeen: true, solutionSeen: true }), "attempt");
   assert.equal(getGuidedStage({ attempted: true, hintSeen: false, solutionSeen: true }), "hint");
+});
+
+test("la retroalimentación escrita distingue borrador vacío y elementos a revisar sin puntaje ni aprobación automática", () => {
+  const exercise = exercises.find((item) => item.id === "reporte");
+  const empty = buildWrittenFeedback("  ", exercise);
+  assert.equal(empty.status, "incompleto");
+  assert.match(empty.nextStep, /Escribe/);
+  const malformed = buildWrittenFeedback("ok", exercise);
+  assert.equal(malformed.status, "incompleto");
+  assert.match(malformed.message, /demasiado breve/);
+
+  const partial = buildWrittenFeedback("Ventas 125,000 MXN. Comparado con agosto.", exercise);
+  assert.equal(partial.status, "revisar");
+  assert.ok(partial.strengths.some((strength) => /cifras/.test(strength)));
+  assert.match(partial.nextStep, /Revisa este elemento/);
+  assert.ok(partial.hint);
+  assert.equal(Object.hasOwn(partial, "score"), false);
+  assert.match(partial.message, /no determina si una respuesta abierta es correcta/);
+});
+
+test("la rúbrica totalmente reconocida en texto abierto tampoco certifica ni cambia a logrado", () => {
+  const exercise = exercises.find((item) => item.id === "reporte");
+  const feedback = buildWrittenFeedback("125,000 72,000 39,000 118,000 agosto comparación falta hipótesis verificar revisar detalle comprobantes", exercise);
+  assert.equal(feedback.status, "revisar");
+  assert.equal(feedback.checklist.every(({ met }) => met), true);
+  assert.match(feedback.nextStep, /Contrasta tu borrador/);
+});
+
+test("la evaluación de selección usa estado explícito, fortalezas y siguiente paso", () => {
+  const exercise = exercises.find((item) => item.id === "clasificacion");
+  const feedback = buildChoiceFeedback(evaluateChoice("gasto", exercise), exercise);
+  assert.equal(feedback.status, "logrado");
+  assert.equal(feedback.strengths.length, 1);
+  assert.match(feedback.nextStep, /evidencia/);
+  assert.ok(feedback.explanation);
 });
