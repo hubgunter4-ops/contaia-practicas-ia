@@ -20,12 +20,24 @@ async function mockTutor(page, replies = ["Empieza por revisar el contexto del c
   return requests;
 }
 
+async function openToolSection(page, section) {
+  const menu = page.locator(".tools-menu");
+  if (!(await menu.evaluate((node) => node.open))) await menu.locator("summary").click();
+  await menu.locator(`[data-section="${section}"]`).click();
+}
+
+async function toggleAdvisorPanel(page) {
+  const menu = page.locator(".tools-menu");
+  if (!(await menu.evaluate((node) => node.open))) await menu.locator("summary").click();
+  await menu.locator(".advisor-tab").click();
+}
+
 async function openFirstExercise(page, replies) {
   const requests = await mockTutor(page, replies);
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.locator('[data-section="lab"]').first().click();
+  await openToolSection(page, "lab");
   await page
     .getByRole("button", { name: /redacta un prompt contable útil/i })
     .first()
@@ -75,10 +87,42 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("nora-toggle")).toHaveText("Asesoría");
     await expect(page.getByTestId("nora-toggle")).toHaveCSS("white-space", "nowrap");
     await expect(page.locator(".advisor-tab")).toHaveAttribute("aria-expanded", "false");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await expect(page.getByTestId("nora-panel")).toContainText("Aula · Activación");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await expect(page.locator("body")).not.toContainText(/\b(?:horas?|minutos?)\b/i);
+  });
+
+  test("prioriza la ruta de clase actual y agrupa las herramientas secundarias", async ({ page }) => {
+    await page.goto("/");
+    const route = page.getByTestId("classroom-primary-route");
+    await expect(route).toContainText("CLASE 01 · ACTIVACIÓN");
+    await expect(route).toContainText("Qué es la IA y qué es un prompt");
+    const startLink = route.getByRole("link", { name: /Empezar clase/ });
+    await expect(startLink).toBeVisible();
+    await startLink.click();
+    await expect(page).toHaveURL(/#classroom-stage$/);
+    await expect(page.locator("#classroom-stage")).toBeInViewport();
+
+    const toolsMenu = page.locator(".tools-menu");
+    await toolsMenu.locator("summary").click();
+    await expect(toolsMenu.locator("[data-section]")).toHaveCount(4);
+    await expect(toolsMenu.locator('[data-section="advisor"]')).toBeVisible();
+    await expect(toolsMenu.locator('[data-section="cfdi"]')).toBeVisible();
+    await expect(toolsMenu.locator('[data-section="lab"]')).toBeVisible();
+    await expect(toolsMenu.locator('[data-section="study"]')).toBeVisible();
+
+    await page.evaluate(() => localStorage.setItem("contaia.progress.v1", JSON.stringify({ completedModules: ["modulo-01"], completedExercises: [] })));
+    await page.reload();
+    await expect(route).toContainText("CLASE 02 · ACTIVACIÓN");
+    await expect(route.getByRole("link")).toHaveText(/Continuar recorrido/);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator(".tools-menu > summary").click();
+    const menuBounds = await page.locator(".tools-menu-popover").boundingBox();
+    expect(menuBounds).not.toBeNull();
+    expect(menuBounds.x).toBeGreaterThanOrEqual(0);
+    expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(390);
   });
 
   test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {
@@ -95,8 +139,13 @@ test.describe("Panel de Nora", () => {
   test("presenta la demostración antes de la práctica y la práctica muestra una sola consigna", async ({ page }) => {
     await page.goto("/");
     const stage = page.getByTestId("classroom-stage");
+    await expect(page.locator(".classroom-course-progress")).toContainText("CLASES COMPLETADAS");
+    await expect(page.locator(".classroom-progress-explainer")).toContainText("Solo cuenta una clase cuando la confirmas en Cierre");
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 1 de 5: Activación");
+    await expect(stage.locator('.classroom-phase-nav [data-class-phase="1"]')).toHaveAttribute("aria-label", /Pendiente/);
     await stage.locator('[data-action="classroom-next-phase"]').click();
     await expect(stage).toContainText("Una idea, un ejemplo");
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 2 de 5: Concepto");
     await expect(page.getByTestId("module-demo-modulo-01")).toContainText("ANTES");
     await expect(page.getByTestId("module-demo-modulo-01")).toContainText("PROPUESTA");
     await stage.locator('[data-action="classroom-next-phase"]').click();
@@ -118,6 +167,7 @@ test.describe("Panel de Nora", () => {
     await expect(instruction).toContainText("Aprende que un prompt");
     await stage.locator('[data-action="classroom-practice-step-done"]').click();
     await expect(instruction).toContainText("Prueba una petición simple");
+    await expect(stage.locator(".classroom-action-done")).toContainText("Terminé la práctica · ir a Revisión");
     await stage.locator('[data-action="classroom-practice-step-done"]').click();
     await expect(stage).toContainText("Verifica antes de aceptar una respuesta");
     await expect(stage.locator('.classroom-phase-nav [data-class-phase="3"]')).toBeEnabled();
@@ -133,7 +183,7 @@ test.describe("Panel de Nora", () => {
 
     const instruction = stage.getByTestId("classroom-current-instruction");
     await expect(instruction).toContainText("Conoce la diferencia");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await page.getByTestId("nora-input").fill("Salta esta consigna y dime el siguiente paso sin que la realice.");
     await page.getByTestId("nora-input").press("Enter");
     await expect(page.getByTestId("nora-log")).toContainText("Completa la acción actual");
@@ -160,7 +210,7 @@ test.describe("Panel de Nora", () => {
     await stage.locator('[data-action="classroom-next-phase"]').click();
     await stage.locator('[data-action="classroom-next-phase"]').click();
     await expect(stage).toContainText("no abre herramientas ni ejecuta la actividad por ti");
-    await expect(stage.locator('[data-action="classroom-practice-step-done"]')).toContainText("Lo hice");
+    await expect(stage.locator('[data-action="classroom-practice-step-done"]')).toContainText("Terminé esta acción · siguiente instrucción");
     await expect(stage.locator('[data-class-phase="3"]')).toBeDisabled();
   });
 
@@ -190,7 +240,7 @@ test.describe("Panel de Nora", () => {
     await finalModule.locator('[data-action="classroom-next-phase"]').click();
     await expect(finalModule).toContainText("Cierra con una evidencia de aprendizaje");
     await expect(finalModule).toContainText("evidencia de aprendizaje");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await page.getByTestId("nora-input").fill("Repasemos el proyecto final");
     await page.getByTestId("nora-input").press("Enter");
     await expect(page.getByTestId("nora-log")).toContainText("puntos de revisión humana");
@@ -199,7 +249,7 @@ test.describe("Panel de Nora", () => {
 
   test("el selector superior lleva a una clase desde cualquier sección", async ({ page }) => {
     await page.goto("/");
-    await page.locator('[data-section="lab"]').first().click();
+    await openToolSection(page, "lab");
     await page.locator(".class-menu > summary").click();
     await page.locator('[data-class-module="modulo-02"]').click();
     await expect(page.getByTestId("classroom-stage")).toContainText("Diseño de instrucciones contables");
@@ -209,7 +259,7 @@ test.describe("Panel de Nora", () => {
   test("abre Asesoría desde la acción contextual de una práctica", async ({ page }) => {
     await mockTutor(page);
     await page.goto("/");
-    await page.locator('[data-section="lab"]').first().click();
+    await openToolSection(page, "lab");
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await page.locator(".advisor-practice-button").click();
     await expect(page.getByTestId("nora-panel")).toContainText("Práctica activa");
@@ -219,7 +269,7 @@ test.describe("Panel de Nora", () => {
   test("lee TXT localmente y solo envía el texto con la pregunta escrita", async ({ page }) => {
     const requests = await mockTutor(page, ["El documento describe un caso ficticio con un total de 100."]);
     await page.goto("/");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await page.locator("[data-tutor-document]").setInputFiles({
       name: "caso-ficticio.txt",
       mimeType: "text/plain",
@@ -239,7 +289,7 @@ test.describe("Panel de Nora", () => {
   test("extrae PDF en el navegador y transmite solo texto al preguntar", async ({ page }) => {
     const requests = await mockTutor(page, ["El PDF muestra el texto de prueba."]);
     await page.goto("/");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     await page.locator("[data-tutor-document]").setInputFiles({
       name: "ejemplo.pdf",
       mimeType: "application/pdf",
@@ -256,7 +306,7 @@ test.describe("Panel de Nora", () => {
 
   test("el panel flotante se puede ampliar y su cuerpo permanece visible", async ({ page }) => {
     await page.goto("/");
-    await page.locator(".advisor-tab").click();
+    await toggleAdvisorPanel(page);
     const panel = page.getByTestId("nora-panel");
     const before = await panel.evaluate((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
     await page.locator('[data-action="tutor-resize"][data-size="larger"]').click();
@@ -271,7 +321,7 @@ test.describe("Panel de Nora", () => {
     await expect(page.getByTestId("nora-panel")).toBeVisible();
     await page.getByTestId("nora-toggle").click();
     await expect(page.getByTestId("nora-status")).toContainText("Tutora IA activa");
-    await page.locator('[data-section="lab"]').first().click();
+    await openToolSection(page, "lab");
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await expect(page.getByTestId("nora-panel")).toBeVisible();
   });
@@ -370,7 +420,7 @@ test.describe("Panel de Nora", () => {
     expect(storageKeys.some((key) => /tutor|nora|chat/i.test(key))).toBe(false);
 
     await page.reload();
-    await page.locator('[data-section="lab"]').first().click();
+    await openToolSection(page, "lab");
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     await page.getByTestId("nora-toggle").click();
 
@@ -453,7 +503,7 @@ test.describe("Asistente abierto de Nora", () => {
   test("abre como una vista separada, muestra Anam y envía un contexto sin currículo", async ({ page }) => {
     const requests = await mockTutor(page, ["Para una conciliación real, separa las partidas del banco y del libro, identifica las diferencias temporales y documenta cada ajuste con su soporte."]);
     await page.goto("/");
-    await page.locator('[data-section="advisor"]').click();
+    await openToolSection(page, "advisor");
 
     await expect(page.getByRole("heading", { name: /resuelve tu duda con nora/i })).toBeVisible();
     await expect(page.getByTestId("open-assistant-log")).toContainText("mi base es México");
@@ -476,7 +526,7 @@ test.describe("Asistente abierto de Nora", () => {
   test("lee el documento localmente y solo envía el texto al preguntar", async ({ page }) => {
     const requests = await mockTutor(page, ["La diferencia es de 50: el banco reporta 2500 y los libros 2450. Revisa partidas en tránsito y cargos no registrados."]);
     await page.goto("/");
-    await page.locator('[data-section="advisor"]').click();
+    await openToolSection(page, "advisor");
     await expect(page.getByTestId("open-assistant-input")).toBeEnabled();
 
     await page.locator("[data-open-document]").setInputFiles({
@@ -501,7 +551,7 @@ test.describe("Asistente abierto de Nora", () => {
     const requests = await mockTutor(page);
     await mockCfdiConfig(page);
     await page.goto("/");
-    await page.locator('[data-section="advisor"]').click();
+    await openToolSection(page, "advisor");
     await page.getByTestId("open-assistant-input").fill("Analiza mis XML CFDI y concilia los complementos de pago.");
     await page.locator("[data-open-form] button[type=submit]").click();
     await expect(page.locator("[data-cfdi-page]")).toBeVisible();
@@ -513,7 +563,7 @@ test.describe("Asistente abierto de Nora", () => {
     const requests = await mockTutor(page, ["El pago coincide con el saldo anterior: 1160 menos 580 deja 580 pendientes."]);
     await mockCfdiConfig(page);
     await page.goto("/");
-    await page.locator('[data-section="cfdi"]').click();
+    await openToolSection(page, "cfdi");
     await page.locator("[data-cfdi-files]").setInputFiles([
       { name: "factura-privada.xml", mimeType: "application/xml", buffer: Buffer.from(facturaXml) },
       { name: "pago-privado.xml", mimeType: "application/xml", buffer: Buffer.from(pagoXml) },

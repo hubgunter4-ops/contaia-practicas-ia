@@ -1564,3 +1564,124 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 @media (max-width: 760px) {
   .app-shell:has(.classroom-content) .topbar { border-bottom-color: #383b4c; }
 }
+
+
+/* Ruta principal del Aula en vivo y accesos secundarios */
+.classroom-primary-route {
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid #d5c8b4;
+}
+.classroom-primary-route > span {
+  color: #88775f;
+  font: 8px var(--mono);
+  letter-spacing: .07em;
+}
+.classroom-primary-route > strong {
+  color: #39322d;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.classroom-route-cta {
+  justify-self: start;
+  min-height: 36px;
+  margin-top: 2px;
+  border-radius: 9px;
+  font-size: 11px;
+  text-decoration: none;
+}
+.classroom-course-progress .classroom-primary-route { grid-column: 1 / -1; }
+
+.tools-menu { position: relative; display: inline-flex; flex: none; }
+.tools-menu > summary { list-style: none; }
+.tools-menu > summary::-webkit-details-marker { display: none; }
+.tools-menu > summary i { color: #907c61; font-style: normal; }
+.tools-menu-popover {
+  position: absolute;
+  z-index: 1400;
+  top: calc(100% + 7px);
+  right: 0;
+  display: none;
+  width: min(280px, calc(100vw - 24px));
+  max-height: min(65dvh, 520px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #ded3c1;
+  background: #fffaf2;
+  box-shadow: 0 14px 32px rgba(43, 31, 23, .18);
+}
+.tools-menu[open] > .tools-menu-popover { display: grid; gap: 3px; }
+.tools-menu-popover .section-tab {
+  width: 100%;
+  justify-content: flex-start;
+  border-radius: 5px;
+  text-align: left;
+}
+.tools-menu-popover .section-tab > span { flex: 1; }
+.tools-menu-popover .advisor-tab { margin-top: 3px; border-top-color: #e2d7c6; }
+.app-shell:has(.classroom-content) .classroom-primary-route { border-color: #41455a; }
+.app-shell:has(.classroom-content) .classroom-primary-route > span { color: #9ce8c7; }
+.app-shell:has(.classroom-content) .classroom-primary-route > strong { color: #f0eff7; }
+.app-shell:has(.classroom-content) .classroom-route-cta {
+  border-color: #aa91ff;
+  background: #aa91ff;
+  color: #191b28;
+}
+.app-shell:has(.classroom-content) .classroom-route-cta:hover:not(:disabled) {
+  border-color: #c0adff;
+  background: #c0adff;
+}
+.app-shell:has(.classroom-content) .tools-menu > summary i { color: #c0adff; }
+.app-shell:has(.classroom-content) .tools-menu-popover {
+  border-color: #45485c;
+  background: #202333;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .38);
+}
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab { color: #c9c9d6; }
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab:hover,
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab.is-active {
+  border-color: #514b70;
+  background: #2b2d41;
+  color: #c0adff;
+}
+.app-shell:has(.classroom-content) .tools-menu-popover .advisor-tab { border-color: #514b70; }
+@media (max-width: 1000px) {
+  .classroom-course-progress .classroom-primary-route { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .tools-menu-popover {
+    position: fixed;
+    top: 87px;
+    right: 10px;
+    left: auto;
+    width: min(280px, calc(100vw - 20px));
+    max-height: min(65dvh, 520px);
+  }
+  .classroom-primary-route { gap: 6px; }
+  .classroom-route-cta { width: 100%; justify-content: space-between; }
+}
+
+
+/* Microcopy de progreso: distingue clases guardadas de fases de la sesión */
+.classroom-progress-explainer {
+  margin: 0;
+  color: #746b60;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.classroom-phase-explainer {
+  margin: -3px 2px 12px;
+  color: #746b60;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.classroom-phase-explainer strong { color: var(--wine-dark); }
+.app-shell:has(.classroom-content) .classroom-progress-explainer,
+.app-shell:has(.classroom-content) .classroom-phase-explainer { color: #b4b6c7; }
+.app-shell:has(.classroom-content) .classroom-phase-explainer strong { color: #c0adff; }
+.app-shell:has(.classroom-content) .classroom-phase-button[disabled] { opacity: .46; }
+@media (max-width: 760px) {
+  .classroom-progress-explainer,
+  .classroom-phase-explainer { font-size: 9px; }
+}

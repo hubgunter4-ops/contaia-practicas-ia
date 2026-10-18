@@ -61,6 +61,8 @@ try { progressStorage = window.localStorage; } catch { /* El navegador puede blo
 const restoredProgress = loadProgress(progressStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
+const nextIncompleteModule = courseModules.find(({ id }) => !state.completedModules.has(id));
+state.activeModuleId = nextIncompleteModule?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
 state.storageWarning = progressStorage ? "" : "El navegador no permite guardar el progreso; esta sesión seguirá en memoria.";
 try {
   state.onboardingLevel = progressStorage?.getItem("contaia.onboarding.v1") || "";
@@ -696,15 +698,18 @@ function topbar() {
   const done = state.completed.size;
   const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
   const classOptions = courseModules.map((module, index) => `<button type="button" class="class-menu-item ${module.id === state.activeModuleId ? "is-active" : ""} ${state.completedModules.has(module.id) ? "is-complete" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${module.id === state.activeModuleId ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><i aria-hidden="true">${state.completedModules.has(module.id) ? "✓" : ""}</i></button>`).join("");
+  const toolsActive = ["advisor", "cfdi", "lab", "study"].includes(state.section);
+  const tools = [
+    ["advisor", "Asistente abierto"],
+    ["cfdi", "Analizador CFDI"],
+    ["lab", "Laboratorio práctico"],
+    ["study", "Base de estudio"],
+  ].map(([section, label]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}"><span>${label}</span></button>`).join("");
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Aula en vivo</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Seleccionar clase">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · estado local</p></div></details>
-      <button class="section-tab ${state.section === "advisor" ? "is-active" : ""}" type="button" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}"><b>03</b><span>Asistente abierto</span></button>
-      <button class="section-tab ${state.section === "cfdi" ? "is-active" : ""}" type="button" data-section="cfdi" aria-current="${state.section === "cfdi" ? "page" : "false"}"><b>04</b><span>Analizador CFDI</span></button>
-      ${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}
-      <button class="section-tab ${state.section === "lab" ? "is-active" : ""}" type="button" data-section="lab" aria-current="${state.section === "lab" ? "page" : "false"}"><b>05</b><span>Laboratorio práctico</span></button>
-      <button class="section-tab ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}"><b>06</b><span>Base de estudio</span></button>
+      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b><span>Herramientas</span><i aria-hidden="true">⌄</i></summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}</div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
   </header>`;

@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+async function openToolSection(page, section) {
+  const menu = page.locator(".tools-menu");
+  if (!(await menu.evaluate((node) => node.open))) await menu.locator("summary").click();
+  await menu.locator(`[data-section="${section}"]`).click();
+}
+
 async function configureClipboard(page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
@@ -19,7 +25,7 @@ test.describe("apoyos audiovisuales opcionales", () => {
   test("cada práctica ofrece su brief contextual y no inserta un video no aprobado", async ({ page }) => {
     await configureClipboard(page);
     await page.goto("/");
-    await page.locator('[data-section="lab"]').first().click();
+    await openToolSection(page, "lab");
     await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
     const card = page.getByTestId("course-video-exercise-prompt");
 
@@ -42,7 +48,7 @@ test("explica si el navegador deniega la copia del briefing de práctica", async
     });
   });
   await page.goto("/");
-  await page.locator('[data-section="lab"]').first().click();
+  await openToolSection(page, "lab");
   await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
   const card = page.getByTestId("course-video-exercise-prompt");
   await card.getByRole("button", { name: /copiar briefing para notebooklm/i }).click();
