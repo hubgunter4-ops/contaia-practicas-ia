@@ -17,7 +17,7 @@
 - No almacenar texto de respuestas, opciones seleccionadas, contenidos del diagnóstico ni calificaciones; el almacenamiento persistente se limita a identificadores de módulos y prácticas completados.
 - No enviar respuestas ni progreso a servicios externos; no añadir cuentas, API de IA, analítica, base de datos remota, proveedores ni dependencias externas. La base de estudio usa únicamente IndexedDB nativo del navegador.
 - El curso, las soluciones y los ejercicios usan exclusivamente datos ficticios. El contenido de ISR, RESICO, nómina y auditoría sigue siendo educativo, no asesoría ni determinación de obligaciones reales.
-- Mantener la paleta vino `#7A2E3A`, oro `#D8B26E`, estética editorial de expediente, navegación por teclado, foco visible, adaptación móvil y soporte a `prefers-reduced-motion`.
+- Mantener la identidad editorial, navegación por teclado, foco visible, adaptación móvil y soporte a `prefers-reduced-motion`. En Aula en vivo usar el tema oscuro lavanda/menta documentado abajo; el resto de la experiencia conserva su tema propio y el Analizador CFDI mantiene su tema AuditPro independiente.
 - Mantener Node.js `>=22`, puerto `3000`, manifiesto de rutas de página `GET /manus-routes.json` con la ruta única `/`, y cero dependencias npm adicionales.
 - No añadir ninguna integración externa. Si una integración adicional llegara a resultar conveniente, detener ese punto y pedir autorización antes de proponerla o conectarla.
 - Para cada fase: cambiar solamente sus archivos, ejecutar las comprobaciones afectadas, hacer un commit descriptivo, obtener `origin/main`, integrar solo avance fast-forward compatible, volver a comprobar y empujar a `origin/main`. No usar `git add -A`, no reescribir historial ni forzar. `publishing.auto_publish` está en `false`; no solicitar publicación.
@@ -34,7 +34,7 @@
 
 - **Movimiento:** diseño editorial contemporáneo de archivo, con referencias sutiles a expedientes y cuadernos de trabajo mexicanos, evitando clichés y apariencia corporativa genérica.
 - **Principios:** legibilidad primero; rigor sin intimidar; práctica progresiva con explicación; datos sintéticos claramente identificados.
-- **Color:** vino oscuro `#7A2E3A` como color propio de criterio y autoridad amable; oro cálido `#D8B26E` para pistas y acciones; crema de papel y tinta azul-gris para lectura prolongada.
+- **Color:** el sistema editorial base conserva vino `#7A2E3A`, oro `#D8B26E`, papel crema y tinta azul-gris en las vistas que ya lo usan. El Aula en vivo adopta una paleta oscura específica de tinta azul-violeta, lavanda y menta, sin imponerla al Asistente abierto ni al Analizador CFDI.
 - **Composición:** pestañas superiores numeradas para 01/02, navegación del laboratorio como segunda sección, módulos presentados como fichas de expediente con horas y vínculo a su práctica; en móvil, navegación compacta y una columna.
 - **Motivos:** pestañas de expediente numeradas, etiquetas de folio “CASO FICTICIO” y líneas de cuaderno con anotaciones al margen.
 - **Interacción:** cada práctica comienza con un intento; después permite pedir pista, revisar un ejemplo y comparar borrador/elección. No forzar los pasos por medio de un proveedor externo.
@@ -43,7 +43,11 @@
 - **Esencia de marca:** laboratorio de práctica contable con IA para estudiantes y profesionales que quieren aprender de forma segura; personalidad cuidadosa, clara y práctica.
 - **Voz:** directa y didáctica. Ejemplos: “Primero intenta. Luego verifica.” y “Una señal no es una conclusión.”
 - **Logotipo:** conservar el monograma original “C” como carpeta abierta con un asiento débito/crédito junto al nombre Laboratorio ContaIA.
-- **Color distintivo:** vino `#7A2E3A`.
+- **Color distintivo:** los colores de marca se aplican por área; lavanda y menta identifican el Aula en vivo, mientras las vistas existentes conservan sus paletas y el Analizador CFDI mantiene AuditPro.
+
+### Actualización visual — Aula en vivo
+
+La interfaz del Aula en vivo usa fondo tinta `#191B28`, superficies `#202333` y `#252838`, texto claro `#F0EFF7`, texto secundario `#B4B6C7` y bordes `#383C50`. La lavanda (`#AA91FF`, `#C0ADFF`) destaca navegación, títulos, acciones y progreso; la menta (`#9CE8C7`) señala estados, foco y acentos de aprendizaje. Mantener contraste legible, estados no dependientes solo del color y adaptación a movimiento reducido. El alcance es exclusivamente la vista Aula en vivo; no recolorear globalmente otras secciones ni el Analizador CFDI.
 
 ## Estructura del proyecto
 
@@ -89,3 +93,64 @@ Definir dos conjuntos breves de cinco preguntas deterministas en `src/course.js`
 Definir en `src/course.js` cuatro controles de reflexión: usar el caso ficticio; contrastar datos/cálculos con evidencia y fuente pertinente; declarar qué información falta; y no tratar una anomalía como conclusión. Integrar el checklist antes del pie de cada ejercicio en `src/main.js`, adaptando el último control para que diga explícitamente que una señal no demuestra fraude. Las casillas viven solo en memoria y la lista recuerda verificar antes de continuar, sin crear una afirmación contable o fiscal. Probar presencia en las nueve prácticas y el texto prudente para anomalías; conservar avisos fiscales y privacidad. Commit: `feat: add responsible review checklist`.
 
 Al cerrar cada fase, actualizar su estado en `TODO.md`, correr las pruebas afectadas, hacer el commit indicado y empujarlo al `origin/main` canónico después de integrar cualquier avance fast-forward que aparezca. No publicar el sitio.
+
+
+---
+
+# Propuesta de extensión — Dashboard de sesiones con Nora (2026-10-08)
+
+**Estado:** pendiente de aprobación de diseño. Esta propuesta se añade al plan maestro sin reemplazar su historial. Para el comportamiento vigente del bot prevalecen los criterios posteriores de `TODO.md`, sección 3 y sección 9, junto con la implementación actual de `src/tutor/`.
+
+## Resultado solicitado
+
+Añadir al sitio ContaIA una vista integrada que reúna las diez sesiones del curso y permita conversar en vivo con Nora sobre la sesión seleccionada. El contenido procede del currículo existente; el chat conserva el backend seguro de Vercel.
+
+## Lectura del producto y dirección visual
+
+- **Artefacto:** dashboard curricular dentro de la aplicación web actual.
+- **Audiencia:** participantes del curso de IA aplicada a la contaduría que necesitan orientarse, revisar su avance y pedir ayuda contextual.
+- **Modo:** extensión de producto existente; no rediseño general.
+- **Lenguaje visual:** el Aula en vivo ya utiliza fondos oscuros azul-violeta, acentos lavanda y menta, texto claro y bordes discretos; sus tokens se detallan en “Actualización visual — Aula en vivo”. La identidad editorial cálida sigue vigente en las vistas que no adoptaron ese tema. Preservar wordmark ContaIA, avatar de Nora, voz educativa en español y patrones accesibles.
+- **Restricciones:** escritorio y móvil; no agregar cuentas, analítica, paquetes, proveedores ni almacenamiento de conversaciones; no modificar los contenidos de los videos.
+
+### Diales de diseño
+
+| Dial | Valor | Consecuencia concreta |
+|---|---:|---|
+| Variación visual | 2/10 | Cuadrícula y navegación reconocibles; la novedad queda acotada a una vista nueva. |
+| Intensidad de movimiento | 2/10 | Sin animaciones decorativas; solo estados y transiciones breves de foco/selección. |
+| Densidad informativa | 7/10 | Las diez sesiones se exploran y comparan con claridad, mostrando título, horas, objetivo y avance. |
+| Dependencia de assets | 2/10 | Los datos curriculares y la interfaz existente bastan; se reutiliza el avatar de Nora. |
+| Fidelidad de marca | 10/10 | Extensión nativa: conservar tokens, identidad, tipografía, patrones, accesibilidad y voz. |
+
+## Registro antes/después
+
+- **Preservar:** tabs y etiquetas actuales; diez módulos, duración de 40 horas y objetivos reales; avance local; tutoría por `/api/tutor`; streaming SSE; controles y aviso de privacidad; hilo del chat temporal en memoria, contextualizado al módulo activo y descartado al recargar.
+- **Mejorar:** acceso a cualquiera de las diez sesiones; resumen calculado exclusivamente a partir de horas y progreso reales; contexto visible de la sesión activa; acceso al chat en vivo desde la misma vista.
+- **Eliminar:** nada existente. No duplicar ni simular el chatbot; no inventar estados, métricas, sesiones ni videos.
+- **Contratos protegidos:** logo y nombres de secciones actuales; contenido y secuencia del curso; claves privadas solo en Vercel; no enviar progreso, notas ni respuestas de ejercicios al modelo.
+
+## Diseño propuesto
+
+1. Añadir una nueva pestaña principal **“Sesiones + Nora”** sin renombrar las tres secciones existentes.
+2. Incluir un resumen compacto con horas curriculares y avance real de módulos completados.
+3. Mostrar las diez sesiones con número, título, duración, enfoque/resultado y estado local. Seleccionar una actualiza el contexto de Nora y permite abrir el módulo completo.
+4. En escritorio, usar dos columnas: recorrido de sesiones y el panel existente de Nora, reutilizado en línea para conversar. En móvil, apilar los bloques y mantener el formulario accesible.
+5. Reutilizar panel, proveedor, streaming, cancelación, estados de error y protecciones existentes; solo el mensaje y la conversación de Nora llegan al backend.
+
+## Implementación y verificación propuestas
+
+- Continuar sobre `hubgunter4-ops/contaia-practicas-ia` y su despliegue Vercel existente; no crear un sitio paralelo.
+- Extender la SPA actual en `src/main.js` y `src/styles.css`, con datos de `courseModules` y progreso ya disponible en `localStorage`.
+- Reutilizar `renderTutorPanel()` y `getTutorContext()`; conservar el mismo hilo temporal y cambiar únicamente su contexto canónico al elegir otra sesión.
+- Añadir selectores estables y pruebas para las diez sesiones, selección/contexto, avance local, envío/streaming de Nora, estados sin configuración/error, accesibilidad básica y responsive.
+- Validar `npm test`, build Vercel y las pruebas E2E existentes que no requieran llamadas reales al proveedor.
+- No cambiar variables, secretos ni backend. No publicar en producción en esta fase; la publicación queda fuera del alcance.
+
+## Riesgo principal y fallback
+
+El panel global debe usar la sesión elegida como contexto sin duplicar conversaciones ni alterar Curso, Laboratorio o Base de estudio. Si incrustarlo en la vista altera el comportamiento actual del panel flotante, mantener el panel compartido y ofrecer un control en el dashboard que lo abra con el módulo seleccionado, sin copiar su lógica.
+
+## Criterio de aceptación
+
+Una persona abre **Sesiones + Nora**, identifica las diez sesiones y su avance real, elige cualquiera de ellas y envía una consulta que Nora responde en vivo con el contexto curricular elegido. Funciona en escritorio y móvil, preserva las tres áreas existentes y no guarda el chat ni envía progreso/notas.
