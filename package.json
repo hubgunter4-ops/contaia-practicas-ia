@@ -23,6 +23,7 @@
   "dependencies": {
     "@anam-ai/js-sdk": "^4.28.0",
     "@supabase/supabase-js": "^2.117.3",
+    "@vercel/analytics": "^2.0.1",
     "jszip": "^3.10.2",
     "pdfjs-dist": "^6.4.299"
   }
