@@ -651,4 +651,44 @@ test.describe("Asistente abierto de Nora", () => {
     const serialized = JSON.stringify(requests[0]);
     for (const privateValue of [facturaXml, pagoXml, "factura-privada.xml", "pago-privado.xml", "11111111-2222-3333-4444-555555555555", "AAA010101AAA", "BBB010101BBB"]) expect(serialized).not.toContain(privateValue);
   });
+
+  test("guía una práctica abierta sin puntuarla ni completarla hasta confirmación manual", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await openToolSection(page, "lab");
+    await page.getByRole("button", { name: /redacta un prompt contable útil/i }).first().click();
+
+    await page.getByRole("button", { name: /comprobar mi respuesta/i }).click();
+    await expect(page.locator(".feedback-box")).toContainText("Estado: Intento incompleto");
+    await expect(page.locator("[data-action=mark-reviewed]")).toHaveCount(0);
+
+    await page.locator("[data-answer=prompt]").fill("ok");
+    await page.getByRole("button", { name: /comprobar mi respuesta/i }).click();
+    await expect(page.locator(".feedback-box")).toContainText("demasiado breve");
+    await expect(page.locator("[data-action=mark-reviewed]")).toHaveCount(0);
+
+    const draft = "Contexto: empresa ficticia. Compara movimientos. Devuelve una tabla con datos proporcionados; verifica, no inventes y señala lo que falta.";
+    await page.locator("[data-answer=prompt]").fill(draft);
+    await page.getByRole("button", { name: /comprobar mi respuesta/i }).click();
+    await expect(page.locator(".feedback-box")).toContainText("Estado: Para revisar");
+    await expect(page.locator(".feedback-box")).toContainText("Puntos fuertes");
+    await expect(page.locator(".feedback-box")).toContainText("Siguiente paso");
+    await expect(page.locator(".feedback-box")).toContainText("no determina si una respuesta abierta es correcta");
+    await expect(page.locator(".feedback-box")).not.toContainText(/\d+\s*\/\s*\d+/);
+    await expect(page.locator("[data-action=mark-reviewed]")).toBeVisible();
+    await expect(page.locator(".exercise-footer")).not.toContainText("Práctica completada");
+
+    await page.getByRole("button", { name: /pedir una pista/i }).click();
+    await expect(page.locator(".hint-box")).toContainText("Pista:");
+    await page.getByRole("button", { name: /ver ejemplo y comparar/i }).click();
+    await expect(page.locator(".comparison-panel")).toBeVisible();
+    expect(JSON.stringify(await page.evaluate(() => JSON.parse(localStorage.getItem("contaia.progress.v1")))).toLowerCase()).not.toContain("contexto: empresa ficticia");
+
+    await page.getByRole("button", { name: /terminé de revisar esta práctica/i }).click();
+    await expect(page.locator(".exercise-footer")).toContainText("Práctica completada en esta sesión");
+    const savedProgress = await page.evaluate(() => JSON.parse(localStorage.getItem("contaia.progress.v1")));
+    expect(savedProgress.completedExercises).toContain("prompt");
+    expect(JSON.stringify(savedProgress)).not.toContain(draft);
+  });
 });
