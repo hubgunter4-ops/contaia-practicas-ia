@@ -96,11 +96,17 @@ test.describe("Panel de Nora", () => {
   test("prioriza la ruta de clase actual y agrupa las herramientas secundarias", async ({ page }) => {
     await page.goto("/");
     const route = page.getByTestId("classroom-primary-route");
-    await expect(route).toContainText("RUTA ACTUAL · CLASE 01 · ACTIVACIÓN");
+    await expect(route).toContainText("RUTA ACTUAL · CLASE 01 DE 10 · ACTIVACIÓN");
     await expect(route).toContainText("Qué es la IA y qué es un prompt");
-    const startLink = route.getByRole("link", { name: /Ver clase actual/ });
+    await expect(page.getByTestId("classroom-persistence-status")).toContainText("Las clases confirmadas se guardan en este dispositivo");
+    const startLink = route.getByRole("link", { name: /Continuar clase/ });
     await expect(startLink).toBeVisible();
     await startLink.click();
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-status')).toHaveText("En curso");
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-action')).toHaveText("Continuar clase");
+    await expect(page.locator('[data-class-module="modulo-02"] .class-menu-status')).toHaveText("Siguiente");
+    await expect(page.locator('[data-class-module="modulo-03"] .class-menu-status')).toHaveText("Por empezar");
+    await expect(page.locator(".class-menu-popover > p")).toContainText("clase actual 01");
     await expect(page).toHaveURL(/#classroom-stage$/);
     await expect(page.locator("#classroom-stage")).toBeInViewport();
 
@@ -114,8 +120,14 @@ test.describe("Panel de Nora", () => {
 
     await page.evaluate(() => localStorage.setItem("contaia.progress.v1", JSON.stringify({ completedModules: ["modulo-01"], completedExercises: [] })));
     await page.reload();
-    await expect(route).toContainText("CLASE 02 · ACTIVACIÓN");
-    await expect(route.getByRole("link")).toHaveText(/Ver clase actual/);
+    await expect(route).toContainText("CLASE 02 DE 10 · ACTIVACIÓN");
+    await expect(route.getByRole("link")).toHaveText(/Continuar clase/);
+    await page.locator(".class-menu > summary").click();
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-status')).toHaveText("Completada");
+    await expect(page.locator('[data-class-module="modulo-02"] .class-menu-status')).toHaveText("En curso");
+    await expect(page.locator('[data-class-module="modulo-03"] .class-menu-status')).toHaveText("Siguiente");
+    await expect(page.locator(".class-menu-popover > p")).toContainText("clase actual 02");
+    await page.locator(".class-menu > summary").click();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator(".tools-menu > summary").click();
@@ -123,6 +135,50 @@ test.describe("Panel de Nora", () => {
     expect(menuBounds).not.toBeNull();
     expect(menuBounds.x).toBeGreaterThanOrEqual(0);
     expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(390);
+  });
+
+  test("Continuar conserva la fase de sesión y abrir otra clase mantiene las fases bloqueadas", async ({ page }) => {
+    await page.goto("/");
+    const stage = page.getByTestId("classroom-stage");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 2 de 5: Concepto");
+
+    await page.locator(".class-menu > summary").click();
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-action')).toHaveText("Continuar clase");
+    await page.locator('[data-class-module="modulo-01"]').click();
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 2 de 5: Concepto");
+
+    await page.locator(".class-menu > summary").click();
+    await page.locator('[data-class-module="modulo-02"]').click();
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 1 de 5: Activación");
+    await expect(page.locator('.classroom-phase-nav [data-class-phase="1"]')).toBeDisabled();
+  });
+
+  test("solo la confirmación en Cierre actualiza la ruta y al recargar reanuda la primera clase incompleta", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    const stage = page.getByTestId("classroom-stage");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    for (let index = 0; index < 3; index += 1) {
+      await stage.locator('[data-action="classroom-practice-step-done"]').click();
+    }
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 4 de 5: Revisión");
+    await stage.locator('[data-action="classroom-next-phase"]').click();
+    await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 5 de 5: Cierre");
+    await expect(page.locator(".classroom-course-progress")).toContainText("0");
+    await stage.locator('[data-action="classroom-complete"]').click();
+
+    await expect(page.locator(".classroom-course-progress")).toContainText("1");
+    await page.locator(".class-menu > summary").click();
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-status')).toHaveText("Completada");
+    await expect(page.locator('[data-class-module="modulo-01"] .class-menu-action')).toHaveText("Revisar clase");
+    await expect(page.locator('[data-class-module="modulo-02"] .class-menu-status')).toHaveText("Siguiente");
+
+    await page.reload();
+    await expect(page.getByTestId("classroom-primary-route")).toContainText("CLASE 02 DE 10");
+    await expect(page.locator('.classroom-phase-nav [data-class-phase="1"]')).toBeDisabled();
   });
 
   test("ofrece diagnóstico inicial y permite elegir una ruta", async ({ page }) => {

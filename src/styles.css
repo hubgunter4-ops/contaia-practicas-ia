@@ -1798,3 +1798,98 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
     transform: none !important;
   }
 }
+
+
+/* Ruta del curso: estado de cada clase, además del número y título */
+.class-menu-item {
+  grid-template-columns: 26px minmax(0, 1fr) auto 16px;
+}
+.class-menu-item > b { min-width: 0; }
+.class-menu-status {
+  padding: 3px 6px;
+  border: 1px solid #ded3c1;
+  border-radius: 999px;
+  color: #625747;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.class-menu-item.is-complete .class-menu-status {
+  border-color: #9ab5a2;
+  color: #42634d;
+}
+.class-menu-item.is-active:not(.is-complete) .class-menu-status {
+  border-color: #b6a2ef;
+  color: #5f478f;
+  font-weight: 700;
+}
+.class-menu-item.is-next .class-menu-status {
+  border-color: #87bda6;
+  color: #35674f;
+}
+.app-shell:has(.classroom-content) .class-menu-status {
+  border-color: #484b61;
+  background: #202333;
+  color: #c5c6d3;
+}
+.app-shell:has(.classroom-content) .class-menu-item.is-complete .class-menu-status {
+  border-color: #557e6d;
+  background: rgba(156, 232, 199, .08);
+  color: #9ce8c7;
+}
+.app-shell:has(.classroom-content) .class-menu-item.is-active:not(.is-complete) .class-menu-status {
+  border-color: #726295;
+  background: rgba(170, 145, 255, .1);
+  color: #c0adff;
+}
+.app-shell:has(.classroom-content) .class-menu-item.is-next .class-menu-status {
+  border-color: #557e6d;
+  color: #9ce8c7;
+}
+.app-shell:has(.classroom-content) .class-menu-item.is-next:not(.is-active) {
+  border-left-color: #9ce8c7;
+}
+@media (max-width: 460px) {
+  .class-menu-popover { width: min(380px, calc(100vw - 20px)); }
+  .class-menu-item { grid-template-columns: 24px minmax(0, 1fr) auto 14px; gap: 6px; padding-inline: 6px; }
+  .class-menu-status { padding: 3px 5px; font-size: 8px; }
+}
+
+
+/* Fase 2: ruta visible y persistencia local sin prometer sincronización */
+.class-menu-item {
+  grid-template-columns: 24px minmax(0, 1fr) auto auto 14px;
+  gap: 6px;
+}
+.class-menu-action {
+  color: #705994;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.class-menu-item:not(.is-active) .class-menu-action {
+  color: #625b50;
+  font-weight: 500;
+}
+.app-shell:has(.classroom-content) .class-menu-action { color: #bdaaff; }
+.app-shell:has(.classroom-content) .class-menu-item:not(.is-active) .class-menu-action { color: #c2c3d0; }
+.app-shell:has(.classroom-content) .class-menu-item.is-active.is-complete .class-menu-action { color: #9ce8c7; }
+.classroom-persistence-status {
+  margin: 6px 0 10px;
+  padding: 7px 9px;
+  border-left: 2px solid #87bda6;
+  background: rgba(135, 189, 166, .09);
+  color: #37644f;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.app-shell:has(.classroom-content) .classroom-persistence-status {
+  border-left-color: #9ce8c7;
+  background: rgba(156, 232, 199, .08);
+  color: #b9e8d2;
+}
+@media (max-width: 460px) {
+  .class-menu-item { grid-template-columns: 22px minmax(0, 1fr) auto auto 12px; gap: 4px; padding-inline: 5px; }
+  .class-menu-action { font-size: 8px; }
+  .classroom-persistence-status { font-size: 10px; }
+}

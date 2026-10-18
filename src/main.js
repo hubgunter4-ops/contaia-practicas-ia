@@ -697,7 +697,18 @@ function sidebar() {
 function topbar() {
   const done = state.completed.size;
   const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
-  const classOptions = courseModules.map((module, index) => `<button type="button" class="class-menu-item ${module.id === state.activeModuleId ? "is-active" : ""} ${state.completedModules.has(module.id) ? "is-complete" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${module.id === state.activeModuleId ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><i aria-hidden="true">${state.completedModules.has(module.id) ? "✓" : ""}</i></button>`).join("");
+  const activeClassIndex = Math.max(0, courseModules.findIndex(({ id }) => id === state.activeModuleId));
+  const activeClassComplete = state.completedModules.has(courseModules[activeClassIndex]?.id);
+  const nextClassIndex = activeClassComplete
+    ? courseModules.findIndex(({ id }) => !state.completedModules.has(id))
+    : courseModules.findIndex(({ id }, index) => index > activeClassIndex && !state.completedModules.has(id));
+  const classOptions = courseModules.map((module, index) => {
+    const isComplete = state.completedModules.has(module.id);
+    const isActive = module.id === state.activeModuleId;
+    const status = isComplete ? "Completada" : isActive ? "En curso" : index === nextClassIndex ? "Siguiente" : "Por empezar";
+    const actionLabel = isActive ? isComplete ? "Revisar clase" : "Continuar clase" : "Abrir";
+    return `<button type="button" class="class-menu-item ${isActive ? "is-active" : ""} ${isComplete ? "is-complete" : ""} ${index === nextClassIndex ? "is-next" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${isActive ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><small class="class-menu-status">${status}</small><small class="class-menu-action">${actionLabel}</small><i aria-hidden="true">${isComplete ? "✓" : index === nextClassIndex ? "→" : ""}</i></button>`;
+  }).join("");
   const toolsActive = ["advisor", "cfdi", "lab", "study"].includes(state.section);
   const tools = [
     ["advisor", "Asistente abierto"],
@@ -708,7 +719,7 @@ function topbar() {
   return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Aula en vivo</span></button>
-      <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Seleccionar clase">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · estado local</p></div></details>
+      <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
       <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b><span>Herramientas</span><i aria-hidden="true">⌄</i></summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}</div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
@@ -1073,14 +1084,18 @@ app.addEventListener("click", (event) => {
   if (classroomModule) {
     const moduleId = classroomModule.dataset.classModule;
     if (!courseModules.some(({ id }) => id === moduleId)) return;
+    const continuingCurrentClass = moduleId === state.activeModuleId;
     state.section = "course";
-    resetTutor();
-    state.activeModuleId = moduleId;
-    state.coursePhaseIndex = 0;
-    state.highestUnlockedPhase = 0;
-    state.practiceStepIndex = 0;
+    if (!continuingCurrentClass) {
+      resetTutor();
+      state.activeModuleId = moduleId;
+      state.coursePhaseIndex = 0;
+      state.highestUnlockedPhase = 0;
+      state.practiceStepIndex = 0;
+    }
     render();
-    narrateClassroomInstruction();
+    if (!continuingCurrentClass) narrateClassroomInstruction();
+    document.querySelector("#classroom-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
   const classroomPhase = event.target.closest("[data-class-phase]");
