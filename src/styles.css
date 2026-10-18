@@ -1730,3 +1730,71 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   }
   .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-control-spacer { display: none; }
 }
+
+/* Microefectos del Aula: respuesta visual breve, sin alterar la identidad */
+.app-shell:has(.classroom-content) .classroom-character-glow {
+  animation: classroom-glow-breathe 7s ease-in-out infinite;
+  transform-origin: center;
+}
+.app-shell:has(.classroom-content) .classroom-character.is-live .classroom-character-glow {
+  animation: none;
+}
+@keyframes classroom-glow-breathe {
+  0%, 100% { opacity: .72; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.035); }
+}
+.app-shell:has(.classroom-content) .classroom-stage,
+.app-shell:has(.classroom-content) .classroom-scene,
+.app-shell:has(.classroom-content) .classroom-action-card,
+.app-shell:has(.classroom-content) .classroom-phase-button,
+.app-shell:has(.classroom-content) .classroom-route-cta,
+.app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next,
+.app-shell:has(.classroom-content) .class-menu > summary,
+.app-shell:has(.classroom-content) .tools-menu > summary,
+.app-shell:has(.classroom-content) .class-menu-item,
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab {
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease,
+    box-shadow .18s ease, transform .18s ease;
+}
+.app-shell:has(.classroom-content) .classroom-course-progress .progress-track span {
+  transition: width .7s cubic-bezier(.2, .75, .25, 1);
+}
+.app-shell:has(.classroom-content) .classroom-phase-button:hover:not(:disabled),
+.app-shell:has(.classroom-content) .class-menu-item:hover,
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab:hover {
+  transform: translateY(-1px);
+}
+.app-shell:has(.classroom-content) .classroom-action-card {
+  transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease,
+    transform .18s ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .app-shell:has(.classroom-content) .classroom-action-card:hover {
+    border-color: #aa91ff;
+    box-shadow: 0 8px 22px rgba(170, 145, 255, .12);
+    transform: translateY(-2px);
+  }
+  .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next:hover:not(:disabled),
+  .app-shell:has(.classroom-content) .classroom-route-cta:hover:not(:disabled) {
+    box-shadow: 0 5px 16px rgba(170, 145, 255, .22);
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell:has(.classroom-content) .classroom-character-glow,
+  .app-shell:has(.classroom-content) .classroom-stage,
+  .app-shell:has(.classroom-content) .classroom-scene,
+  .app-shell:has(.classroom-content) .classroom-action-card,
+  .app-shell:has(.classroom-content) .classroom-phase-button,
+  .app-shell:has(.classroom-content) .classroom-route-cta,
+  .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next,
+  .app-shell:has(.classroom-content) .class-menu > summary,
+  .app-shell:has(.classroom-content) .tools-menu > summary,
+  .app-shell:has(.classroom-content) .class-menu-item,
+  .app-shell:has(.classroom-content) .tools-menu-popover .section-tab,
+  .app-shell:has(.classroom-content) .classroom-course-progress .progress-track span {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
