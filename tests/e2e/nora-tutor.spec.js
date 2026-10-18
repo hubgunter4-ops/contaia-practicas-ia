@@ -96,9 +96,9 @@ test.describe("Panel de Nora", () => {
   test("prioriza la ruta de clase actual y agrupa las herramientas secundarias", async ({ page }) => {
     await page.goto("/");
     const route = page.getByTestId("classroom-primary-route");
-    await expect(route).toContainText("CLASE 01 · ACTIVACIÓN");
+    await expect(route).toContainText("RUTA ACTUAL · CLASE 01 · ACTIVACIÓN");
     await expect(route).toContainText("Qué es la IA y qué es un prompt");
-    const startLink = route.getByRole("link", { name: /Empezar clase/ });
+    const startLink = route.getByRole("link", { name: /Ver clase actual/ });
     await expect(startLink).toBeVisible();
     await startLink.click();
     await expect(page).toHaveURL(/#classroom-stage$/);
@@ -115,7 +115,7 @@ test.describe("Panel de Nora", () => {
     await page.evaluate(() => localStorage.setItem("contaia.progress.v1", JSON.stringify({ completedModules: ["modulo-01"], completedExercises: [] })));
     await page.reload();
     await expect(route).toContainText("CLASE 02 · ACTIVACIÓN");
-    await expect(route.getByRole("link")).toHaveText(/Continuar recorrido/);
+    await expect(route.getByRole("link")).toHaveText(/Ver clase actual/);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator(".tools-menu > summary").click();
@@ -139,6 +139,10 @@ test.describe("Panel de Nora", () => {
   test("presenta la demostración antes de la práctica y la práctica muestra una sola consigna", async ({ page }) => {
     await page.goto("/");
     const stage = page.getByTestId("classroom-stage");
+    const primaryAction = stage.locator(".classroom-phase-controls");
+    await expect(primaryAction).toBeVisible();
+    expect(await primaryAction.evaluate((node) => node.previousElementSibling?.classList.contains("classroom-scene"))).toBe(true);
+    expect(await primaryAction.evaluate((node) => node.nextElementSibling?.classList.contains("classroom-stage-controls"))).toBe(true);
     await expect(page.locator(".classroom-course-progress")).toContainText("CLASES COMPLETADAS");
     await expect(page.locator(".classroom-progress-explainer")).toContainText("Solo cuenta una clase cuando la confirmas en Cierre");
     await expect(page.locator(".classroom-phase-explainer")).toContainText("Fase 1 de 5: Activación");

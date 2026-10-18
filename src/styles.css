@@ -1685,3 +1685,48 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   .classroom-progress-explainer,
   .classroom-phase-explainer { font-size: 9px; }
 }
+
+/* Flujo del aula: acción curricular antes de controles de apoyo */
+.app-shell:has(.classroom-content) .classroom-phase-controls {
+  min-height: 62px;
+  margin: 14px 0 16px;
+  padding: 9px 12px;
+  border: 1px solid #41455a;
+  border-left: 4px solid #9ce8c7;
+  border-radius: 12px;
+  background: #252838;
+}
+.app-shell:has(.classroom-content) .classroom-step-control {
+  min-height: 44px;
+  color: #c5c6d3;
+}
+.app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next,
+.app-shell:has(.classroom-content) .classroom-phase-controls .button-primary {
+  min-height: 44px;
+  border-color: #aa91ff;
+  background: #aa91ff;
+  color: #191b28;
+}
+.app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next:hover:not(:disabled),
+.app-shell:has(.classroom-content) .classroom-phase-controls .button-primary:hover:not(:disabled) {
+  border-color: #c0adff;
+  background: #c0adff;
+}
+.app-shell:has(.classroom-content) .classroom-phase-controls .classroom-next-class {
+  min-height: 44px;
+  color: #c0adff;
+}
+@media (max-width: 760px) {
+  .app-shell:has(.classroom-content) .classroom-phase-controls {
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px;
+  }
+  .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next,
+  .app-shell:has(.classroom-content) .classroom-phase-controls .button-primary {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-control-spacer { display: none; }
+}
