@@ -2081,3 +2081,52 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
   .public-description-hero h1 { font-size: clamp(38px, 10vw, 52px); }
 }
 @media (prefers-reduced-motion: reduce) { .public-description-hero { animation: none; } }
+
+/* Iconos de las tres rutas: animación discreta por fotogramas */
+#cfdi .public-card-icon .ui-icon-file {
+  transform-origin: 48% 54%;
+  animation: public-cfdi-icon-frames 3.4s steps(1, end) infinite;
+}
+@keyframes public-cfdi-icon-frames {
+  0%, 61%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  10% { transform: translateY(-2px) rotate(-6deg) scale(1.04); }
+  20% { transform: translateY(0) rotate(4deg) scale(1.02); }
+  30% { transform: translateY(-1px) rotate(0) scale(1.06); }
+  40% { transform: translateY(0) rotate(0) scale(1); }
+  49% { transform: translateY(-1px) rotate(-3deg) scale(1.03); }
+}
+#anam .public-card-icon { animation: public-anam-signal-frames 3.8s steps(1, end) infinite; }
+#anam .public-card-icon .ui-icon-nora {
+  transform-origin: 50% 62%;
+  animation: public-anam-icon-frames 3.8s steps(1, end) infinite;
+}
+@keyframes public-anam-signal-frames {
+  0%, 54%, 100% { box-shadow: 0 0 0 0 rgba(220,213,255,0); }
+  14% { box-shadow: 0 0 0 4px rgba(220,213,255,.13); }
+  28% { box-shadow: 0 0 0 8px rgba(220,213,255,.06); }
+  40% { box-shadow: 0 0 0 3px rgba(220,213,255,.1); }
+}
+@keyframes public-anam-icon-frames {
+  0%, 53%, 100% { transform: translateY(0) scale(1); }
+  13% { transform: translateY(-2px) scale(1.04); }
+  26% { transform: translateY(0) scale(1.08); }
+  39% { transform: translateY(-1px) scale(1.02); }
+}
+#curso .public-card-icon .ui-icon-book path:first-child {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: public-course-icon-frames 4s steps(1, end) infinite;
+}
+@keyframes public-course-icon-frames {
+  0%, 62%, 100% { transform: perspective(35px) rotateY(0); }
+  12% { transform: perspective(35px) rotateY(-13deg); }
+  24% { transform: perspective(35px) rotateY(0); }
+  36% { transform: perspective(35px) rotateY(-8deg); }
+  48% { transform: perspective(35px) rotateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #cfdi .public-card-icon .ui-icon-file,
+  #anam .public-card-icon,
+  #anam .public-card-icon .ui-icon-nora,
+  #curso .public-card-icon .ui-icon-book path:first-child { animation: none !important; }
+}
