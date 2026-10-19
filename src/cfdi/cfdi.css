@@ -203,3 +203,10 @@
 .cfdi-processing li.is-complete > span { border-color: #43805f; background: #173626; color: #8dd2a8; }
 @media (max-width: 420px) { .cfdi-processing ol { grid-template-columns: 1fr; gap: 6px; } .cfdi-processing li { min-height: 25px; } }
 @media (prefers-reduced-motion: reduce) { .cfdi-processing li > span { box-shadow: none; } }
+
+.cfdi-hero-visual { position: relative; z-index: 1; width: min(245px, 28vw); flex: none; }
+.cfdi-hero-visual contaia-video { --contaia-video-radius: 10px; display: block; border: 1px solid #38516a; box-shadow: 0 12px 24px rgba(0,0,0,.24); }
+.cfdi-hero-visual p { margin: 6px 0 0; color: #8294a8; font-size: 9px; text-align: center; }
+@media (max-width: 1000px) { .cfdi-hero-visual { width: min(210px, 25vw); } }
+@media (max-width: 760px) { .cfdi-hero-visual { width: min(100%, 360px); align-self: stretch; } }
+@media (prefers-reduced-motion: reduce) { .cfdi-hero-visual contaia-video { opacity: .92; } }
