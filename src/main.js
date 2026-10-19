@@ -740,6 +740,16 @@ function sidebar() {
   </aside>`;
 }
 
+function mobileNavigation() {
+  return `<nav class="mobile-bottom-nav" aria-label="Navegación móvil">
+    <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home"><span aria-hidden="true">⌂</span><small>Recorrido</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course"><span aria-hidden="true">▣</span><small>Aula</small></button>
+    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "study"].includes(state.section) ? "is-active" : ""}" data-section="tools"><span aria-hidden="true">⌘</span><small>Herramientas</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor"><span aria-hidden="true">N</span><small>Nora</small></button>
+    <button type="button" class="mobile-primary-action" data-section="course" aria-label="Continuar con el aula">Continuar <span aria-hidden="true">→</span></button>
+  </nav>`;
+}
+
 function topbar() {
   const done = state.completed.size;
   const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "tools" ? "Centro de herramientas" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
@@ -1049,7 +1059,7 @@ function render() {
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
   const tutorPanel = ["advisor", "cfdi", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
-  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}</div>`;
+  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
     if (placeholder) placeholder.replaceWith(persistentVideo);
@@ -1559,6 +1569,17 @@ bindCfdiWorkspace(app, {
 initializeTutorConfig();
 initializeStudyDatabase();
 void initializeCfdiWorkspace();
+function syncMobileKeyboardOffset() {
+  if (!window.visualViewport) return;
+  const keyboardHeight = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+  document.documentElement.style.setProperty("--keyboard-offset", `${Math.round(keyboardHeight)}px`);
+}
+if (window.visualViewport) {
+  syncMobileKeyboardOffset();
+  window.visualViewport.addEventListener("resize", syncMobileKeyboardOffset, { passive: true });
+  window.visualViewport.addEventListener("scroll", syncMobileKeyboardOffset, { passive: true });
+  window.addEventListener("resize", syncMobileKeyboardOffset, { passive: true });
+}
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   activeStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
