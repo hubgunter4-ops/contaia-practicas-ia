@@ -16,8 +16,9 @@ export function currentUser() {
 }
 
 function authRedirectUrl() {
-  const destination = new URLSearchParams(location.search).get("destino");
-  const query = ["cfdi", "anam", "curso"].includes(destination) ? `?destino=${destination}` : "";
+  const requestedDestination = new URLSearchParams(location.search).get("destino");
+  const destination = requestedDestination === "anam" ? "asistente" : requestedDestination;
+  const query = ["cfdi", "asistente", "curso"].includes(destination) ? `?destino=${destination}` : "";
   return `${location.origin}/${query}`;
 }
 

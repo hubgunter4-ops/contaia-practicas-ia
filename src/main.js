@@ -842,14 +842,14 @@ function renderPublicLanding() {
   return `<div class="public-landing">
     <header class="public-header">
       <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
-      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="#cfdi">CFDI</a><a href="#anam">Asistente Anam</a><a href="#curso">Curso</a></nav>
+      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="#cfdi">CFDI</a><a href="#asistente">Asistente abierto</a><a href="#curso">Curso</a></nav>
       <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
     </header>
     <main id="contenido" class="public-main" tabindex="-1">
       <section class="public-hero" aria-labelledby="public-title">
         <p class="public-kicker"><i aria-hidden="true"></i> LABORATORIO CONTAIA · IA PARA CONTABILIDAD</p>
         <h1 id="public-title">IA práctica para<br/> tu trabajo contable.</h1>
-        <p class="public-lede">Explora herramientas para CFDI, consulta a Anam y aprende paso a paso. Tres formas de llevar la inteligencia artificial a tu práctica contable, a tu ritmo.</p>
+        <p class="public-lede">Analiza tus CFDI, conversa con Nora en el Asistente abierto y aprende paso a paso con Anam como integración opcional en la experiencia formativa.</p>
         <a class="public-primary-cta" href="#rutas">Elige por dónde empezar <span aria-hidden="true">↓</span></a>
       </section>
       <section id="rutas" class="public-card-grid" aria-label="Tres formas de usar ContaIA">
@@ -860,22 +860,49 @@ function renderPublicLanding() {
           <p class="public-card-note"><span aria-hidden="true">◈</span> Empieza con ejemplos; protege los datos reales.</p>
           <a class="public-card-cta" href="/descripcion/cfdi">Explorar herramientas CFDI <span aria-hidden="true">→</span></a>
         </article>
-        <article id="anam" class="public-card public-card-anam">
+        <article id="asistente" class="public-card public-card-assistant">
           <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("nora")}</span><span class="public-card-label">ASISTENTE</span></div>
-          <h2>Asistente con Anam</h2>
-          <p class="public-card-copy">Consulta a Nora y avanza con orientación conversacional. Activa voz y video solo cuando tú quieras.</p>
-          <p class="public-card-note"><span aria-hidden="true">✓</span> Tú decides cuándo iniciar la conversación.</p>
-          <a class="public-card-cta" href="/descripcion/anam">Explorar el asistente <span aria-hidden="true">→</span></a>
+          <h2>Asistente abierto</h2>
+          <p class="public-card-copy">Conversa con Nora sobre dudas contables y fiscales en México, fuera del recorrido estructurado del curso.</p>
+          <p class="public-card-note"><span aria-hidden="true">✓</span> Pregunta a tu ritmo y conserva tu criterio.</p>
+          <a class="public-card-cta" href="/descripcion/asistente">Explorar el Asistente abierto <span aria-hidden="true">→</span></a>
         </article>
         <article id="curso" class="public-card public-card-course">
           <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("book")}</span><span class="public-card-label">APRENDIZAJE GUIADO</span></div>
           <h2>Aprende a tu ritmo</h2>
-          <p class="public-card-copy">Clases prácticas, ejercicios guiados y casos ficticios para aplicar IA a la contabilidad.</p>
-          <p class="public-card-note"><span aria-hidden="true">✦</span> 10 clases guiadas · avanza a tu paso.</p>
+          <p class="public-card-copy">Clases prácticas, ejercicios guiados y casos ficticios; Anam puede acompañar el aprendizaje cuando tú lo actives.</p>
+          <p class="public-card-note"><span aria-hidden="true">✦</span> 10 clases guiadas · integración opcional de Anam.</p>
           <a class="public-card-cta" href="/descripcion/curso">Explorar el curso <span aria-hidden="true">→</span></a>
         </article>
       </section>
       <p class="public-privacy-note">Aprende y prueba con responsabilidad. Usa ejemplos ficticios y revisa los resultados antes de aplicarlos a tu trabajo.</p>
+      <section class="public-lead-section" aria-labelledby="public-lead-title">
+        <div class="public-lead-copy"><p class="public-lead-eyebrow">TU SIGUIENTE PASO</p><h2 id="public-lead-title">¿Qué ruta te interesa?</h2><p>Déjanos tu correo y elige por dónde empezar. Te llevamos al registro con esa ruta seleccionada.</p></div>
+        <form class="public-lead-form" data-interest-form>
+          <label class="public-lead-email-label" for="public-lead-email">Tu correo electrónico</label>
+          <input id="public-lead-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required />
+          <fieldset><legend>Me interesa:</legend>
+            <label class="public-interest-option"><input type="radio" name="destino" value="cfdi" required /><span>CFDI</span></label>
+            <label class="public-interest-option"><input type="radio" name="destino" value="asistente" /><span>Asistente abierto</span></label>
+            <label class="public-interest-option"><input type="radio" name="destino" value="curso" /><span>Curso</span></label>
+          </fieldset>
+          <button class="public-lead-submit" type="submit">Continuar con mi correo <span aria-hidden="true">→</span></button>
+          <p class="public-lead-disclosure">El correo se usa para prellenar el registro; no se agrega a una lista de marketing.</p>
+          <div class="public-lead-toast" data-lead-toast role="status" aria-live="polite" hidden>
+            <span class="public-lead-toast-check" aria-hidden="true">✓</span>
+            <span class="public-lead-toast-copy"><b>Ruta seleccionada</b><small data-lead-toast-message>Abriendo el registro…</small></span>
+          </div>
+        </form>
+      </section>
+      <section class="public-faq" aria-labelledby="public-faq-title">
+        <div class="public-faq-heading"><p class="public-lead-eyebrow">CONOCE CONTAIA</p><h2 id="public-faq-title">Preguntas frecuentes</h2><p>Qué puedes hacer y cómo empezar.</p></div>
+        <div class="public-faq-list">
+          <details class="public-faq-item"><summary>¿Qué se puede realizar con CFDI?</summary><div class="public-faq-answer"><p>El analizador lee archivos XML o ZIP, organiza facturas, pagos y conceptos, relaciona complementos de pago con facturas y señala diferencias o alertas aritméticas para revisar. El procesamiento del XML ocurre localmente en tu navegador. No es una validación ante el SAT ni un dictamen profesional.</p></div></details>
+          <details class="public-faq-item"><summary>¿Cómo se integra Anam en el aprendizaje?</summary><div class="public-faq-answer"><p>Anam es un acompañamiento opcional con voz y video para apoyar la experiencia formativa junto a Nora. Se activa solo cuando tú lo decides y concedas los permisos necesarios; no sustituye las prácticas ni el criterio profesional.</p></div></details>
+          <details class="public-faq-item"><summary>¿Cómo puedo aprender?</summary><div class="public-faq-answer"><p>El curso tiene diez módulos semanales y 40 horas. Cada clase alterna activación, explicación, práctica guiada con casos ficticios, revisión y cierre. Nora acompaña el recorrido; Anam puede integrarse de forma opcional. Avanza paso a paso y revisa tu progreso en este navegador.</p></div></details>
+          <details class="public-faq-item"><summary>¿Qué otras herramientas y opciones hay?</summary><div class="public-faq-answer"><p>Además del analizador CFDI, puedes explorar el Asistente abierto de Nora, el Laboratorio práctico y la Base de estudio. El Centro de herramientas también presenta Contabilidad —requiere conexión—, Nómina, DIOT y Monitor fiscal, que están en preparación o requieren una conexión antes de operar.</p></div></details>
+        </div>
+      </section>
     </main>
     <footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/registro">Crear una cuenta</a></footer>
     ${renderAuthPanel()}
@@ -892,22 +919,22 @@ const PUBLIC_FEATURES = Object.freeze({
     note: "No es una validación ante el SAT ni un dictamen profesional. El XML no se envía al servidor; si eliges guardar un resultado, algunos datos identificatorios pueden quedar en tu cuenta privada.",
     cta: "Crear cuenta y explorar CFDI",
   },
-  anam: {
-    eyebrow: "ASISTENTE · NORA CON ANAM",
-    title: "Consulta a Nora. Activa Anam cuando quieras.",
-    summary: "Usa la conversación de Nora para aprender conceptos y razonar sobre tus preguntas. Si lo deseas, inicia voz y video de Anam con una acción explícita.",
+  asistente: {
+    eyebrow: "ASISTENTE ABIERTO · NORA",
+    title: "Conversa con Nora sobre tus dudas contables.",
+    summary: "Usa el espacio abierto para explorar preguntas de contabilidad y temas fiscales con México como contexto, sin seguir una práctica predeterminada.",
     icon: "nora",
-    bullets: ["Pregunta por chat y recibe orientación para seguir avanzando.", "Activa la experiencia de voz y video cuando decidas conectarte.", "Continúa por chat si prefieres no usar cámara o micrófono."],
+    bullets: ["Plantea preguntas abiertas de contabilidad y fiscalidad.", "Pide explicaciones, ejemplos y puntos que conviene verificar.", "Usa respuestas como orientación; conserva tu propio criterio profesional."],
     note: "Las preguntas se procesan mediante el proveedor de IA configurado. No incluyas información personal, fiscal ni confidencial.",
     cta: "Crear cuenta y explorar el asistente",
   },
   curso: {
     eyebrow: "CURSO · APRENDIZAJE GUIADO",
     title: "Aprende IA aplicada a la práctica contable.",
-    summary: "Recorre diez módulos semanales —40 horas en total— con conceptos, prácticas guiadas, revisión y cierre. Avanza paso a paso con casos ficticios.",
+    summary: "Recorre diez módulos semanales —40 horas en total— con conceptos, prácticas guiadas, revisión y cierre. Anam puede integrarse como acompañamiento opcional durante el aprendizaje.",
     icon: "book",
-    bullets: ["Diez módulos organizados en una ruta de diez semanas.", "Prácticas contables guiadas con apoyo de Nora.", "Consulta tu avance desde este navegador."],
-    note: "Es un curso educativo, no asesoría profesional, contable, fiscal, laboral ni legal.",
+    bullets: ["Diez módulos organizados en una ruta de diez semanas.", "Prácticas contables guiadas con apoyo de Nora.", "Integra Anam de forma opcional y consulta tu avance en este navegador."],
+    note: "Es un curso educativo, no asesoría profesional, contable, fiscal, laboral ni legal. Anam es opcional y requiere que concedas los permisos de audio o video que decidas usar.",
     cta: "Crear cuenta y empezar el curso",
   },
 });
@@ -920,7 +947,7 @@ function renderPublicFeaturePage(featureId) {
   return `<div class="public-landing public-feature-page">
     <header class="public-header">
       <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
-      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/#cfdi">CFDI</a><a href="/#anam">Asistente Anam</a><a href="/#curso">Curso</a></nav>
+      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/#cfdi">CFDI</a><a href="/#asistente">Asistente abierto</a><a href="/#curso">Curso</a></nav>
       <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
     </header>
     <main id="contenido" class="public-main public-description-main" tabindex="-1">
@@ -1175,15 +1202,24 @@ function render() {
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
   if (!currentUser()) {
-    const featureRoute = location.pathname.match(/^\/descripcion\/(cfdi|anam|curso)\/?$/);
-    app.innerHTML = location.pathname === "/registro" ? renderRegistrationGate() : featureRoute ? renderPublicFeaturePage(featureRoute[1]) : renderPublicLanding();
+    if (location.pathname === "/registro" && !authState.identifier) {
+      try {
+        authState.identifier = sessionStorage.getItem("contaia.signup.prefill-email") || "";
+        sessionStorage.removeItem("contaia.signup.prefill-email");
+      } catch { /* El formulario seguirá disponible si el almacenamiento está bloqueado. */ }
+    }
+    const featureRoute = location.pathname.match(/^\/descripcion\/(cfdi|asistente|anam|curso)\/?$/);
+    const featureId = featureRoute?.[1] === "anam" ? "asistente" : featureRoute?.[1];
+    app.innerHTML = location.pathname === "/registro" ? renderRegistrationGate() : featureRoute ? renderPublicFeaturePage(featureId) : renderPublicLanding();
     return;
   }
   if (!state.publicDestinationApplied) {
-    const featureRoute = location.pathname.match(/^\/descripcion\/(cfdi|anam|curso)\/?$/)?.[1];
+    const routeSlug = location.pathname.match(/^\/descripcion\/(cfdi|asistente|anam|curso)\/?$/)?.[1];
     const requestedDestination = new URLSearchParams(location.search).get("destino");
-    const destination = featureRoute || (Object.prototype.hasOwnProperty.call(PUBLIC_FEATURES, requestedDestination) ? requestedDestination : "");
-    if (destination) state.section = destination === "cfdi" ? "cfdi" : destination === "anam" ? "advisor" : "course";
+    const routeDestination = routeSlug === "anam" ? "asistente" : routeSlug;
+    const queryDestination = requestedDestination === "anam" ? "asistente" : requestedDestination;
+    const destination = routeDestination || (Object.prototype.hasOwnProperty.call(PUBLIC_FEATURES, queryDestination) ? queryDestination : "");
+    if (destination) state.section = destination === "cfdi" ? "cfdi" : destination === "asistente" ? "advisor" : "course";
     if (destination || location.pathname === "/registro") window.history.replaceState(null, "", "/");
     state.publicDestinationApplied = true;
   }
@@ -1587,6 +1623,29 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("submit", (event) => {
+  const interestForm = event.target.closest("[data-interest-form]");
+  if (interestForm) {
+    event.preventDefault();
+    const formData = new FormData(interestForm);
+    const email = String(formData.get("email") || "").trim();
+    const destination = String(formData.get("destino") || "");
+    if (!email || !["cfdi", "asistente", "curso"].includes(destination)) return;
+    try { sessionStorage.setItem("contaia.signup.prefill-email", email); } catch { /* Si el almacenamiento falla, el registro permite escribirlo manualmente. */ }
+    const destinationLabels = { cfdi: "CFDI", asistente: "Asistente abierto", curso: "el curso" };
+    const toast = interestForm.querySelector("[data-lead-toast]");
+    const toastMessage = interestForm.querySelector("[data-lead-toast-message]");
+    const submitButton = interestForm.querySelector(".public-lead-submit");
+    if (toast && toastMessage && submitButton) {
+      toastMessage.textContent = `Abriendo el registro para ${destinationLabels[destination]}…`;
+      toast.hidden = false;
+      toast.classList.remove("is-visible");
+      requestAnimationFrame(() => toast.classList.add("is-visible"));
+      submitButton.disabled = true;
+      submitButton.innerHTML = 'Preparando tu ruta… <span aria-hidden="true">✓</span>';
+    }
+    window.setTimeout(() => window.location.assign(`/registro?destino=${encodeURIComponent(destination)}`), 1100);
+    return;
+  }
   const registerForm = event.target.closest("[data-register-form]");
   if (registerForm) {
     event.preventDefault();

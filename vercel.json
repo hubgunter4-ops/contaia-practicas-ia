@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/registro", "destination": "/" },
     { "source": "/descripcion/cfdi", "destination": "/" },
+    { "source": "/descripcion/asistente", "destination": "/" },
     { "source": "/descripcion/anam", "destination": "/" },
     { "source": "/descripcion/curso", "destination": "/" }
   ],
