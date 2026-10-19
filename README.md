@@ -72,6 +72,8 @@ La sección **Base de estudio** crea un catálogo IndexedDB privado con módulos
 - **México:** escenarios didácticos sobre ISR, RESICO y privacidad de nómina.
 - **Datos de ejemplo:** archivo CSV inventado disponible en el sitio.
 
+Para reutilizar la animación de Analizador CFDI en páginas HTML, consulta la [guía del componente de video](docs/video-component.md) y el script `scripts/insert-video-component.mjs`.
+
 La secuencia de práctica individual es intento, pista, ejemplo y comparación. No se reproducen materiales propietarios de [Alegra Academy](https://academy.alegra.com/courses/ia-para-contadores/), [Edutin](https://edutin.com/curso-de-ia-para-contabilidad) ni [ContadorMx](https://contadormx.net/cursos/inteligencia-artificial-aplicada-a-la-contabilidad-finanzas-e-impuestos/); las prácticas son originales.
 
 ## Requisitos y comandos

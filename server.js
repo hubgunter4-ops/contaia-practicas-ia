@@ -56,6 +56,13 @@ function resolvePublicPath(pathname) {
   else if (decoded === "/vendor/pdf.worker.mjs") relative = "dist/vendor/pdf.worker.mjs";
   else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";
   else if (decoded.startsWith("/assets/")) relative = `public${decoded}`;
+  else if (decoded.startsWith("/videos/")) {
+    const videosRoot = path.resolve(root, "public/videos");
+    const candidate = path.resolve(root, `public${decoded}`);
+    const withinVideos = path.relative(videosRoot, candidate);
+    if (!withinVideos || withinVideos === ".." || withinVideos.startsWith(`..${path.sep}`) || path.isAbsolute(withinVideos)) return null;
+    relative = path.relative(root, candidate);
+  }
   else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);
   else if (decoded.startsWith("/docs/curso/") && path.extname(decoded) === ".md") {
     const courseRoot = path.resolve(root, "docs/curso");
@@ -101,7 +108,7 @@ const server = createServer(async (request, response) => {
 			const range = request.headers.range;
 			const headers = {
 				"Content-Type": mime[".mp4"],
-				"Cache-Control": "no-cache",
+				"Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
 				"Referrer-Policy": "strict-origin-when-cross-origin",
 				"X-Content-Type-Options": "nosniff",
 				"Accept-Ranges": "bytes",
