@@ -12,7 +12,7 @@ import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, renderAuthControls, renderAuthPanel, signIn, signOut } from "./auth/client.js";
+import { authState, currentUser, renderAuthControls, renderAuthGate, renderAuthPanel, signIn, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -1036,6 +1036,10 @@ function render() {
   const persistentVideo = keepAnamVideo ? app.querySelector("[data-anam-video]") : null;
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
+  if (!currentUser()) {
+    app.innerHTML = renderAuthGate();
+    return;
+  }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
@@ -1258,6 +1262,15 @@ app.addEventListener("click", (event) => {
     authState.error = false;
     render();
     document.querySelector("#auth-identifier")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "auth-password-toggle") {
+    const input = document.querySelector("#auth-password");
+    if (!input) return;
+    const visible = input.type === "password";
+    input.type = visible ? "text" : "password";
+    action.setAttribute("aria-pressed", String(visible));
+    action.setAttribute("aria-label", visible ? "Ocultar contraseña" : "Mostrar contraseña");
     return;
   }
   if (action.dataset.action === "auth-signout") {
