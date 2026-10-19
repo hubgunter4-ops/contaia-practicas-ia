@@ -20,6 +20,11 @@ test("valida longitud de contraseña sin revelar su contenido", () => {
   assert.throws(() => __test.normalizePassword("corta"), /8 y 128/);
 });
 
+test("el login cerrado al esquema privado exige correo electrónico", () => {
+  assert.equal(__test.normalizeEmail(" Persona@Ejemplo.com "), "persona@ejemplo.com");
+  assert.throws(() => __test.normalizeEmail("usuario-sin-rpc"), /correo electrónico válido/);
+});
+
 test("rechaza métodos distintos de POST", async () => {
   const response = new ResponseMock();
   await handleAuth(request("GET"), response, {});

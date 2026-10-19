@@ -19,3 +19,5 @@ La migración se aplicó remotamente en ambos proyectos después de restaurarlos
 Ambos proyectos están ahora `ACTIVE_HEALTHY`; las cinco tablas aparecen con RLS habilitado y las consultas de prueba reportan cero perfiles y cero conexiones, sin datos creados durante la verificación.
 
 La migración `20261019011000_auth_usernames.sql` añade `user_login_names` para permitir el acceso con alias además de correo. El endpoint de login resuelve el alias mediante `resolve_login_email` y después autentica con Supabase Auth; nunca guarda ni transmite contraseñas a tablas propias. Los alias deben ser creados por un flujo administrativo o de alta de cuenta autenticado.
+
+La migración `20261019030000_private_auth_helpers.sql` mueve las funciones auxiliares al esquema no expuesto `private`, actualiza las políticas RLS para usar `private.is_fiscal_profile_member` y elimina los RPC públicos. El login público usa correo electrónico mientras no exista una credencial server-side o Edge Function privada para resolver alias sin exponer PostgREST.
