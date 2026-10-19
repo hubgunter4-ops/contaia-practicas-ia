@@ -8,6 +8,7 @@ import { handleAnamSession } from "./src/tutor/anam-session.js";
 import { handleCfdiConfig } from "./src/cfdi/server.js";
 import { handleTools } from "./src/tools/server.js";
 import { handleDocuments } from "./src/documents/server.js";
+import { handleAuth } from "./src/auth/server.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const allowedRoot = path.resolve(root);
@@ -83,6 +84,7 @@ const server = createServer(async (request, response) => {
   if (pathname === "/api/cfdi/config") return handleCfdiConfig(request, response);
   if (pathname === "/api/tools") return handleTools(request, response);
   if (pathname === "/api/documents") return handleDocuments(request, response);
+  if (pathname === "/api/auth") return handleAuth(request, response);
   if (pathname === "/api/tutor/stream") return handleTutorStream(request, response);
   if (pathname === "/api/tutor/anam-session") return handleAnamSession(request, response);
   const filePath = resolvePublicPath(pathname);

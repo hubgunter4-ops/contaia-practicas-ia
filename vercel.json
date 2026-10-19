@@ -12,6 +12,9 @@
     },
     "api/cfdi/config.js": {
       "maxDuration": 5
+    },
+    "api/auth/index.js": {
+      "maxDuration": 10
     }
   }
 }

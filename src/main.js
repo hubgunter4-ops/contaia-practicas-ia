@@ -12,6 +12,7 @@ import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
+import { authState, renderAuthControls, renderAuthPanel, signIn, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -763,7 +764,7 @@ function topbar() {
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
       <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b><span>Herramientas</span><i aria-hidden="true">⌄</i></summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}</div></details>
     </nav>
-    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}</div>
+    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;
 }
 
@@ -1039,7 +1040,7 @@ function render() {
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
   const tutorPanel = ["advisor", "cfdi", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
-  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}</div>`;
+  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
     if (placeholder) placeholder.replaceWith(persistentVideo);
@@ -1081,6 +1082,11 @@ function checkAnswer(exercise) {
 }
 
 app.addEventListener("click", (event) => {
+  if (event.target.closest("[data-action='auth-close']") && !event.target.closest("[data-auth-panel]")) {
+    authState.open = false;
+    render();
+    return;
+  }
   const section = event.target.closest("[data-section]");
   if (section) {
     state.section = ["course", "lab", "study", "advisor", "cfdi", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
@@ -1241,6 +1247,18 @@ app.addEventListener("click", (event) => {
   }
   const action = event.target.closest("[data-action]");
   if (!action) return;
+  if (action.dataset.action === "auth-toggle") {
+    authState.open = true;
+    authState.message = "";
+    authState.error = false;
+    render();
+    document.querySelector("#auth-identifier")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "auth-signout") {
+    void signOut();
+    return;
+  }
   if (action.dataset.action === "copy-video-brief") {
     const { videoKind, videoId } = action.dataset;
     if (["module", "exercise"].includes(videoKind) && videoId) copyVideoBrief(videoKind, videoId);
@@ -1400,6 +1418,15 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("submit", (event) => {
+  const authForm = event.target.closest("[data-auth-form]");
+  if (authForm) {
+    event.preventDefault();
+    const formData = new FormData(authForm);
+    authState.identifier = String(formData.get("identifier") || "").trim();
+    authState.password = String(formData.get("password") || "");
+    void signIn();
+    return;
+  }
   const studyForm = event.target.closest("[data-study-note-form]");
   if (studyForm) {
     event.preventDefault();
@@ -1431,6 +1458,10 @@ app.addEventListener("toggle", (event) => {
 }, true);
 
 app.addEventListener("input", (event) => {
+  if (event.target.matches("#auth-identifier")) {
+    authState.identifier = event.target.value;
+    return;
+  }
   if (event.target.matches("[data-study-search]")) {
     state.studyQuery = event.target.value;
     state.studyVisibleCount = 60;
@@ -1510,4 +1541,5 @@ bindCfdiWorkspace(app, {
 initializeTutorConfig();
 initializeStudyDatabase();
 void initializeCfdiWorkspace();
+document.addEventListener("contaia:auth-updated", () => render());
 window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });

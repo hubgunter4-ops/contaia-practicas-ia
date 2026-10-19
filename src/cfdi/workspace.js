@@ -1,4 +1,5 @@
 import { buildCfdiAnalysis, buildNoraCfdiContext, buildStoredAnalysis } from "./analysis.js";
+import { setAuthClient, updateAuthUser } from "../auth/client.js";
 
 export const cfdiState = {
   initialized: false, configStatus: "loading", configMessage: "Conectando con el almacenamiento privado…",
@@ -116,10 +117,12 @@ async function loadSupabaseClient() {
   const { data, error } = await client.auth.getSession();
   if (error) throw error;
   cfdiState.user = data.session?.user ?? null;
+  setAuthClient(client, cfdiState.user);
   cfdiState.configStatus = "ready";
   cfdiState.configMessage = "";
   client.auth.onAuthStateChange((_event, session) => {
     cfdiState.user = session?.user ?? null;
+    updateAuthUser(cfdiState.user);
     cfdiState.authMessage = session ? "Acceso privado activo." : "";
     void loadHistory();
     document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
