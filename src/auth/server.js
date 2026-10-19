@@ -75,12 +75,6 @@ function normalizeIdentifier(value) {
   return identifier;
 }
 
-function normalizeEmail(value) {
-  const email = normalizeIdentifier(value);
-  if (!email.includes("@") || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw Object.assign(new Error("Escribe un correo electrónico válido."), { status: 400 });
-  return email;
-}
-
 function normalizePassword(value) {
   if (typeof value !== "string" || value.length < 8 || value.length > 128) throw Object.assign(new Error("La contraseña debe tener entre 8 y 128 caracteres."), { status: 400 });
   return value;
@@ -107,11 +101,19 @@ export async function handleAuth(request, response, env = process.env) {
   if (!withinRateLimit(request)) return sendJson(response, 429, { error: "Demasiados intentos. Espera unos minutos antes de volver a probar." });
   try {
     const body = await readJson(request);
-    const email = normalizeEmail(body?.identifier);
+    const identifier = normalizeIdentifier(body?.identifier);
     const password = normalizePassword(body?.password);
+    if (!identifier.includes("@")) {
+      const url = String(env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+      if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return sendJson(response, 503, { error: "La autenticación no está configurada." });
+      const upstream = await fetch(`${url}/functions/v1/login-by-alias`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ identifier, password }) });
+      const payload = await upstream.text();
+      response.writeHead(upstream.status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
+      return response.end(payload);
+    }
     const { url, key } = supabaseConfig(env);
     const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email: identifier, password });
     if (error || !data.session || !data.user) return sendJson(response, 401, { error: "Correo, usuario o contraseña incorrectos." });
     return sendJson(response, 200, { session: publicSession(data.session) });
   } catch (error) {
@@ -119,4 +121,4 @@ export async function handleAuth(request, response, env = process.env) {
   }
 }
 
-export const __test = { normalizeIdentifier, normalizeEmail, normalizePassword, publicSession };
+export const __test = { normalizeIdentifier, normalizePassword, publicSession };
