@@ -15,6 +15,12 @@ export function currentUser() {
   return window.__contaiaAuth?.client ? window.__contaiaAuth.user : null;
 }
 
+function authRedirectUrl() {
+  const destination = new URLSearchParams(location.search).get("destino");
+  const query = ["cfdi", "anam", "curso"].includes(destination) ? `?destino=${destination}` : "";
+  return `${location.origin}/${query}`;
+}
+
 export function renderAuthControls() {
   const user = currentUser();
   if (user) return `<span class="auth-user" title="${escapeHtml(user.email || "Sesión activa")}">${escapeHtml(user.email || "Sesión activa")}</span><button type="button" class="auth-button" data-action="auth-signout">Cerrar sesión</button>`;
@@ -124,7 +130,7 @@ export async function signUp() {
   if (!client || authState.busy) return;
   authState.busy = true; authState.message = ""; authState.error = false;
   try {
-    const { data, error } = await client.auth.signUp({ email: authState.identifier, password: authState.password, options: { emailRedirectTo: `${location.origin}/` } });
+    const { data, error } = await client.auth.signUp({ email: authState.identifier, password: authState.password, options: { emailRedirectTo: authRedirectUrl() } });
     if (error) throw error;
     authState.password = "";
     authState.status = "success";
@@ -139,7 +145,7 @@ export async function signInWithGoogle() {
   const client = window.__contaiaAuth?.client;
   if (!client || authState.busy) return;
   authState.busy = true; authState.message = ""; authState.error = false; notify();
-  const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}/` } });
+  const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: authRedirectUrl() } });
   if (error) {
     authState.busy = false; authState.status = "error"; authState.error = true;
     authState.message = "Google no está habilitado todavía en el proveedor de autenticación.";

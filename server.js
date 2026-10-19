@@ -47,7 +47,7 @@ function resolvePublicPath(pathname) {
     return null;
   }
   let relative;
-  if (decoded === "/") relative = "public/index.html";
+  if (decoded === "/" || decoded === "/registro" || /^\/descripcion\/(cfdi|anam|curso)\/?$/.test(decoded)) relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
   else if (decoded === "/vendor/document-reader.js") relative = "dist/vendor/document-reader.js";

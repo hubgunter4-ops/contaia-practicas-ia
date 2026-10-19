@@ -12,7 +12,7 @@ import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, renderAuthControls, renderAuthGate, renderRegistrationGate, renderAuthPanel, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -838,6 +838,111 @@ function renderHome() {
   </main>`;
 }
 
+function renderPublicLanding() {
+  return `<div class="public-landing">
+    <header class="public-header">
+      <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
+      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="#cfdi">CFDI</a><a href="#anam">Asistente Anam</a><a href="#curso">Curso</a></nav>
+      <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
+    </header>
+    <main id="contenido" class="public-main" tabindex="-1">
+      <section class="public-hero" aria-labelledby="public-title">
+        <p class="public-kicker"><i aria-hidden="true"></i> LABORATORIO CONTAIA · IA PARA CONTABILIDAD</p>
+        <h1 id="public-title">IA práctica para<br/> tu trabajo contable.</h1>
+        <p class="public-lede">Explora herramientas para CFDI, consulta a Anam y aprende paso a paso. Tres formas de llevar la inteligencia artificial a tu práctica contable, a tu ritmo.</p>
+        <a class="public-primary-cta" href="#rutas">Elige por dónde empezar <span aria-hidden="true">↓</span></a>
+      </section>
+      <section id="rutas" class="public-card-grid" aria-label="Tres formas de usar ContaIA">
+        <article id="cfdi" class="public-card public-card-cfdi">
+          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("file")}</span><span class="public-card-label">HERRAMIENTAS</span></div>
+          <h2>CFDI con más claridad</h2>
+          <p class="public-card-copy">Analiza y organiza comprobantes con herramientas de apoyo para tu trabajo contable.</p>
+          <p class="public-card-note"><span aria-hidden="true">◈</span> Empieza con ejemplos; protege los datos reales.</p>
+          <a class="public-card-cta" href="/descripcion/cfdi">Explorar herramientas CFDI <span aria-hidden="true">→</span></a>
+        </article>
+        <article id="anam" class="public-card public-card-anam">
+          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("nora")}</span><span class="public-card-label">ASISTENTE</span></div>
+          <h2>Asistente con Anam</h2>
+          <p class="public-card-copy">Consulta a Nora y avanza con orientación conversacional. Activa voz y video solo cuando tú quieras.</p>
+          <p class="public-card-note"><span aria-hidden="true">✓</span> Tú decides cuándo iniciar la conversación.</p>
+          <a class="public-card-cta" href="/descripcion/anam">Explorar el asistente <span aria-hidden="true">→</span></a>
+        </article>
+        <article id="curso" class="public-card public-card-course">
+          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("book")}</span><span class="public-card-label">APRENDIZAJE GUIADO</span></div>
+          <h2>Aprende a tu ritmo</h2>
+          <p class="public-card-copy">Clases prácticas, ejercicios guiados y casos ficticios para aplicar IA a la contabilidad.</p>
+          <p class="public-card-note"><span aria-hidden="true">✦</span> 10 clases guiadas · avanza a tu paso.</p>
+          <a class="public-card-cta" href="/descripcion/curso">Explorar el curso <span aria-hidden="true">→</span></a>
+        </article>
+      </section>
+      <p class="public-privacy-note">Aprende y prueba con responsabilidad. Usa ejemplos ficticios y revisa los resultados antes de aplicarlos a tu trabajo.</p>
+    </main>
+    <footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/registro">Crear una cuenta</a></footer>
+    ${renderAuthPanel()}
+  </div>`;
+}
+
+const PUBLIC_FEATURES = Object.freeze({
+  cfdi: {
+    eyebrow: "HERRAMIENTAS · CFDI",
+    title: "Analiza tus comprobantes. Con criterio y control.",
+    summary: "Lee archivos XML o ZIP, relaciona complementos de pago con facturas y localiza diferencias para revisar. El análisis se realiza localmente en tu navegador.",
+    icon: "file",
+    bullets: ["Analiza uno o varios XML, o un archivo ZIP.", "Consulta resúmenes de facturas, pagos y conceptos.", "Revisa alertas aritméticas y de relación entre documentos."],
+    note: "No es una validación ante el SAT ni un dictamen profesional. El XML no se envía al servidor; si eliges guardar un resultado, algunos datos identificatorios pueden quedar en tu cuenta privada.",
+    cta: "Crear cuenta y explorar CFDI",
+  },
+  anam: {
+    eyebrow: "ASISTENTE · NORA CON ANAM",
+    title: "Consulta a Nora. Activa Anam cuando quieras.",
+    summary: "Usa la conversación de Nora para aprender conceptos y razonar sobre tus preguntas. Si lo deseas, inicia voz y video de Anam con una acción explícita.",
+    icon: "nora",
+    bullets: ["Pregunta por chat y recibe orientación para seguir avanzando.", "Activa la experiencia de voz y video cuando decidas conectarte.", "Continúa por chat si prefieres no usar cámara o micrófono."],
+    note: "Las preguntas se procesan mediante el proveedor de IA configurado. No incluyas información personal, fiscal ni confidencial.",
+    cta: "Crear cuenta y explorar el asistente",
+  },
+  curso: {
+    eyebrow: "CURSO · APRENDIZAJE GUIADO",
+    title: "Aprende IA aplicada a la práctica contable.",
+    summary: "Recorre diez módulos semanales —40 horas en total— con conceptos, prácticas guiadas, revisión y cierre. Avanza paso a paso con casos ficticios.",
+    icon: "book",
+    bullets: ["Diez módulos organizados en una ruta de diez semanas.", "Prácticas contables guiadas con apoyo de Nora.", "Consulta tu avance desde este navegador."],
+    note: "Es un curso educativo, no asesoría profesional, contable, fiscal, laboral ni legal.",
+    cta: "Crear cuenta y empezar el curso",
+  },
+});
+
+function renderPublicFeaturePage(featureId) {
+  const feature = PUBLIC_FEATURES[featureId];
+  if (!feature) return "";
+  const bullets = feature.bullets.map((item) => `<li><span aria-hidden="true">✓</span>${escapeHtml(item)}</li>`).join("");
+  const destination = encodeURIComponent(featureId);
+  return `<div class="public-landing public-feature-page">
+    <header class="public-header">
+      <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
+      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/#cfdi">CFDI</a><a href="/#anam">Asistente Anam</a><a href="/#curso">Curso</a></nav>
+      <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
+    </header>
+    <main id="contenido" class="public-main public-description-main" tabindex="-1">
+      <a class="public-back-link" href="/">← Volver a ContaIA</a>
+      <section class="public-description-hero" aria-labelledby="feature-title">
+        <span class="public-description-icon" aria-hidden="true">${uiIcon(feature.icon)}</span>
+        <p class="public-kicker">${escapeHtml(feature.eyebrow)}</p>
+        <h1 id="feature-title">${escapeHtml(feature.title)}</h1>
+        <p class="public-lede">${escapeHtml(feature.summary)}</p>
+        <a class="public-primary-cta" href="/registro?destino=${destination}">${escapeHtml(feature.cta)} <span aria-hidden="true">→</span></a>
+      </section>
+      <section class="public-description-grid" aria-label="Detalles de la ruta">
+        <div class="public-description-list"><p class="public-description-label">QUÉ ENCONTRARÁS</p><h2>Una ruta clara para empezar.</h2><ul>${bullets}</ul></div>
+        <aside class="public-description-note"><span class="public-note-shield" aria-hidden="true">◈</span><b>Privacidad y alcance</b><p>${escapeHtml(feature.note)}</p></aside>
+      </section>
+      <p class="public-description-bottom"><a href="/">Explora también las otras rutas de ContaIA</a></p>
+    </main>
+    <footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/registro?destino=${destination}">Crear una cuenta</a></footer>
+    ${renderAuthPanel()}
+  </div>`;
+}
+
 function renderModuleSessionFlow(module) {
   const guide = module.guide;
   const descriptions = [
@@ -1070,8 +1175,17 @@ function render() {
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
   if (!currentUser()) {
-    app.innerHTML = location.pathname === "/registro" ? renderRegistrationGate() : renderAuthGate();
+    const featureRoute = location.pathname.match(/^\/descripcion\/(cfdi|anam|curso)\/?$/);
+    app.innerHTML = location.pathname === "/registro" ? renderRegistrationGate() : featureRoute ? renderPublicFeaturePage(featureRoute[1]) : renderPublicLanding();
     return;
+  }
+  if (!state.publicDestinationApplied) {
+    const featureRoute = location.pathname.match(/^\/descripcion\/(cfdi|anam|curso)\/?$/)?.[1];
+    const requestedDestination = new URLSearchParams(location.search).get("destino");
+    const destination = featureRoute || (Object.prototype.hasOwnProperty.call(PUBLIC_FEATURES, requestedDestination) ? requestedDestination : "");
+    if (destination) state.section = destination === "cfdi" ? "cfdi" : destination === "anam" ? "advisor" : "course";
+    if (destination || location.pathname === "/registro") window.history.replaceState(null, "", "/");
+    state.publicDestinationApplied = true;
   }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = state.section === "course" ? renderCourse()

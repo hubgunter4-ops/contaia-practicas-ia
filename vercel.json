@@ -3,7 +3,12 @@
   "framework": null,
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/registro", "destination": "/" }],
+  "rewrites": [
+    { "source": "/registro", "destination": "/" },
+    { "source": "/descripcion/cfdi", "destination": "/" },
+    { "source": "/descripcion/anam", "destination": "/" },
+    { "source": "/descripcion/curso", "destination": "/" }
+  ],
   "functions": {
     "api/tutor/stream.js": {
       "maxDuration": 30
