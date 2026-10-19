@@ -6,13 +6,15 @@ const RATE_LIMIT = 8;
 const rateBuckets = new Map();
 
 const sendJson = (response, status, payload) => {
+  const body = JSON.stringify(payload);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
   });
-  response.end(JSON.stringify(payload));
+  response.end(body);
 };
 
 function originAllowed(request, env) {
