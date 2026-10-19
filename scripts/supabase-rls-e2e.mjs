@@ -123,6 +123,18 @@ async function main() {
       assert.equal(data[0].user_id, userA.id);
     });
 
+    await check("El historial CFDI es inmutable para el propietario", async () => {
+      const { error } = await userAClient
+        .from(TABLE)
+        .update({ title: `${marker}-updated` })
+        .eq("id", runId)
+        .select("id");
+      assert.equal(error?.code, "42501", "UPDATE debe fallar por privilegio revocado para preservar el historial");
+      const ownerCheck = await userAClient.from(TABLE).select("title").eq("id", runId).single();
+      assert.ifError(ownerCheck.error);
+      assert.equal(ownerCheck.data.title, marker, "La fila no debe cambiar tras un intento UPDATE");
+    });
+
     await check("Usuario B no puede leer la fila de A", async () => {
       const { data, error } = await userBClient.from(TABLE).select("id,title,user_id").eq("id", runId);
       assert.ifError(error);

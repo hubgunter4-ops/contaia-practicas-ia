@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:supabase:rls": "node scripts/supabase-rls-e2e.mjs",
+    "test:supabase:rls:local": "supabase test db",
     "supabase:rls:accounts": "node scripts/provision-supabase-rls-users.mjs"
   },
   "devDependencies": {
