@@ -137,6 +137,29 @@ function downloadPortfolio() {
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[character]));
+const UI_ICON_PATHS = Object.freeze({
+  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5M9 21v-6h6v6"/>',
+  book: '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  nora: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0M8 3l-2-2M16 3l2-2"/>',
+  chevron: '<path d="m7 9 5 5 5-5"/>',
+  arrow: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
+  file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14-4L4 9M4 5v4h4M4 13a8 8 0 0 0 14 4l2-2M20 19v-4h-4"/>',
+  send: '<path d="m21 3-7.5 18-3.5-7-7-3.5zM21 3 10 14"/>',
+  close: '<path d="m5 5 14 14M19 5 5 19"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+});
+function uiIcon(name, label = "") {
+  const path = UI_ICON_PATHS[name] || UI_ICON_PATHS.grid;
+  return `<svg class="ui-icon ui-icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="${label ? "false" : "true"}"${label ? ` role="img" aria-label="${escapeHtml(label)}"` : ""}>${path}</svg>`;
+}
 
 function resetTutor() {
   state.tutor.abortController?.abort();
@@ -727,10 +750,10 @@ function sidebar() {
     <div class="sidebar-divider"></div>
     <p class="nav-label sidebar-section-label">SECCIÓN 02 · LABORATORIO</p>
     <button class="nav-item nav-home ${state.section === "lab" && state.current === "home" ? "is-active" : ""}" type="button" data-nav="home" aria-current="${state.section === "lab" && state.current === "home" ? "page" : "false"}">
-      <span class="home-glyph" aria-hidden="true">⌂</span><span>Panel de práctica</span>
+      <span class="home-glyph">${uiIcon("home")}</span><span>Panel de práctica</span>
     </button>
     <button class="nav-item ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">
-      <span class="home-glyph" aria-hidden="true">⌕</span><span>Base de estudio</span>
+      <span class="home-glyph">${uiIcon("book")}</span><span>Base de estudio</span>
     </button>
     ${groupMarkup}
     <div class="sidebar-bottom">
@@ -742,11 +765,11 @@ function sidebar() {
 
 function mobileNavigation() {
   return `<nav class="mobile-bottom-nav" aria-label="Navegación móvil">
-    <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home"><span aria-hidden="true">⌂</span><small>Recorrido</small></button>
-    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course"><span aria-hidden="true">▣</span><small>Aula</small></button>
-    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "study"].includes(state.section) ? "is-active" : ""}" data-section="tools"><span aria-hidden="true">⌘</span><small>Herramientas</small></button>
-    <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor"><span aria-hidden="true">N</span><small>Nora</small></button>
-    <button type="button" class="mobile-primary-action" data-section="course" aria-label="Continuar con el aula">Continuar <span aria-hidden="true">→</span></button>
+    <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home">${uiIcon("home")}<small>Recorrido</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course">${uiIcon("book")}<small>Aula</small></button>
+    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "study"].includes(state.section) ? "is-active" : ""}" data-section="tools">${uiIcon("grid")}<small>Herramientas</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor">${uiIcon("nora")}<small>Nora</small></button>
+    <button type="button" class="mobile-primary-action" data-section="course" aria-label="Continuar con el aula">Continuar ${uiIcon("arrow")}</button>
   </nav>`;
 }
 
@@ -767,17 +790,17 @@ function topbar() {
   }).join("");
   const toolsActive = ["tools", "advisor", "cfdi", "lab", "study"].includes(state.section);
   const tools = [
-    ["tools", "Centro de herramientas"],
-    ["advisor", "Asistente abierto"],
-    ["cfdi", "Analizador CFDI"],
-    ["lab", "Laboratorio práctico"],
-    ["study", "Base de estudio"],
-  ].map(([section, label]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}"><span>${label}</span></button>`).join("");
-  return `<header class="topbar"><div class="breadcrumb"><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
+    ["tools", "Centro de herramientas", "grid"],
+    ["advisor", "Asistente abierto", "nora"],
+    ["cfdi", "Analizador CFDI", "file"],
+    ["lab", "Laboratorio práctico", "check"],
+    ["study", "Base de estudio", "book"],
+  ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`).join("");
+  return `<header class="topbar"><div class="breadcrumb"><img class="topbar-brand-logo" src="/brand/contaia-logo-64.png" alt="" aria-hidden="true" /><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
-      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b><span>Aula en vivo</span></button>
-      <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b><span>Clases</span><i aria-hidden="true">⌄</i></summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
-      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b><span>Herramientas</span><i aria-hidden="true">⌄</i></summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body"><span>Asesoría</span></button>`}</div></details>
+      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>Aula en vivo</span></button>
+      <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b>${uiIcon("menu")}<span>Clases</span>${uiIcon("chevron")}</summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
+      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body">${uiIcon("nora")}<span>Asesoría</span></button>`}</div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;

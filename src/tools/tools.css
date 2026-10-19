@@ -57,3 +57,7 @@
   .tools-profile-strip .button { margin-left: 60px; }
   .tools-grid { grid-template-columns: 1fr; }
 }
+
+
+.tools-ui-icon { width: 22px; height: 22px; display: block; }
+.tools-card-icon { display: grid; place-items: center; }

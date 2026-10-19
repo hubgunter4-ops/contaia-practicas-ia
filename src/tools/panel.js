@@ -64,11 +64,22 @@ function escapeHtml(value) {
   }[character]));
 }
 
+const TOOL_ICON_PATHS = Object.freeze({
+  cfdi: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/>',
+  accounting: '<path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/>',
+  payroll: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  diot: '<path d="M4 19V5M4 19h16"/><path d="M8 16v-4M12 16V8M16 16v-7"/>',
+  monitor: '<path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16h.01"/>',
+});
+function toolIcon(id) {
+  return `<svg class="tools-ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOOL_ICON_PATHS[id] || TOOL_ICON_PATHS.monitor}</svg>`;
+}
+
 function renderToolCard(tool) {
   const status = TOOL_STATUS[tool.status] ?? TOOL_STATUS.preparation;
   const isAvailable = tool.status === "available";
   return `<article class="tools-card ${status.className}" data-tool-card="${escapeHtml(tool.id)}">
-    <div class="tools-card-head"><span class="tools-card-icon" aria-hidden="true">${escapeHtml(tool.icon)}</span><span class="tools-card-status ${status.className}">${escapeHtml(status.label)}</span></div>
+    <div class="tools-card-head"><span class="tools-card-icon" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${status.className}">${escapeHtml(status.label)}</span></div>
     <p class="tools-card-eyebrow">${escapeHtml(tool.eyebrow)}</p>
     <h2>${escapeHtml(tool.title)}</h2>
     <p class="tools-card-description">${escapeHtml(tool.description)}</p>

@@ -1939,3 +1939,23 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 @media (prefers-reduced-motion: reduce) {
   .mobile-primary-action, .tutor-panel.is-open { animation: none !important; }
 }
+
+
+/* Sistema de iconos y controles */
+.ui-icon { display: inline-block; width: 1.05em; height: 1.05em; flex: 0 0 auto; vertical-align: -.16em; stroke: currentColor; }
+.section-tab > .ui-icon { width: 13px; height: 13px; opacity: .78; }
+.section-tab > .ui-icon-chevron { width: 12px; height: 12px; margin-left: 1px; transition: transform .18s ease; }
+.class-menu[open] > summary > .ui-icon-chevron, .tools-menu[open] > summary > .ui-icon-chevron { transform: rotate(180deg); }
+.section-tab > span { min-width: 0; }
+.home-glyph { display: inline-grid; width: 19px; place-items: center; }
+.home-glyph .ui-icon { width: 17px; height: 17px; }
+.mobile-nav-item .ui-icon { width: 18px; height: 18px; }
+.mobile-primary-action .ui-icon { width: 15px; height: 15px; }
+.mobile-nav-item, .mobile-primary-action, .section-tab, .class-menu-item, .tools-menu-popover .section-tab { line-height: 1; }
+.section-tab { display: inline-flex; align-items: center; }
+.class-menu-item > i { display: inline-flex; align-items: center; }
+.button > .ui-icon, .button-primary > .ui-icon, .button-quiet > .ui-icon { width: 15px; height: 15px; }
+select { appearance: none; padding-right: 28px !important; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 13px) 50%, calc(100% - 9px) 50%; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
+.tutor-provider-label, .open-provider-label { display: inline-flex; align-items: center; gap: 6px; }
+.tutor-provider-label::before, .open-provider-label::before { content: ""; width: 13px; height: 13px; opacity: .7; background: currentColor; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 4h16v16H4zM7 7v3h3V7H7zm7 0v3h3V7h-3zM7 14v3h3v-3H7zm7 0v3h3v-3h-3z'/%3E%3C/svg%3E") center/contain no-repeat; }
+@media (prefers-reduced-motion: reduce) { .section-tab > .ui-icon-chevron { transition: none; } }
