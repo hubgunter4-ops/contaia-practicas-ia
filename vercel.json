@@ -3,6 +3,7 @@
   "framework": null,
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
+  "rewrites": [{ "source": "/registro", "destination": "/" }],
   "functions": {
     "api/tutor/stream.js": {
       "maxDuration": 30

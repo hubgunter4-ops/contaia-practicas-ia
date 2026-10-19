@@ -49,3 +49,6 @@
 @media (max-width: 720px) { .auth-gate { overflow: auto; } .auth-gate-layout { grid-template-columns: 1fr; gap: 2.5rem; width: min(calc(100% - 2rem),34rem); padding: 2.5rem 0 5rem; } .auth-brand-story > .eyebrow { margin-top: 3.5rem; } .auth-brand-story h1 { font-size: clamp(2.6rem,12vw,4rem); } .auth-tutor-badge { margin-top: 2rem; } .auth-gate-card { padding: 1.65rem; border-radius: 1.2rem; } .auth-gate-footer { position: relative; right: auto; bottom: auto; left: auto; padding: 0 1rem 1.5rem; } }
 @media (max-width: 420px) { .auth-gate-layout { width: min(calc(100% - 1.25rem),34rem); } .auth-gate-card { padding: 1.35rem; } .auth-gate-options { align-items: flex-start; flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { .auth-gate *, .auth-gate *::before, .auth-gate *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+
+.auth-form-hint { margin: -.2rem 0 .35rem; color: #6f8388; font-size: .7rem; }
+.auth-register-gate .auth-sso-button { margin-top: 0; }

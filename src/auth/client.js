@@ -56,7 +56,7 @@ export function renderAuthGate() {
           ${connectionNote}${message}
         </form>
         <div class="auth-divider"><span>o continúa con</span></div>
-        <button class="auth-sso-button" type="button" disabled aria-disabled="true"><span aria-hidden="true">G</span> Continuar con Google <small>Próximamente</small></button>
+        <button class="auth-sso-button" type="button" data-action="auth-google" ${disabled ? "disabled" : ""}><span aria-hidden="true">G</span> Continuar con Google</button>
         <p class="auth-signup">¿No tienes una cuenta? <a href="/registro">Crear una cuenta</a></p>
         <p class="auth-note">Nunca compartas tu contraseña. La sesión se conserva en este navegador mediante Supabase Auth.</p>
       </section>
@@ -116,6 +116,41 @@ export async function signIn() {
     authState.busy = false;
     notify();
   }
+}
+
+export async function signUp() {
+  const client = window.__contaiaAuth?.client;
+  if (!client || authState.busy) return;
+  authState.busy = true; authState.message = ""; authState.error = false;
+  try {
+    const { data, error } = await client.auth.signUp({ email: authState.identifier, password: authState.password, options: { emailRedirectTo: `${location.origin}/` } });
+    if (error) throw error;
+    authState.password = "";
+    authState.status = "success";
+    authState.message = data.session ? "Cuenta creada. Ya puedes continuar." : "Cuenta creada. Revisa tu correo para confirmar el acceso.";
+  } catch (error) {
+    authState.password = ""; authState.status = "error"; authState.error = true;
+    authState.message = error instanceof Error ? error.message : "No se pudo crear la cuenta.";
+  } finally { authState.busy = false; notify(); }
+}
+
+export async function signInWithGoogle() {
+  const client = window.__contaiaAuth?.client;
+  if (!client || authState.busy) return;
+  authState.busy = true; authState.message = ""; authState.error = false; notify();
+  const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}/` } });
+  if (error) {
+    authState.busy = false; authState.status = "error"; authState.error = true;
+    authState.message = "Google no está habilitado todavía en el proveedor de autenticación.";
+    notify();
+  }
+}
+
+export function renderRegistrationGate() {
+  const connecting = !authState.ready || !window.__contaiaAuth?.client;
+  const disabled = authState.busy || connecting;
+  const message = authState.message ? `<p class="auth-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : "";
+  return `<main class="auth-gate auth-register-gate" aria-labelledby="register-title"><div class="auth-gate-background" aria-hidden="true"><span class="auth-orb auth-orb-coral"></span><span class="auth-orb auth-orb-gold"></span><span class="auth-orb auth-orb-teal"></span><span class="auth-grid"></span></div><div class="auth-gate-layout"><section class="auth-brand-story"><a class="auth-brand" href="/" aria-label="ContaIA, página de inicio"><span class="auth-brand-mark" aria-hidden="true">C</span><span>Conta<span>IA</span></span></a><p class="eyebrow">NUEVO RECORRIDO</p><h1>Construye tu espacio para <em>aprender.</em></h1><p class="auth-brand-lede">Guarda tu avance, revisa tus prácticas y vuelve a tus herramientas cuando quieras.</p><div class="auth-tutor-badge"><span class="auth-tutor-avatar" aria-hidden="true">N</span><span><strong>Nora</strong><small>Tutora IA · te acompaña paso a paso</small></span><i aria-hidden="true"></i></div></section><section class="auth-gate-card" aria-labelledby="register-title"><div class="auth-gate-heading"><p class="eyebrow">REGISTRO SEGURO</p><h2 id="register-title">Crea tu cuenta</h2><p>Empieza tu recorrido en ContaIA con un correo y una contraseña.</p></div><form class="auth-gate-form" data-register-form><label for="auth-identifier">Correo electrónico</label><input id="auth-identifier" name="identifier" type="email" autocomplete="email" required maxlength="254" value="${escapeHtml(authState.identifier)}" placeholder="tu@correo.com" ${disabled ? "disabled" : ""}/><label for="auth-password">Contraseña</label><div class="auth-password-wrap"><input id="auth-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" ${disabled ? "disabled" : ""}/><button type="button" class="auth-password-toggle" data-action="auth-password-toggle" aria-label="Mostrar contraseña" aria-pressed="false">◉</button></div><small class="auth-form-hint">Usa al menos 8 caracteres.</small><button type="submit" class="auth-gate-submit" ${disabled ? "disabled" : ""}>${connecting ? "Conectando…" : authState.busy ? "Creando cuenta…" : "Crear cuenta"}<span aria-hidden="true">→</span></button>${message}</form><div class="auth-divider"><span>o continúa con</span></div><button class="auth-sso-button" type="button" data-action="auth-google" ${disabled ? "disabled" : ""}><span aria-hidden="true">G</span> Continuar con Google</button><p class="auth-signup">¿Ya tienes una cuenta? <a href="/">Iniciar sesión</a></p><p class="auth-note">La autenticación y la sesión se gestionan mediante Supabase Auth.</p></section></div><footer class="auth-gate-footer"><span>© 2026 ContaIA</span><span aria-hidden="true">·</span><a href="/privacidad">Privacidad</a></footer></main>`;
 }
 
 export async function signOut() {

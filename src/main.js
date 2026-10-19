@@ -12,7 +12,7 @@ import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, renderAuthControls, renderAuthGate, renderAuthPanel, signIn, signOut } from "./auth/client.js";
+import { authState, currentUser, renderAuthControls, renderAuthGate, renderRegistrationGate, renderAuthPanel, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -1047,7 +1047,7 @@ function render() {
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
   if (!currentUser()) {
-    app.innerHTML = renderAuthGate();
+    app.innerHTML = location.pathname === "/registro" ? renderRegistrationGate() : renderAuthGate();
     return;
   }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
@@ -1283,6 +1283,10 @@ app.addEventListener("click", (event) => {
     action.setAttribute("aria-label", visible ? "Ocultar contraseña" : "Mostrar contraseña");
     return;
   }
+  if (action.dataset.action === "auth-google") {
+    void signInWithGoogle();
+    return;
+  }
   if (action.dataset.action === "auth-signout") {
     void signOut();
     return;
@@ -1446,6 +1450,15 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("submit", (event) => {
+  const registerForm = event.target.closest("[data-register-form]");
+  if (registerForm) {
+    event.preventDefault();
+    const formData = new FormData(registerForm);
+    authState.identifier = String(formData.get("identifier") || "").trim();
+    authState.password = String(formData.get("password") || "");
+    void signUp();
+    return;
+  }
   const authForm = event.target.closest("[data-auth-form]");
   if (authForm) {
     event.preventDefault();
