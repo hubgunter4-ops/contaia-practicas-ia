@@ -32,6 +32,7 @@ export function renderAuthGate() {
     : "";
   return `<main class="auth-gate" aria-labelledby="auth-gate-title">
     <div class="auth-gate-background" aria-hidden="true">
+      <video class="auth-gate-video" autoplay muted loop playsinline preload="metadata" poster="/videos/contaia-analizador-cfdi-poster.webp"><source src="/videos/contaia-login-fondo-vertical.mp4" type="video/mp4"/></video>
       <span class="auth-orb auth-orb-coral"></span><span class="auth-orb auth-orb-gold"></span><span class="auth-orb auth-orb-teal"></span>
       <span class="auth-grid"></span><span class="auth-data-line auth-data-line-one"></span><span class="auth-data-line auth-data-line-two"></span>
       <span class="auth-particles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
