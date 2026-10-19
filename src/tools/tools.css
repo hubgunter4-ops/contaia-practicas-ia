@@ -61,3 +61,36 @@
 
 .tools-ui-icon { width: 22px; height: 22px; display: block; }
 .tools-card-icon { display: grid; place-items: center; }
+
+
+/* Centro de herramientas · acciones por estado */
+.tools-hero-mark { animation: tools-mark-float 5s ease-in-out infinite; }
+.tools-hero-mark i { animation: tools-status-blink 2.4s ease-in-out infinite; }
+.tools-profile-strip { transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+.tools-profile-strip:hover { border-color: #c8a76a; box-shadow: 0 9px 22px rgba(67,44,27,.08); transform: translateY(-2px); }
+.tools-profile-strip .button { position: relative; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
+.tools-profile-strip .button:hover:not(:disabled) { box-shadow: 0 7px 16px rgba(122,46,58,.14); transform: translateY(-2px); }
+.tools-card { position: relative; overflow: hidden; }
+.tools-card::after { position: absolute; top: 0; right: 0; width: 110px; height: 110px; border: 1px solid currentColor; border-radius: 50%; content: ""; opacity: .045; transform: translate(38px,-58px); transition: transform .35s ease, opacity .35s ease; }
+.tools-card:hover::after { opacity: .12; transform: translate(20px,-43px) scale(1.12); }
+.tools-card-icon { transition: color .2s ease, border-color .2s ease, transform .25s cubic-bezier(.2,.8,.2,1), background-color .2s ease; }
+.tools-card:hover .tools-card-icon { border-color: currentColor; background: #fbf2df; transform: rotate(-5deg) scale(1.08); }
+.tools-card-status { transition: transform .2s ease, box-shadow .2s ease; }
+.tools-card:hover .tools-card-status { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(67,44,27,.08); }
+.tools-card-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; overflow: hidden; transition: transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.tools-card-action::after { position: absolute; inset: 0 auto 0 -120%; width: 70%; content: ""; transform: skewX(-18deg); background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); transition: left .45s ease; }
+.tools-card-action:hover:not(:disabled)::after { left: 145%; }
+.tools-card-action:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 15px rgba(67,44,27,.1); }
+.tools-card-action:active:not(:disabled) { transform: scale(.97); }
+.tools-card-action > span { display: inline-block; transition: transform .2s ease; }
+.tools-card-action:hover:not(:disabled) > span { transform: translateX(3px); }
+.tools-card.is-available .tools-card-action { box-shadow: 0 5px 12px rgba(216,178,110,.18); }
+.tools-card.is-connection .tools-card-action:hover:not(:disabled) { border-color: #c8a76a; background: #fbf2df; }
+.tools-card.is-preparation .tools-card-action { opacity: .82; }
+.tools-card.is-preparation:hover .tools-card-action { opacity: 1; }
+.tools-notice { animation: tools-notice-in .3s ease both; }
+@keyframes tools-mark-float { 0%,100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(-9deg) translateY(-5px); } }
+@keyframes tools-status-blink { 0%,100% { opacity: .45; box-shadow: 0 0 0 rgba(216,178,110,0); } 50% { opacity: 1; box-shadow: 0 0 0 5px rgba(216,178,110,.1); } }
+@keyframes tools-notice-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) { .tools-card-action { min-height: 40px; padding-inline: 12px; } .tools-profile-strip:hover, .tools-card:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tools-page *, .tools-page *::before, .tools-page *::after { animation: none !important; transition: none !important; } }

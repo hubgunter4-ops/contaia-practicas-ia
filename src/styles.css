@@ -2220,3 +2220,86 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 .public-recovery-message.is-error { color: #fff; background: #a04f60; }
 @media (max-width: 760px) { .public-info-hero { padding: 28px 22px; border-radius: 20px; } .public-info-grid { grid-template-columns: 1fr; margin-bottom: 35px; } .public-recovery-form > div { align-items: stretch; flex-direction: column; } .public-recovery-form .public-primary-cta { justify-content: center; } .public-info-actions { align-items: stretch; flex-direction: column; } .public-info-actions > a { justify-content: center; } }
 @media (prefers-reduced-motion: reduce) { .public-info-card, .public-secondary-cta { transition: none; } }
+
+
+/* Aula · interacción guiada */
+.classroom-content .classroom-phase-button,
+.classroom-content .classroom-step-control,
+.classroom-content .classroom-phase-next,
+.classroom-content .classroom-next-class,
+.classroom-content .classroom-live-button,
+.classroom-content .classroom-narrate-button,
+.classroom-content .classroom-advisor-open,
+.classroom-content .classroom-practice-link,
+.classroom-content .classroom-route-cta,
+.classroom-content .classroom-portfolio-link {
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s ease, background-color .2s ease, box-shadow .2s ease, color .2s ease;
+}
+.classroom-content .classroom-phase-button::after,
+.classroom-content .classroom-phase-next::after,
+.classroom-content .classroom-next-class::after,
+.classroom-content .classroom-route-cta::after {
+  position: absolute;
+  inset: 0 auto 0 -120%;
+  width: 70%;
+  content: "";
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.27), transparent);
+  transition: left .45s ease;
+}
+.classroom-content .classroom-phase-button:hover:not(:disabled),
+.classroom-content .classroom-step-control:hover:not(:disabled),
+.classroom-content .classroom-live-button:hover:not(:disabled),
+.classroom-content .classroom-narrate-button:hover:not(:disabled),
+.classroom-content .classroom-advisor-open:hover:not(:disabled),
+.classroom-content .classroom-practice-link:hover:not(:disabled),
+.classroom-content .classroom-route-cta:hover:not(:disabled),
+.classroom-content .classroom-portfolio-link:hover:not(:disabled) { transform: translateY(-2px); }
+.classroom-content .classroom-phase-next:hover:not(:disabled)::after,
+.classroom-content .classroom-next-class:hover:not(:disabled)::after,
+.classroom-content .classroom-route-cta:hover:not(:disabled)::after,
+.classroom-content .classroom-phase-button:hover:not(:disabled)::after { left: 145%; }
+.classroom-content .classroom-phase-button:active:not(:disabled),
+.classroom-content .classroom-phase-next:active:not(:disabled),
+.classroom-content .classroom-next-class:active:not(:disabled),
+.classroom-content .classroom-route-cta:active:not(:disabled),
+.classroom-content .classroom-live-button:active:not(:disabled) { transform: translateY(0) scale(.98); }
+.classroom-content .classroom-phase-button.is-active { box-shadow: 0 0 0 4px rgba(170,145,255,.12); }
+.classroom-content .classroom-phase-button.is-past:not(:disabled) { animation: classroom-phase-check .42s ease both; }
+.classroom-content .classroom-action-done { box-shadow: 0 9px 22px rgba(170,145,255,.2); }
+.classroom-content .classroom-action-done:hover:not(:disabled) { box-shadow: 0 13px 28px rgba(170,145,255,.3); }
+.classroom-content .classroom-live-button[aria-pressed="true"] { border-color: #9ce8c7; color: #9ce8c7; box-shadow: 0 0 0 4px rgba(156,232,199,.1); }
+.classroom-content .classroom-live-button[aria-pressed="true"]::before { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; content: ""; background: #9ce8c7; box-shadow: 0 0 0 4px rgba(156,232,199,.12); animation: classroom-live-pulse 1.8s ease-in-out infinite; }
+.classroom-content .classroom-narrate-button[disabled] { opacity: .45; filter: grayscale(.25); }
+
+/* Clases · selector de recorrido y módulos */
+.class-menu > summary,
+.tools-menu > summary { transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease; }
+.class-menu > summary:hover,
+.tools-menu > summary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(43,31,23,.08); }
+.class-menu[open] > summary,
+.tools-menu[open] > summary { box-shadow: 0 5px 14px rgba(43,31,23,.1); }
+.class-menu-popover,
+.tools-menu-popover { transform-origin: top right; animation: menu-popover-enter .2s cubic-bezier(.2,.8,.2,1) both; }
+.class-menu-item { position: relative; overflow: hidden; transition: transform .18s ease, padding-left .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease; }
+.class-menu-item::before { position: absolute; inset: 0 auto 0 0; width: 3px; content: ""; background: #aa91ff; opacity: 0; transform: scaleY(.35); transition: opacity .18s ease, transform .18s ease; }
+.class-menu-item:hover { padding-left: 12px; transform: translateX(2px); }
+.class-menu-item:hover::before,
+.class-menu-item.is-active::before { opacity: 1; transform: scaleY(1); }
+.class-menu-item.is-next:not(.is-active) { animation: class-next-nudge 2.6s ease-in-out infinite; }
+.class-menu-item.is-complete > i { animation: class-check-pop .38s cubic-bezier(.2,.85,.3,1.3) both; }
+.classroom-content .course-module-card summary { transition: padding-left .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.classroom-content .course-module-card summary:hover { padding-left: 15px; box-shadow: inset 3px 0 0 #aa91ff; }
+.classroom-content .course-module-toggle { transition: transform .24s cubic-bezier(.2,.8,.2,1), background-color .18s ease, color .18s ease; }
+.classroom-content .course-module-card[open] .course-module-toggle { background: rgba(170,145,255,.12); color: #aa91ff; }
+.classroom-content .course-practice-link:hover { box-shadow: 0 6px 14px rgba(170,145,255,.12); }
+@keyframes classroom-phase-check { from { opacity: .65; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes classroom-live-pulse { 0%,100% { opacity: .55; box-shadow: 0 0 0 3px rgba(156,232,199,.08); } 50% { opacity: 1; box-shadow: 0 0 0 7px rgba(156,232,199,.03); } }
+@keyframes menu-popover-enter { from { opacity: 0; transform: translateY(-5px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes class-next-nudge { 0%,100% { box-shadow: 0 0 0 rgba(170,145,255,0); } 50% { box-shadow: 0 0 0 3px rgba(170,145,255,.11); } }
+@keyframes class-check-pop { from { opacity: .35; transform: scale(.65); } 70% { transform: scale(1.22); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .classroom-content *, .class-menu *, .tools-menu * { animation: none !important; transition: none !important; }
+}
