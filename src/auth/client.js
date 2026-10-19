@@ -154,6 +154,22 @@ export async function signInWithGoogle() {
   }
 }
 
+export async function resetPassword() {
+  const client = window.__contaiaAuth?.client;
+  if (!client || authState.busy) return;
+  authState.busy = true; authState.message = ""; authState.error = false;
+  notify();
+  try {
+    const { error } = await client.auth.resetPasswordForEmail(authState.identifier, { redirectTo: `${location.origin}/recuperar-contrasena` });
+    if (error) throw error;
+    authState.message = "Si existe una cuenta con ese correo, recibirás un enlace para continuar.";
+    authState.status = "success";
+  } catch (error) {
+    authState.error = true; authState.status = "error";
+    authState.message = error instanceof Error ? error.message : "No se pudo enviar el enlace. Revisa el correo e inténtalo de nuevo.";
+  } finally { authState.busy = false; notify(); }
+}
+
 export function renderRegistrationGate() {
   const connecting = !authState.ready || !window.__contaiaAuth?.client;
   const disabled = authState.busy || connecting;

@@ -12,7 +12,7 @@ import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -970,6 +970,35 @@ function renderPublicFeaturePage(featureId) {
   </div>`;
 }
 
+const PUBLIC_INFO_PAGES = Object.freeze({
+  privacidad: {
+    eyebrow: "CONFIANZA · CONTAIA", title: "Aprende con claridad sobre tus datos.",
+    summary: "ContaIA separa los casos educativos, el procesamiento local y el historial privado para que sepas qué ocurre antes de cada acción.", icon: "check",
+    cards: [["Procesamiento local", "El analizador CFDI lee XML y ZIP en tu navegador. El archivo original no se sube por el solo hecho de analizarlo."], ["Historial privado", "Si eliges guardar un resultado, se conserva en tu cuenta y puede incluir datos normalizados del análisis."], ["Tu criterio primero", "La plataforma ofrece apoyo educativo y no sustituye una validación ante el SAT ni una asesoría profesional."]],
+    primary: ["Crear una cuenta", "/registro"], secondary: ["Volver al inicio", "/"],
+  },
+  ayuda: {
+    eyebrow: "CENTRO DE AYUDA · CONTAIA", title: "Una ruta clara cuando algo no sale como esperabas.",
+    summary: "Encuentra el siguiente paso para entrar, practicar, analizar CFDI o entender el alcance de Nora y Anam.", icon: "nora",
+    cards: [["No puedes entrar", "Comprueba tu correo o alias, revisa que la contraseña tenga al menos 8 caracteres y usa la recuperación si la olvidaste."], ["Tu CFDI no aparece", "Usa XML o ZIP válidos, revisa el estado del análisis y confirma que los complementos de pago estén dentro de la selección."], ["Necesitas orientación", "Abre a Nora desde el Asistente abierto. Comparte solo casos ficticios o información previamente anonimizada."]],
+    primary: ["Recuperar contraseña", "/recuperar-contrasena"], secondary: ["Explorar el CFDI", "/descripcion/cfdi"],
+  },
+  "recuperar-contrasena": {
+    eyebrow: "ACCESO SEGURO · CONTAIA", title: "Recupera tu acceso sin perder tu recorrido.",
+    summary: "Escribe el correo con el que creaste tu cuenta y te enviaremos un enlace para restablecer la contraseña.", icon: "refresh", recovery: true,
+    cards: [["01 · Escribe tu correo", "Usa la misma dirección con la que te registraste en ContaIA."], ["02 · Revisa tu bandeja", "El enlace llega por correo. Si no lo ves, revisa spam y espera unos minutos."], ["03 · Vuelve a practicar", "Después de confirmar la nueva contraseña podrás continuar con tus módulos y tu historial privado."]],
+    primary: ["Volver a iniciar sesión", "/"], secondary: ["Abrir ayuda", "/ayuda"],
+  },
+});
+
+function renderPublicInfoPage(pageId) {
+  const page = PUBLIC_INFO_PAGES[pageId];
+  if (!page) return "";
+  const cards = page.cards.map(([title, text], index) => `<article class="public-info-card"><span>${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></article>`).join("");
+  const recovery = page.recovery ? `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label><div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}"/><button class="public-primary-cta" type="submit">${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${authState.message ? `<p class="public-recovery-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : ""}</form>` : "";
+  return `<div class="public-landing public-info-page public-info-${escapeHtml(pageId)}"><header class="public-header"><a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a><nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/descripcion/cfdi">CFDI</a><a href="/descripcion/asistente">Asistente</a><a href="/descripcion/curso">Curso</a></nav><button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button></header><main id="contenido" class="public-main public-info-main" tabindex="-1"><a class="public-back-link" href="/">← Volver a ContaIA</a><section class="public-info-hero"><div class="public-info-icon" aria-hidden="true">${uiIcon(page.icon)}</div><p class="public-kicker">${escapeHtml(page.eyebrow)}</p><h1>${escapeHtml(page.title)}</h1><p class="public-lede">${escapeHtml(page.summary)}</p>${recovery}<div class="public-info-actions"><a class="public-primary-cta" href="${page.primary[1]}">${escapeHtml(page.primary[0])}<span aria-hidden="true">→</span></a><a class="public-secondary-cta" href="${page.secondary[1]}">${escapeHtml(page.secondary[0])}</a></div></section><section class="public-info-grid" aria-label="Información de ContaIA">${cards}</section></main><footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/ayuda">Ayuda</a></footer>${renderAuthPanel()}</div>`;
+}
+
 function renderModuleSessionFlow(module) {
   const guide = module.guide;
   const descriptions = [
@@ -1201,6 +1230,11 @@ function render() {
   const persistentVideo = keepAnamVideo ? app.querySelector("[data-anam-video]") : null;
   if (persistentVideo) persistentVideo.remove();
   else if (state.anam.client || state.anam.status === "connecting") void stopAnamSession({ silent: true });
+  const publicInfoRoute = location.pathname.replace(/^\/+|\/+$/g, "");
+  if (Object.prototype.hasOwnProperty.call(PUBLIC_INFO_PAGES, publicInfoRoute)) {
+    app.innerHTML = renderPublicInfoPage(publicInfoRoute);
+    return;
+  }
   if (!currentUser()) {
     if (location.pathname === "/registro" && !authState.identifier) {
       try {
@@ -1623,6 +1657,13 @@ app.addEventListener("click", (event) => {
 });
 
 app.addEventListener("submit", (event) => {
+  const recoveryForm = event.target.closest("[data-recovery-form]");
+  if (recoveryForm) {
+    event.preventDefault();
+    authState.identifier = String(new FormData(recoveryForm).get("email") || "").trim();
+    void resetPassword();
+    return;
+  }
   const interestForm = event.target.closest("[data-interest-form]");
   if (interestForm) {
     event.preventDefault();

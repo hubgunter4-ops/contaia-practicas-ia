@@ -1,5 +1,13 @@
 {
   "routes": [
-    { "path": "/", "title": "Laboratorio ContaIA" }
+    { "path": "/", "title": "Laboratorio ContaIA" },
+    { "path": "/registro", "title": "Crear una cuenta · ContaIA" },
+    { "path": "/descripcion/cfdi", "title": "Herramientas CFDI · ContaIA" },
+    { "path": "/descripcion/asistente", "title": "Asistente abierto · ContaIA" },
+    { "path": "/descripcion/anam", "title": "Asistente abierto · ContaIA" },
+    { "path": "/descripcion/curso", "title": "Curso de IA contable · ContaIA" },
+    { "path": "/privacidad", "title": "Privacidad · ContaIA" },
+    { "path": "/ayuda", "title": "Centro de ayuda · ContaIA" },
+    { "path": "/recuperar-contrasena", "title": "Recuperar contraseña · ContaIA" }
   ]
 }
