@@ -1567,6 +1567,15 @@ document.addEventListener("contaia:auth-updated", (event) => {
   state.completed = new Set(restored.completedExercises);
   state.activeModuleId = courseModules.find(({ id }) => !state.completedModules.has(id))?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
   try { state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || ""; state.onboardingDraft = state.onboardingLevel; } catch { /* El almacenamiento puede estar bloqueado. */ }
+  if (event.detail?.user && authState.status === "success") {
+    authState.status = "success-visible";
+    window.setTimeout(() => {
+      authState.status = "idle";
+      render();
+    }, 700);
+    return;
+  }
+  if (authState.status === "success-visible") return;
   render();
 });
 window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });

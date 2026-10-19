@@ -6,6 +6,7 @@ export const authState = {
   message: "",
   error: false,
   ready: false,
+  status: "idle",
 };
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
@@ -21,9 +22,10 @@ export function renderAuthControls() {
 }
 
 export function renderAuthGate() {
-  const disabled = authState.busy || !window.__contaiaAuth?.client;
-  const connectionNote = !window.__contaiaAuth?.client
-    ? `<p class="auth-message is-error" role="status">Conectando el acceso seguro con Supabase…</p>`
+  const connecting = !authState.ready || !window.__contaiaAuth?.client;
+  const disabled = authState.busy || connecting;
+  const connectionNote = connecting
+    ? `<p class="auth-connection-status" role="status"><i aria-hidden="true"></i>Conectando acceso seguro…</p>`
     : "";
   const message = authState.message
     ? `<p class="auth-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>`
@@ -50,7 +52,7 @@ export function renderAuthGate() {
           <label for="auth-password">Contraseña</label>
           <div class="auth-password-wrap"><input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" ${disabled ? "disabled" : ""}/><button type="button" class="auth-password-toggle" data-action="auth-password-toggle" aria-label="Mostrar contraseña" aria-pressed="false">◉</button></div>
           <div class="auth-gate-options"><label class="auth-remember"><input type="checkbox" name="remember"/> <span>Recordar este dispositivo</span></label><a href="/recuperar-contrasena">¿Olvidaste tu contraseña?</a></div>
-          <button type="submit" class="auth-gate-submit" ${disabled ? "disabled" : ""}>${authState.busy ? "Entrando…" : "Iniciar sesión"}<span aria-hidden="true">→</span></button>
+          <button type="submit" class="auth-gate-submit" ${disabled ? "disabled" : ""}>${connecting ? "Conectando…" : authState.busy ? "Validando…" : authState.status === "success" ? "Sesión iniciada" : "Iniciar sesión"}<span aria-hidden="true">→</span></button>
           ${connectionNote}${message}
         </form>
         <div class="auth-divider"><span>o continúa con</span></div>
@@ -86,21 +88,30 @@ export async function signIn() {
   const client = window.__contaiaAuth?.client;
   if (!client || authState.busy) return;
   authState.busy = true;
+  authState.status = "validating";
   authState.message = "";
   authState.error = false;
   notify();
   try {
     const response = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ identifier: authState.identifier, password: authState.password }) });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload.session) throw new Error(payload.error || "No se pudo iniciar sesión.");
+    if (!response.ok || !payload.session) {
+      const message = response.status === 401
+        ? "El correo o alias no coincide con la contraseña."
+        : payload.error || "No se pudo iniciar sesión. Revisa los datos e inténtalo de nuevo.";
+      throw new Error(message);
+    }
     const { error } = await client.auth.setSession({ access_token: payload.session.access_token, refresh_token: payload.session.refresh_token });
     if (error) throw error;
     authState.password = "";
+    authState.status = "success";
     authState.open = false;
-    authState.message = "";
+    authState.message = "Sesión iniciada.";
   } catch (error) {
+    authState.password = "";
+    authState.status = "error";
     authState.error = true;
-    authState.message = error instanceof Error ? error.message : "No se pudo iniciar sesión.";
+    authState.message = error instanceof Error ? error.message : "No se pudo iniciar sesión. Revisa los datos e inténtalo de nuevo.";
   } finally {
     authState.busy = false;
     notify();

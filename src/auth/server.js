@@ -114,7 +114,7 @@ export async function handleAuth(request, response, env = process.env) {
     const { url, key } = supabaseConfig(env);
     const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
     const { data, error } = await client.auth.signInWithPassword({ email: identifier, password });
-    if (error || !data.session || !data.user) return sendJson(response, 401, { error: "Correo, usuario o contraseña incorrectos." });
+    if (error || !data.session || !data.user) return sendJson(response, 401, { error: "El correo o alias no coincide con la contraseña." });
     return sendJson(response, 200, { session: publicSession(data.session) });
   } catch (error) {
     return sendJson(response, Number.isInteger(error?.status) ? error.status : 500, { error: Number.isInteger(error?.status) ? error.message : "No se pudo iniciar sesión." });
