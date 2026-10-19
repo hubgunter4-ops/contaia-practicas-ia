@@ -62,14 +62,19 @@ const state = {
 
 let progressStorage = null;
 try { progressStorage = window.localStorage; } catch { /* El navegador puede bloquear el almacenamiento local. */ }
-const restoredProgress = loadProgress(progressStorage);
+let activeStorageScope = "anonymous";
+const scopedStorage = {
+  getItem(key) { return progressStorage?.getItem(`contaia.session.${activeStorageScope}.${key}`) ?? null; },
+  setItem(key, value) { progressStorage?.setItem(`contaia.session.${activeStorageScope}.${key}`, value); },
+};
+const restoredProgress = loadProgress(scopedStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
 const nextIncompleteModule = courseModules.find(({ id }) => !state.completedModules.has(id));
 state.activeModuleId = nextIncompleteModule?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
 state.storageWarning = progressStorage ? "" : "El navegador no permite guardar el progreso; esta sesión seguirá en memoria.";
 try {
-  state.onboardingLevel = progressStorage?.getItem("contaia.onboarding.v1") || "";
+  state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || "";
   state.onboardingDraft = state.onboardingLevel;
 } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
 
@@ -77,14 +82,14 @@ function persistProgress() {
   const saved = saveProgress({
     completedModules: [...state.completedModules],
     completedExercises: [...state.completed],
-  }, progressStorage);
+  }, scopedStorage);
   state.storageWarning = saved ? "" : "No se pudo guardar el progreso local; podrás continuar en memoria durante esta sesión.";
   return saved;
 }
 
 function persistOnboarding() {
   state.onboardingLevel = state.onboardingDraft;
-  try { progressStorage?.setItem("contaia.onboarding.v1", state.onboardingLevel); } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
+  try { scopedStorage.setItem("contaia.onboarding.v1", state.onboardingLevel); } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
 }
 
 async function initializeStudyDatabase() {
@@ -1541,5 +1546,14 @@ bindCfdiWorkspace(app, {
 initializeTutorConfig();
 initializeStudyDatabase();
 void initializeCfdiWorkspace();
-document.addEventListener("contaia:auth-updated", () => render());
+document.addEventListener("contaia:auth-updated", (event) => {
+  const userId = event.detail?.user?.id;
+  activeStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  const restored = loadProgress(scopedStorage);
+  state.completedModules = new Set(restored.completedModules);
+  state.completed = new Set(restored.completedExercises);
+  state.activeModuleId = courseModules.find(({ id }) => !state.completedModules.has(id))?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
+  try { state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || ""; state.onboardingDraft = state.onboardingLevel; } catch { /* El almacenamiento puede estar bloqueado. */ }
+  render();
+});
 window.addEventListener("pagehide", () => { void stopAnamSession({ silent: true }); }, { once: true });
