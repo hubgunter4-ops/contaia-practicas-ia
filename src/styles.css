@@ -1612,6 +1612,9 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   box-shadow: 0 14px 32px rgba(43, 31, 23, .18);
 }
 .tools-menu[open] > .tools-menu-popover { display: grid; gap: 3px; }
+.tools-menu-group { display: grid; gap: 3px; }
+.tools-menu-group + .tools-menu-group { margin-top: 6px; padding-top: 8px; border-top: 1px solid #e2d7c6; }
+.tools-menu-label { margin: 0 8px 3px; color: #88785f; font-size: 9px; font-weight: 800; letter-spacing: .12em; line-height: 1.4; }
 .tools-menu-popover .section-tab {
   width: 100%;
   justify-content: flex-start;
@@ -1645,6 +1648,8 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   background: #2b2d41;
   color: #c0adff;
 }
+.app-shell:has(.classroom-content) .tools-menu-group + .tools-menu-group { border-color: #514b70; }
+.app-shell:has(.classroom-content) .tools-menu-label { color: #a6a3bb; }
 .app-shell:has(.classroom-content) .tools-menu-popover .advisor-tab { border-color: #514b70; }
 @media (max-width: 1000px) {
   .classroom-course-progress .classroom-primary-route { grid-column: 1 / -1; }
