@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as XLSX from "xlsx";
 import { __test, handleDocuments } from "../src/documents/server.js";
 
 function requestFor(payload, remoteAddress = "127.0.0.1") {
@@ -53,4 +54,24 @@ test("lee XML y genera CSV desde el endpoint server-side", async () => {
   assert.equal(generated.status, 200);
   assert.equal(generated.body.result.kind, "file");
   assert.equal(generated.body.result.name, "documento-generado.csv");
+});
+
+test("lee un XLSX y genera un XLSX válido con SheetJS", async () => {
+  const input = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(input, XLSX.utils.aoa_to_sheet([["concepto", "importe"], ["Honorarios", 1234]]), "Movimientos");
+  const inputBytes = XLSX.write(input, { type: "buffer", bookType: "xlsx" });
+  const read = await invoke({
+    instruction: "lee el XLSX",
+    file: { name: "movimientos.xlsx", base64: inputBytes.toString("base64") },
+  }, "127.0.0.4");
+  assert.equal(read.status, 200);
+  assert.match(read.body.result.text, /Honorarios/);
+  assert.match(read.body.result.text, /1234/);
+
+  const generated = await invoke({ instruction: "genera un XLSX" }, "127.0.0.5");
+  assert.equal(generated.status, 200);
+  assert.equal(generated.body.result.mime, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  const output = XLSX.read(Buffer.from(generated.body.result.base64, "base64"), { type: "buffer" });
+  assert.equal(output.Sheets.Contenido.A1.v, "Contenido");
+  assert.equal(output.Sheets.Contenido.A2.v, "genera un XLSX");
 });
