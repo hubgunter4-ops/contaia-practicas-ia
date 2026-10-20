@@ -21,6 +21,8 @@ Todas las operaciones requieren `Authorization: Bearer <supabase access token>`.
 
 Los cuerpos están limitados a 32 KB, se validan RFC, código postal, correo, UUID, herramienta, ambiente y estados. La API rechaza nombres de campos relacionados con secretos, CSD, certificados, contraseñas o tokens. Las credenciales sensibles no se reciben ni se persisten desde esta ruta.
 
+La interfaz del Centro de herramientas usa `src/tools/client.js` y la sesión Supabase ya inicializada por la aplicación. Por ahora, el panel registra las conexiones como `pending` con proveedor `pending`; esto solo guarda metadatos administrativos y no configura, verifica ni contacta una integración externa.
+
 ## Variables necesarias
 
 - `SUPABASE_URL`

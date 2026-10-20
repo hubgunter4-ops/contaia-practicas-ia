@@ -1,8 +1,10 @@
 # Plan de implementación y despliegue del Centro de herramientas
 
-**Estado:** plan de trabajo; no implica que las funciones descritas estén implementadas ni que se haya autorizado un despliegue a producción.  
+**Estado:** plan activo. El primer hito de la Fase 1 tiene una implementación inicial en la rama de trabajo; todavía no está desplegado ni se considera listo para producción.
 **Alcance:** completar gradualmente el Centro de herramientas de ContaIA para perfiles fiscales, contabilidad, DIOT, nómina y monitor fiscal, conservando el Analizador CFDI existente.  
 **Orden recomendado:** base común → perfil fiscal y conexiones → contabilidad → DIOT → monitor fiscal → nómina.
+
+**Avance inicial:** el panel ya consume perfiles con la sesión autenticada, permite crear/editar/activar y seleccionar un perfil, y muestra los registros de conexión por ambiente. El alta/actualización de conexiones solo guarda metadatos como `pending`; no abre una conexión con proveedores ni envía datos externos. La verificación del proyecto Supabase/Vercel de destino, RLS entre dos usuarios, E2E y despliegue siguen pendientes; por tanto, no se ha cumplido el criterio de salida de las fases 0/1.
 
 ## 1. Estado observado en el repositorio
 
@@ -60,7 +62,7 @@
 **Archivos**
 
 - Modificar: `src/main.js`, `src/tools/panel.js`, `src/tools/server.js`, `api/tools/index.js`, `docs/tools-api.md`, `.env.example` solo si se añade una variable necesaria.
-- Crear: `src/tools/client.js` (cliente autenticado de la API), `src/tools/profile-workspace.js` (estado y formularios), `tests/tools-profile.test.js`, `tests/tools-client.test.js` y `tests/e2e/tools-profile.spec.js`.
+- Crear: `src/tools/client.js` (cliente autenticado de la API), `src/tools/workspace.js` (estado y formularios), `tests/tools-client.test.js`, `tests/tools-workspace.test.js` y `tests/e2e/tools-profile.spec.js`.
 - Migración nueva solo si una decisión de producto exige campos/tablas que no cubren el esquema actual: `supabase/migrations/<timestamp>_tools_profile_extension.sql`.
 
 **Criterio de salida:** CRUD de perfil y lectura/escritura de conexiones cubiertos con pruebas; ninguna credencial sensible enviada al navegador/API; RLS verificada con dos usuarios.

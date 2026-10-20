@@ -11,6 +11,7 @@ import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
+import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
 import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
@@ -1262,7 +1263,7 @@ function render() {
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
       : state.section === "cfdi" ? renderCfdiWorkspace()
-      : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice })
+      : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice, workspace: toolsWorkspace })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
@@ -1321,8 +1322,22 @@ app.addEventListener("click", (event) => {
     if (state.section === "lab") state.current = "home";
     if (state.section !== "tools") state.toolsNotice = "";
     render();
+    if (state.section === "tools") void loadToolsWorkspace();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const toolsUi = event.target.closest("[data-tools-ui]");
+  if (toolsUi) {
+    const action = toolsUi.dataset.toolsUi;
+    if (action === "profile-new") openFiscalProfileForm();
+    else if (action === "profile-edit") openFiscalProfileForm(toolsWorkspace.profiles.find((profile) => profile.id === toolsWorkspace.selectedProfileId) || null);
+    else if (action === "connection-open") openToolConnectionForm(toolsUi.dataset.toolKey, toolsUi.dataset.toolEnvironment);
+    else if (action === "cancel") closeToolsForms();
+    else if (action === "refresh") void loadToolsWorkspace();
+    render();
+    if (action === "profile-new" || action === "profile-edit") app.querySelector("[data-tools-profile-form] [name='legal_name']")?.focus({ preventScroll: true });
+    if (action === "connection-open") app.querySelector("[data-tools-connection-form] [name='environment']")?.focus({ preventScroll: true });
     return;
   }
   const toolAction = event.target.closest("[data-tool-action]");
@@ -1331,13 +1346,18 @@ app.addEventListener("click", (event) => {
     if (tool === "cfdi") {
       state.section = "cfdi";
       state.toolsNotice = "";
+    } else if (tool === "fiscal-profile") {
+      state.section = "tools";
+      state.toolsNotice = "";
+      openFiscalProfileForm();
     } else {
       state.section = "tools";
-      state.toolsNotice = tool === "fiscal-profile"
-        ? "El perfil fiscal será el punto de entrada para RFC, régimen, domicilio y conexiones por empresa. La base de datos ya está preparada; falta activar el proyecto Supabase."
-        : "Esta herramienta está contemplada en la arquitectura, pero todavía requiere su conexión y reglas operativas antes de ejecutar acciones fiscales.";
+      state.toolsNotice = "";
+      openToolConnectionForm(tool);
     }
     render();
+    if (state.section === "tools") (app.querySelector("[data-tools-profile-form] [name='legal_name']") || app.querySelector("[data-tools-connection-form] [name='environment']"))?.focus({ preventScroll: true });
+    if (state.section === "tools" && !toolsWorkspace.loaded) void loadToolsWorkspace();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
@@ -1706,6 +1726,25 @@ app.addEventListener("submit", (event) => {
     void signIn();
     return;
   }
+  const toolsProfileForm = event.target.closest("[data-tools-profile-form]");
+  if (toolsProfileForm) {
+    event.preventDefault();
+    const formData = new FormData(toolsProfileForm);
+    void saveFiscalProfile({
+      legal_name: formData.get("legal_name"), rfc: formData.get("rfc"),
+      tax_regime: formData.get("tax_regime"), fiscal_zip: formData.get("fiscal_zip"),
+      fiscal_email: formData.get("fiscal_email"), phone: formData.get("phone"),
+      active: formData.getAll("active").includes("true"),
+    });
+    return;
+  }
+  const toolsConnectionForm = event.target.closest("[data-tools-connection-form]");
+  if (toolsConnectionForm) {
+    event.preventDefault();
+    const formData = new FormData(toolsConnectionForm);
+    void saveToolConnection({ tool_key: formData.get("tool_key"), environment: formData.get("environment") });
+    return;
+  }
   const studyForm = event.target.closest("[data-study-note-form]");
   if (studyForm) {
     event.preventDefault();
@@ -1762,6 +1801,11 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[data-tools-profile-select]")) {
+    state.toolsNotice = "";
+    void loadProfileConnections(event.target.value);
+    return;
+  }
   if (event.target.matches("[data-open-document]")) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -1831,9 +1875,14 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener("scroll", syncMobileKeyboardOffset, { passive: true });
   window.addEventListener("resize", syncMobileKeyboardOffset, { passive: true });
 }
+document.addEventListener("contaia:tools-updated", () => {
+  if (state.section === "tools") render();
+});
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   activeStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  if (!userId) resetToolsWorkspace();
+  else if (state.section === "tools") void loadToolsWorkspace();
   const restored = loadProgress(scopedStorage);
   state.completedModules = new Set(restored.completedModules);
   state.completed = new Set(restored.completedExercises);
