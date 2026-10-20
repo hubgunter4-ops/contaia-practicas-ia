@@ -11,6 +11,7 @@ import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
+import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
 import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
@@ -795,12 +796,13 @@ function topbar() {
     ["cfdi", "Analizador CFDI", "file"],
     ["lab", "Laboratorio práctico", "check"],
     ["study", "Base de estudio", "book"],
-  ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`).join("");
+  ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`);
+  const advisorToggle = state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body">${uiIcon("nora")}<span>Asesoría</span></button>`;
   return `<header class="topbar"><div class="breadcrumb"><img class="topbar-brand-logo" src="/brand/contaia-logo-64.png" alt="" aria-hidden="true" /><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>Aula en vivo</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b>${uiIcon("menu")}<span>Clases</span>${uiIcon("chevron")}</summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
-      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" role="group" aria-label="Otras herramientas">${tools}${state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body">${uiIcon("nora")}<span>Asesoría</span></button>`}</div></details>
+      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 3).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(3).join("")}${advisorToggle}</section></div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;
@@ -1261,7 +1263,7 @@ function render() {
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
       : state.section === "cfdi" ? renderCfdiWorkspace()
-      : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice })
+      : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice, workspace: toolsWorkspace })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
@@ -1320,8 +1322,22 @@ app.addEventListener("click", (event) => {
     if (state.section === "lab") state.current = "home";
     if (state.section !== "tools") state.toolsNotice = "";
     render();
+    if (state.section === "tools") void loadToolsWorkspace();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const toolsUi = event.target.closest("[data-tools-ui]");
+  if (toolsUi) {
+    const action = toolsUi.dataset.toolsUi;
+    if (action === "profile-new") openFiscalProfileForm();
+    else if (action === "profile-edit") openFiscalProfileForm(toolsWorkspace.profiles.find((profile) => profile.id === toolsWorkspace.selectedProfileId) || null);
+    else if (action === "connection-open") openToolConnectionForm(toolsUi.dataset.toolKey, toolsUi.dataset.toolEnvironment);
+    else if (action === "cancel") closeToolsForms();
+    else if (action === "refresh") void loadToolsWorkspace();
+    render();
+    if (action === "profile-new" || action === "profile-edit") app.querySelector("[data-tools-profile-form] [name='legal_name']")?.focus({ preventScroll: true });
+    if (action === "connection-open") app.querySelector("[data-tools-connection-form] [name='environment']")?.focus({ preventScroll: true });
     return;
   }
   const toolAction = event.target.closest("[data-tool-action]");
@@ -1330,13 +1346,18 @@ app.addEventListener("click", (event) => {
     if (tool === "cfdi") {
       state.section = "cfdi";
       state.toolsNotice = "";
+    } else if (tool === "fiscal-profile") {
+      state.section = "tools";
+      state.toolsNotice = "";
+      openFiscalProfileForm();
     } else {
       state.section = "tools";
-      state.toolsNotice = tool === "fiscal-profile"
-        ? "El perfil fiscal será el punto de entrada para RFC, régimen, domicilio y conexiones por empresa. La base de datos ya está preparada; falta activar el proyecto Supabase."
-        : "Esta herramienta está contemplada en la arquitectura, pero todavía requiere su conexión y reglas operativas antes de ejecutar acciones fiscales.";
+      state.toolsNotice = "";
+      openToolConnectionForm(tool);
     }
     render();
+    if (state.section === "tools") (app.querySelector("[data-tools-profile-form] [name='legal_name']") || app.querySelector("[data-tools-connection-form] [name='environment']"))?.focus({ preventScroll: true });
+    if (state.section === "tools" && !toolsWorkspace.loaded) void loadToolsWorkspace();
     document.querySelector("#contenido")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
@@ -1705,6 +1726,25 @@ app.addEventListener("submit", (event) => {
     void signIn();
     return;
   }
+  const toolsProfileForm = event.target.closest("[data-tools-profile-form]");
+  if (toolsProfileForm) {
+    event.preventDefault();
+    const formData = new FormData(toolsProfileForm);
+    void saveFiscalProfile({
+      legal_name: formData.get("legal_name"), rfc: formData.get("rfc"),
+      tax_regime: formData.get("tax_regime"), fiscal_zip: formData.get("fiscal_zip"),
+      fiscal_email: formData.get("fiscal_email"), phone: formData.get("phone"),
+      active: formData.getAll("active").includes("true"),
+    });
+    return;
+  }
+  const toolsConnectionForm = event.target.closest("[data-tools-connection-form]");
+  if (toolsConnectionForm) {
+    event.preventDefault();
+    const formData = new FormData(toolsConnectionForm);
+    void saveToolConnection({ tool_key: formData.get("tool_key"), environment: formData.get("environment") });
+    return;
+  }
   const studyForm = event.target.closest("[data-study-note-form]");
   if (studyForm) {
     event.preventDefault();
@@ -1761,6 +1801,11 @@ app.addEventListener("input", (event) => {
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.matches("[data-tools-profile-select]")) {
+    state.toolsNotice = "";
+    void loadProfileConnections(event.target.value);
+    return;
+  }
   if (event.target.matches("[data-open-document]")) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -1830,9 +1875,14 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener("scroll", syncMobileKeyboardOffset, { passive: true });
   window.addEventListener("resize", syncMobileKeyboardOffset, { passive: true });
 }
+document.addEventListener("contaia:tools-updated", () => {
+  if (state.section === "tools") render();
+});
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   activeStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  if (!userId) resetToolsWorkspace();
+  else if (state.section === "tools") void loadToolsWorkspace();
   const restored = loadProgress(scopedStorage);
   state.completedModules = new Set(restored.completedModules);
   state.completed = new Set(restored.completedExercises);
