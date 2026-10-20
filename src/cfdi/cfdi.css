@@ -204,9 +204,10 @@
 @media (max-width: 420px) { .cfdi-processing ol { grid-template-columns: 1fr; gap: 6px; } .cfdi-processing li { min-height: 25px; } }
 @media (prefers-reduced-motion: reduce) { .cfdi-processing li > span { box-shadow: none; } }
 
-.cfdi-hero-visual { position: relative; z-index: 1; width: min(245px, 28vw); flex: none; }
-.cfdi-hero-visual contaia-video { --contaia-video-radius: 10px; display: block; border: 1px solid #38516a; box-shadow: 0 12px 24px rgba(0,0,0,.24); }
-.cfdi-hero-visual p { margin: 6px 0 0; color: #8294a8; font-size: 9px; text-align: center; }
+.cfdi-hero-visual { position: relative; z-index: 1; display: grid; width: min(245px, 28vw); flex: none; justify-items: center; gap: 10px; }
+.cfdi-visual-icon { position: relative; display: grid; width: 164px; height: 164px; place-items: center; border: 1px solid #38516a; border-radius: 18px; background: linear-gradient(145deg, #15283a, #203c52); box-shadow: 0 12px 24px rgba(0,0,0,.24); }
+.cfdi-visual-icon span { display: grid; width: 84px; height: 100px; place-items: center; border: 1px solid #54718b; border-radius: 8px; color: #dce8f2; font: 700 17px var(--mono); letter-spacing: .08em; }
+.cfdi-visual-icon i { position: absolute; right: 25px; bottom: 25px; display: grid; width: 35px; height: 35px; place-items: center; border: 3px solid #15283a; border-radius: 50%; background: #9ce8c7; color: #16352d; font: 700 18px var(--sans); font-style: normal; }
+.cfdi-hero-visual p { margin: 0; color: #8294a8; font-size: 9px; text-align: center; }
 @media (max-width: 1000px) { .cfdi-hero-visual { width: min(210px, 25vw); } }
 @media (max-width: 760px) { .cfdi-hero-visual { width: min(100%, 360px); align-self: stretch; } }
-@media (prefers-reduced-motion: reduce) { .cfdi-hero-visual contaia-video { opacity: .92; } }

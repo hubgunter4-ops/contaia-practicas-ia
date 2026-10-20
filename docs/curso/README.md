@@ -14,9 +14,7 @@ El programa se desarrolla en diez semanas, con tres horas guiadas y una hora de 
 | 2 | Diseño de instrucciones contables | [Materiales detallados del Módulo 2](modulo-02/README.md) |
 | 3–10 | Herramientas, operación, análisis, fiscalidad e integración | Por desarrollar según el plan y la matrícula del grupo |
 
-## Videos explicativos
-
-La [serie de diez videos guiados](videos/README.md) acompaña un módulo por semana. Son recursos complementarios con narración en español, ejemplos ficticios y revisión humana; no sustituyen las sesiones ni los materiales del curso.
+El curso no incluye videos explicativos grabados. Nora mantiene únicamente el acompañamiento interactivo disponible en la aplicación.
 
 ## Supuestos y adaptación
 
