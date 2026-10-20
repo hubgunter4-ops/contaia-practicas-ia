@@ -102,3 +102,7 @@ tests/            Pruebas unitarias y E2E
 server.js         Servidor Node local con las mismas rutas API
 vercel.json       Configuración de build y Functions
 ```
+
+## Centro de herramientas
+
+Consulta el [plan de implementación y despliegue](docs/plan-implementacion-herramientas.md) para conocer el estado actual, las fases propuestas, los procesos, archivos y criterios de liberación. La [API de herramientas](docs/tools-api.md) documenta los recursos de perfiles, conexiones, alertas y vencimientos.

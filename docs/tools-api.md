@@ -2,6 +2,8 @@
 
 El proyecto actual sirve funciones Vercel desde `api/`; por eso el endpoint operativo es `GET|POST|PATCH /api/tools`. La misma lógica está disponible como Route Handler compatible con Next.js en `app/api/tools/route.js`.
 
+El estado funcional y el plan para completar los módulos se describen en [Plan de implementación del Centro de herramientas](plan-implementacion-herramientas.md).
+
 Todas las operaciones requieren `Authorization: Bearer <supabase access token>`. El servidor crea un cliente Supabase con la clave publicable y reenvía el JWT del usuario; nunca usa `service_role`, por lo que las políticas RLS de los perfiles fiscales son obligatorias.
 
 ## Recursos
