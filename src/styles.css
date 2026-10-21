@@ -2,17 +2,17 @@
 
 :root {
   color-scheme: light;
-  --wine: #7a2e3a;
-  --wine-dark: #59202a;
-  --gold: #d8b26e;
-  --gold-pale: #f2e5c9;
-  --paper: #f6f1e8;
-  --paper-bright: #fffcf6;
-  --ink: #272a2b;
-  --muted: #737575;
-  --line: #e1d9cb;
-  --green: #397a63;
-  --green-pale: #e6f0ea;
+  --wine: #1d684f;
+  --wine-dark: #154c3b;
+  --gold: #b2d96d;
+  --gold-pale: #eaf4d9;
+  --paper: #f2f7f3;
+  --paper-bright: #ffffff;
+  --ink: #20372d;
+  --muted: #61756a;
+  --line: #d8e5d8;
+  --green: #1d684f;
+  --green-pale: #e5f1e7;
   --red-pale: #f7e9e7;
   --mono: "DM Mono", "SFMono-Regular", Consolas, monospace;
   --sans: "Alegreya Sans", "Segoe UI", Arial, sans-serif;
@@ -27,7 +27,7 @@ button, textarea { font: inherit; }
 button { color: inherit; }
 a { color: inherit; }
 ::selection { color: white; background: var(--wine); }
-:focus-visible { outline: 3px solid #bc8b36; outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--wine); outline-offset: 3px; }
 .skip-link { position: fixed; z-index: 20; top: 10px; left: 10px; transform: translateY(-160%); padding: 10px 14px; background: var(--ink); color: white; border-radius: 4px; }
 .skip-link:focus { transform: translateY(0); }
 .app-shell { min-height: 100vh; }
@@ -2280,4 +2280,128 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 @keyframes class-check-pop { from { opacity: .35; transform: scale(.65); } 70% { transform: scale(1.22); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .classroom-content *, .class-menu *, .tools-menu * { animation: none !important; transition: none !important; }
+}
+
+
+/* Paleta bosque y lima · opción 4 */
+.sidebar { background: #eaf3e8; border-right-color: var(--line); }
+.sidebar-divider { background: #cddfce; }
+.nav-item { color: #405b4d; }
+.nav-item:hover { background: rgba(29,104,79,.09); color: var(--wine-dark); }
+.nav-item.is-active { background: var(--wine); color: #f8fff8; box-shadow: 0 4px 12px rgba(21,76,59,.2); }
+.is-active .nav-index, .nav-done { color: #d4edaa; }
+.folio-stamp { border-color: #c6d9c5; background: rgba(255,255,255,.62); }
+.topbar { background: rgba(255,255,255,.82); }
+.hero-panel { background: linear-gradient(130deg, var(--wine-dark), var(--wine)); }
+.hero-copy .eyebrow, .hero-copy h1 em, .hero-footer i, .hero-index { color: var(--gold); }
+.button-primary { background: var(--gold); color: #20372d; }
+.button-primary:hover:not(:disabled) { background: #c1e47f; }
+.paper-sheet { background: #f8fbf6; }
+.paper-tab { background: #e6efe2; color: #526a59; }
+.paper-rule { background: #dce8d9; }
+.paper-row { border-color: #e1eadf; }
+.paper-row i { background: #e1efdf; color: var(--green); }
+.paper-stamp { border-color: rgba(29,104,79,.5); color: var(--wine); }
+.notice-strip { border-color: #cfe1c8; background: #eaf3e5; }
+.notice-strip p { color: #4f6656; }
+.notice-strip p strong { color: var(--wine-dark); }
+.notice-icon { color: #20372d; }
+.section-heading h2, .module-info strong { color: var(--ink); }
+.count-pill { border-color: var(--line); color: var(--muted); }
+.progress-track { background: #dce8d9; }
+.module-row:hover { background: rgba(255,255,255,.82); }
+.method-note, .rubric-panel { border-color: var(--line); background: #eaf3e8; }
+.method-note p, .exercise-intro { color: var(--muted); }
+.text-link, .back-link, .notice-link { color: var(--wine); }
+.exercise-number { border-color: #bfd5bf; color: var(--wine); }
+.case-box, .ledger-card, .answer-option { border-color: var(--line); }
+.case-box { background: #edf5e9; }
+.ledger-head { border-color: var(--line); background: #e8f0e5; color: #526b59; }
+.answer-option { background: #fff; color: #40584a; }
+.answer-option:hover, .answer-option.is-selected { border-color: var(--wine); }
+.answer-option.is-selected { background: #edf5e9; }
+.option-marker { border-color: #bfd4bf; color: var(--muted); }
+.writing-prompt textarea { border-color: var(--line); background-color: #fff; background-image: linear-gradient(to bottom, transparent 31px, #e5eee2 32px); color: var(--ink); }
+.rubric-panel li { color: #49624e; }
+.button-quiet:hover:not(:disabled) { border-color: var(--wine); background: #eaf3e8; }
+.work-feedback { border-color: #bfd4bf; background: rgba(255,255,255,.78); }
+.feedback-neutral { border-color: var(--line); background: #edf3e9; }
+.solution-box { border-color: #c9ddc6; background: #f5faf2; }
+.onboarding-card, .course-glossary { border-color: var(--line); background: #edf5e9; }
+.onboarding-complete, .phase5-card, .phase5-project { border-color: var(--line); background: rgba(255,255,255,.86); }
+.glossary-index-entry { border-color: var(--line); background: #fff; }
+.glossary-index-selected, .phase5-heading { background: #eaf3e8; }
+.phase5-heading, .onboarding-card { border-left-color: var(--gold); }
+.section-tab { color: var(--muted); }
+.section-tab:hover { border-color: #c8ddc5; background: #edf5e9; }
+.section-tab.is-active { border-color: var(--wine); background: var(--wine); color: #f8fff8; }
+.section-tab.is-active b { color: #d4edaa; }
+
+/* Transición de vistas y respuesta de controles */
+@keyframes contaia-view-enter { from { opacity: 0; transform: translateY(8px) scale(.996); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes contaia-icon-hop { 0%,100% { transform: translateY(0) scale(1); } 45% { transform: translateY(-3px) scale(1.12); } 75% { transform: translateY(0) scale(.96); } }
+@keyframes contaia-mark-wiggle { 0%,100% { transform: rotate(0) scale(1); } 35% { transform: rotate(-8deg) scale(1.08); } 70% { transform: rotate(5deg) scale(1.04); } }
+.contaia-page-enter { animation: contaia-view-enter 280ms cubic-bezier(.2,.8,.2,1) both; }
+.button, .button-quiet, .button-primary, .tools-card-action, .auth-button, .nav-item, .module-row, .section-tab, .notice-link, .back-link, .next-link {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1);
+}
+.button:hover:not(:disabled), .tools-card-action:hover:not(:disabled) { box-shadow: 0 6px 15px rgba(21,76,59,.14); }
+.button:active:not(:disabled), .tools-card-action:active:not(:disabled) { transform: translateY(1px) scale(.985); box-shadow: none; }
+.home-glyph { display: inline-block; transform-origin: center; }
+.nav-home:hover .home-glyph { animation: contaia-icon-hop 420ms cubic-bezier(.2,.8,.2,1) both; }
+.brand-mark { transform-origin: center; }
+.brand-button:hover .brand-mark { animation: contaia-mark-wiggle 520ms cubic-bezier(.2,.8,.2,1) both; }
+@media (hover: none) { .button:hover:not(:disabled), .tools-card-action:hover:not(:disabled) { box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .contaia-page-enter,
+  .nav-home:hover .home-glyph, .brand-button:hover .brand-mark { animation: none !important; }
+  .button, .button-quiet, .button-primary, .tools-card-action, .auth-button, .nav-item, .module-row, .section-tab, .notice-link, .back-link, .next-link { transition: none !important; }
+}
+
+
+/* Portada pública y fichas · opción bosque y lima */
+.public-landing {
+  --landing-ink: #20372d;
+  --landing-paper: #f2f7f3;
+  --landing-muted: #61756a;
+  --landing-mint: #e5f1e7;
+  --landing-lilac: #b2d96d;
+  --landing-amber: #dcecc1;
+  background: radial-gradient(ellipse at 83% 9%, rgba(178,217,109,.27), transparent 25rem), radial-gradient(ellipse at 8% 44%, rgba(29,104,79,.1), transparent 28rem), var(--landing-paper);
+}
+.public-brand > span > span { color: #1d684f; }
+.public-nav a:hover, .public-login:hover, .public-back-link:hover, .public-footer a:hover, .public-description-bottom a { color: #1d684f; }
+.public-primary-cta { border-color: #1d684f; background: #1d684f; }
+.public-primary-cta:hover { background: #154c3b; }
+.public-card:hover { border-color: rgba(29,104,79,.28); }
+.public-card-assistant { border-color: #254d38; background: #154c3b; }
+.public-card-assistant:hover { border-color: #b2d96d; }
+.public-card-icon { background: #e5f1e7; }
+.public-card-assistant .public-card-icon { background: #b2d96d; }
+.public-card-course .public-card-icon { background: #dcecc1; }
+.public-card-label { background: rgba(29,104,79,.1); color: #1d684f; }
+.public-card-assistant .public-card-label { background: rgba(178,217,109,.14); color: #d6eba5; }
+.public-card-course .public-card-label { background: rgba(178,217,109,.28); color: #536b2e; }
+.public-card-note span, .public-description-list li span { color: #1d684f; }
+.public-card-assistant .public-card-note span { color: #d6eba5; }
+.public-card-cta { background: #1d684f; }
+.public-card-cta:hover { background: #154c3b; }
+.public-card-assistant .public-card-cta { background: #b2d96d; color: #20372d; }
+.public-card-assistant .public-card-cta:hover { background: #c9e78d; }
+.public-card-course .public-card-cta:hover { background: #154c3b; }
+.public-description-icon { background: #dcecc1; }
+.public-description-list li span { color: #1d684f; }
+.public-description-note { background: #154c3b; }
+.public-note-shield { background: rgba(178,217,109,.15); color: #b2d96d; }
+.public-description-bottom a:hover { color: #154c3b; }
+.public-landing :focus-visible { outline-color: #1d684f; }
+.public-primary-cta, .public-card, .public-card-cta, .public-login, .public-nav a, .public-back-link, .public-footer a {
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1);
+}
+.public-primary-cta:active, .public-card-cta:active, .public-login:active { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) {
+  .public-primary-cta, .public-card, .public-card-cta, .public-login, .public-nav a, .public-back-link, .public-footer a { transition: none !important; }
 }

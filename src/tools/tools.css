@@ -131,3 +131,65 @@
   .tools-connection-row { align-items: flex-start; flex-direction: column; padding-block: 12px; }
   .tools-connection-row .button { width: 100%; }
 }
+
+
+/* Centro operativo · opción bosque y lima */
+.tools-hero { background: linear-gradient(125deg, #154c3b, #1d684f); }
+.tools-hero .eyebrow { color: #d4edaa; }
+.tools-hero h1 em, .tools-hero-mark { color: #b2d96d; }
+.tools-hero-mark { border-color: rgba(178,217,109,.55); }
+.tools-hero-mark::before, .tools-hero-mark::after { border-color: rgba(178,217,109,.25); }
+.tools-hero-mark i { background: #b2d96d; }
+.tools-profile-strip { border-color: #c9ddc6; background: #edf5e9; }
+.tools-profile-mark, .tools-card-icon { border-color: #c5d9c3; color: #1d684f; }
+.tools-profile-strip h2, .tools-section-heading h2 { color: #20372d; }
+.tools-profile-strip p:last-child, .tools-card-description, .tools-form-privacy, .tools-connections-note { color: #61756a; }
+.tools-profile-strip .eyebrow, .tools-card-eyebrow { color: #718474; }
+.tools-card { background: #fff; }
+.tools-card:hover { border-color: #9dbb88; box-shadow: 0 9px 22px rgba(29,104,79,.12); }
+.tools-card.is-available { border-top-color: #1d684f; }
+.tools-card-status.is-connection { border-color: #cbdc9c; background: #eef5dc; color: #52692d; }
+.tools-card-action { border-color: #c5d9c3; color: #1d684f; }
+.tools-card-action:hover, .tools-card.is-connection .tools-card-action:hover:not(:disabled) { border-color: #1d684f; background: #edf5e9; }
+.tools-card-action.button-primary { border-color: #b2d96d; background: #b2d96d; color: #20372d; }
+.tools-card-action.button-primary:hover { background: #c1e47f; }
+.tools-notice { border-left-color: #1d684f; background: #eaf3e8; color: #49624e; }
+.tools-disclaimer { border-color: #d8e5d8; background: #eaf3e8; color: #4d6452; }
+.tools-disclaimer > span { background: #b2d96d; color: #20372d; }
+.tools-profile-select, .tools-inline-panel, .tools-connections { border-color: #d8e5d8; background: #fff; color: #20372d; }
+.tools-data-form input:not([type="checkbox"]):not([type="hidden"]), .tools-data-form select { border-color: #d8e5d8; background: #fff; color: #20372d; }
+.tools-data-form input:focus-visible, .tools-data-form select:focus-visible, .tools-profile-select:focus-visible { outline-color: rgba(29,104,79,.28); border-color: #1d684f; }
+.tools-connection-list, .tools-connection-row { border-color: #d8e5d8; }
+.tools-connection-row b { color: #20372d; }
+.tools-notice.is-error { border-left-color: #b9433c; background: #fbe9e6; color: #7b302d; }
+.tools-profile-strip:hover { border-color: #9cbd91; box-shadow: 0 9px 22px rgba(29,104,79,.1); }
+.tools-profile-strip .button:hover:not(:disabled) { box-shadow: 0 7px 16px rgba(29,104,79,.16); }
+.tools-card:hover .tools-card-icon { border-color: currentColor; background: #eef5e5; }
+.tools-card.is-available .tools-card-action { box-shadow: 0 5px 12px rgba(178,217,109,.24); }
+.tools-card-action:hover:not(:disabled) { box-shadow: 0 7px 15px rgba(29,104,79,.14); }
+.tools-card-icon { overflow: hidden; }
+.tools-card[data-tool-card="cfdi"] .tools-card-icon { background: #e5f1e7; color: #1d684f; }
+.tools-card[data-tool-card="accounting"] .tools-card-icon { background: #eef4e2; color: #557c43; }
+.tools-card[data-tool-card="payroll"] .tools-card-icon { background: #e7f0e7; color: #3e7355; }
+.tools-card[data-tool-card="diot"] .tools-card-icon { background: #f0f5dc; color: #718b32; }
+.tools-card[data-tool-card="monitor"] .tools-card-icon { background: #e8f1e2; color: #496e42; }
+.tools-ui-icon { transform-origin: center; }
+.tools-card:hover .tools-ui-icon--cfdi { animation: tools-icon-document 520ms cubic-bezier(.2,.8,.2,1) both; }
+.tools-card:hover .tools-ui-icon--accounting { animation: tools-icon-ledger 520ms cubic-bezier(.2,.8,.2,1) both; }
+.tools-card:hover .tools-ui-icon--payroll { animation: tools-icon-people 520ms cubic-bezier(.2,.8,.2,1) both; }
+.tools-card:hover .tools-ui-icon--diot { animation: tools-icon-diot 520ms cubic-bezier(.2,.8,.2,1) both; }
+.tools-card:hover .tools-ui-icon--monitor { animation: tools-icon-monitor 520ms cubic-bezier(.2,.8,.2,1) both; }
+.tools-card-action, .tools-profile-strip .button { transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease, border-color 180ms ease, color 180ms ease, background-color 180ms ease; }
+.tools-card-action:active:not(:disabled), .tools-profile-strip .button:active:not(:disabled) { transform: scale(.97); }
+@keyframes tools-icon-document { 0% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-2px) rotate(-5deg); } 78% { transform: translateY(1px) rotate(2deg); } 100% { transform: translateY(0) rotate(0); } }
+@keyframes tools-icon-ledger { 0% { transform: scale(1); } 40% { transform: scale(1.12) rotate(3deg); } 72% { transform: scale(.96) rotate(-2deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes tools-icon-people { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-3px); } 65% { transform: translateY(1px); } }
+@keyframes tools-icon-diot { 0% { transform: translateY(0) scale(1); } 45% { transform: translateY(-2px) scale(1.09); } 75% { transform: translateY(1px) scale(.97); } 100% { transform: translateY(0) scale(1); } }
+@keyframes tools-icon-monitor { 0%,100% { transform: scale(1); } 40% { transform: scale(1.1) rotate(-4deg); } 75% { transform: scale(.98) rotate(2deg); } }
+@keyframes tools-status-blink-forest { 0%,100% { opacity: .55; box-shadow: 0 0 0 rgba(178,217,109,0); } 50% { opacity: 1; box-shadow: 0 0 0 5px rgba(178,217,109,.18); } }
+.tools-hero-mark i { animation-name: tools-status-blink-forest; }
+@media (prefers-reduced-motion: reduce) {
+  .tools-card:hover .tools-ui-icon--cfdi, .tools-card:hover .tools-ui-icon--accounting,
+  .tools-card:hover .tools-ui-icon--payroll, .tools-card:hover .tools-ui-icon--diot,
+  .tools-card:hover .tools-ui-icon--monitor { animation: none !important; }
+}

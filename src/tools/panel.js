@@ -65,21 +65,22 @@ function escapeHtml(value) {
 }
 
 const TOOL_ICON_PATHS = Object.freeze({
-  cfdi: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/>',
-  accounting: '<path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/>',
-  payroll: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  diot: '<path d="M4 19V5M4 19h16"/><path d="M8 16v-4M12 16V8M16 16v-7"/>',
-  monitor: '<path d="M12 3 20 6v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z"/><path d="M12 8v5M12 16h.01"/>',
+  cfdi: '<path d="M6.5 2.5h7l4 4v15h-11z"/><path d="M13.5 2.5v4h4M9 11h6M9 14.5h6"/><path d="m9 18 1.5 1.5 3.5-3.5"/>',
+  accounting: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7.5 7h9M7.5 10h9M8 17v-2M12 17v-4M16 17v-6"/>',
+  payroll: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5a5 5 0 0 1 4.5 5.2"/>',
+  diot: '<path d="M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21z"/><path d="M9 8h6M9 12h3"/><circle cx="9" cy="16.5" r=".9"/><circle cx="15" cy="14.5" r=".9"/><path d="m9.7 15.8 4.6-3.1"/>',
+  monitor: '<path d="M12 3 20 6v5c0 5-3.4 8-8 10-4.6-2-8-5-8-10V6z"/><path d="m8.5 12.3 2.2 2.2 4.8-5"/>',
 });
 function toolIcon(id) {
-  return `<svg class="tools-ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOOL_ICON_PATHS[id] || TOOL_ICON_PATHS.monitor}</svg>`;
+  const iconId = TOOL_ICON_PATHS[id] ? id : "monitor";
+  return `<svg class="tools-ui-icon tools-ui-icon--${iconId}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOOL_ICON_PATHS[iconId]}</svg>`;
 }
 
 function renderToolCard(tool) {
   const status = TOOL_STATUS[tool.status] ?? TOOL_STATUS.preparation;
   const isAvailable = tool.status === "available";
   return `<article class="tools-card ${status.className}" data-tool-card="${escapeHtml(tool.id)}">
-    <div class="tools-card-head"><span class="tools-card-icon" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${status.className}">${escapeHtml(status.label)}</span></div>
+    <div class="tools-card-head"><span class="tools-card-icon" role="img" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${status.className}">${escapeHtml(status.label)}</span></div>
     <p class="tools-card-eyebrow">${escapeHtml(tool.eyebrow)}</p>
     <h2>${escapeHtml(tool.title)}</h2>
     <p class="tools-card-description">${escapeHtml(tool.description)}</p>

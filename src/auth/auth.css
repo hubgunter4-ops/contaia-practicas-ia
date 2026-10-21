@@ -70,3 +70,26 @@
 @keyframes contaia-logo-enter { from { opacity: 0; transform: translateY(-.65rem) rotate(-10deg) scale(.8); } to { opacity: 1; transform: translateY(0) rotate(-3deg) scale(1); } }
 @keyframes contaia-logo-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
 @media (prefers-reduced-motion: reduce) { .auth-brand-mark, .auth-brand-mark img { animation: none !important; } .auth-brand:hover .auth-brand-mark { transform: none; } }
+
+
+/* Acceso ContaIA · opción bosque y lima */
+.auth-gate { background: radial-gradient(circle at 13% 18%, rgba(178,217,109,.2), transparent 28rem), linear-gradient(120deg, #102f25, #1d684f 48%, #154c3b); }
+.auth-orb-coral { background: #789b45; }
+.auth-orb-gold { background: #b2d96d; }
+.auth-orb-teal { background: #3d8b62; }
+.auth-brand > span:last-child > span, .auth-brand-story h1 em { color: #c8e78b; }
+.auth-brand-mark, .auth-tutor-avatar { background: linear-gradient(135deg, #1d684f, #6b963d); }
+.auth-brand-mark { box-shadow: 0 0 0 7px rgba(178,217,109,.12), 0 8px 28px rgba(0,0,0,.2); }
+.auth-tutor-avatar { box-shadow: 0 0 0 5px rgba(178,217,109,.16); }
+.auth-gate-card { background: rgba(250,253,247,.97); }
+.auth-gate-card .eyebrow, .auth-gate-options a, .auth-signup a { color: #1d684f; }
+.auth-gate-form input:focus { border-color: #1d684f; box-shadow: 0 0 0 4px rgba(29,104,79,.15); }
+.auth-password-toggle:hover { color: #1d684f; background: #edf5e9; }
+.auth-remember input { accent-color: #1d684f; }
+.auth-gate-submit { background: linear-gradient(135deg, #1d684f, #327d51); box-shadow: 0 .7rem 1.2rem rgba(29,104,79,.24); transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease, background-color 180ms ease; }
+.auth-gate-submit:hover { box-shadow: 0 .9rem 1.5rem rgba(29,104,79,.32); }
+.auth-gate-submit:active:not(:disabled), .auth-sso-button:active:not(:disabled), .auth-button:active:not(:disabled) { transform: scale(.985); }
+.auth-connection-status i { background: #b2d96d; box-shadow: 0 0 0 4px rgba(178,217,109,.16); }
+.auth-confirmation-icon { border-color: #c8ddc6; color: #1d684f; background: #edf5e9; }
+
+.auth-sso-button { transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease; }

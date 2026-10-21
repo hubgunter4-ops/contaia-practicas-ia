@@ -211,3 +211,31 @@
 .cfdi-hero-visual p { margin: 0; color: #8294a8; font-size: 9px; text-align: center; }
 @media (max-width: 1000px) { .cfdi-hero-visual { width: min(210px, 25vw); } }
 @media (max-width: 760px) { .cfdi-hero-visual { width: min(100%, 360px); align-self: stretch; } }
+
+
+/* AuditPro · acentos bosque y lima; el ámbar permanece reservado a alertas */
+.cfdi-page .cfdi-hero { background: radial-gradient(ellipse at 78% 12%, rgba(178,217,109,.12), transparent 38%), linear-gradient(124deg, #0b1422 0%, #101b2a 56%, #152337 100%); }
+.cfdi-page .cfdi-eyebrow, .cfdi-page .cfdi-section-title > div > span, .cfdi-upload-heading > div > span { color: #b2d96d; }
+.cfdi-page .cfdi-hero h1 em { color: #b2d96d; }
+.cfdi-dropzone:hover, .cfdi-dropzone.is-dragging, .cfdi-dropzone:focus-within { border-color: #b2d96d; background: #122019; }
+.cfdi-upload-icon { border-color: #45653f; background: #1b2e20; color: #b2d96d; transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease; }
+.cfdi-dropzone:hover .cfdi-upload-icon, .cfdi-dropzone.is-dragging .cfdi-upload-icon { animation: cfdi-upload-icon-pop 460ms cubic-bezier(.2,.8,.2,1) both; box-shadow: 0 0 0 5px rgba(178,217,109,.1); }
+.cfdi-result-tabs button:hover, .cfdi-result-tabs button.is-active { border-bottom-color: #b2d96d; color: #c8e78b; }
+.cfdi-page .cfdi-nora-handoff { border-color: #456447; background: linear-gradient(110deg, #19271d, #1b2024); }
+.cfdi-nora-handoff > div > span { color: #b2d96d; }
+.cfdi-nora-handoff > button { border-color: #b2d96d; background: #b2d96d; color: #20372d; transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease, background-color 180ms ease; }
+.cfdi-nora-handoff > button:hover { background: #c1e47f; box-shadow: 0 5px 14px rgba(178,217,109,.18); transform: translateY(-1px); }
+.cfdi-page button:not(:disabled) { transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, color 180ms ease, background-color 180ms ease, box-shadow 180ms ease; }
+.cfdi-page button:focus-visible, .cfdi-page input:focus-visible { outline-color: #b2d96d; }
+.cfdi-consent input { accent-color: #b2d96d; }
+.cfdi-visual-icon { border-color: #41624a; background: linear-gradient(145deg, #152d24, #203c32); }
+.cfdi-visual-icon i { background: #b2d96d; color: #20372d; }
+.open-cfdi-context { border-color: #c6d9ae; background: #edf5e5; }
+.open-cfdi-context > span { color: #587841; }
+.open-cfdi-context p { color: #4c6247; }
+.open-cfdi-context button { color: #1d684f; }
+@keyframes cfdi-upload-icon-pop { 0%,100% { transform: translateY(0) scale(1); } 42% { transform: translateY(-3px) scale(1.12); } 72% { transform: translateY(1px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) {
+  .cfdi-dropzone:hover .cfdi-upload-icon, .cfdi-dropzone.is-dragging .cfdi-upload-icon { animation: none !important; }
+  .cfdi-page button:not(:disabled), .cfdi-upload-icon { transition: none !important; }
+}

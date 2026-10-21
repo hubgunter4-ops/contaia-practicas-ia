@@ -15,6 +15,7 @@ import { downloadDocumentArtifact, processDocumentFile } from "./documents/clien
 import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
+let lastPageTransitionKey = "";
 const state = {
   section: "course",
   current: "home",
@@ -1177,6 +1178,26 @@ function renderExercise(exercise) {
 }
 
 function render() {
+  const pageKey = `${location.pathname}${location.search}|${currentUser()?.id ?? "anonymous"}|${state.section}|${state.current}`;
+  const pageChanged = Boolean(lastPageTransitionKey && pageKey !== lastPageTransitionKey);
+  lastPageTransitionKey = pageKey;
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  renderView();
+  if (pageChanged && !reduceMotion) {
+    const page = app.querySelector("#contenido, .auth-gate") || app.firstElementChild;
+    if (page) {
+      page.classList.add("contaia-page-enter");
+      const clearPageAnimation = (event) => {
+        if (event.target !== page) return;
+        page.classList.remove("contaia-page-enter");
+        page.removeEventListener("animationend", clearPageAnimation);
+      };
+      page.addEventListener("animationend", clearPageAnimation);
+    }
+  }
+}
+
+function renderView() {
   const keepAnamVideo = ["course", "advisor"].includes(state.section) && ["live", "connecting"].includes(state.anam.status);
   const persistentVideo = keepAnamVideo ? app.querySelector("[data-anam-video]") : null;
   if (persistentVideo) persistentVideo.remove();

@@ -46,3 +46,12 @@ test("los formularios explican el tratamiento del perfil y las conexiones pendie
   assert.match(connectionHtml, /data-tools-connection-form/);
   assert.match(connectionHtml, /No configura ni verifica una integración/);
 });
+
+
+test("cada herramienta muestra un SVG propio con nombre accesible", () => {
+  const html = renderToolsPanel();
+  const iconIds = [...html.matchAll(/class="tools-ui-icon tools-ui-icon--([a-z]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(iconIds, ["cfdi", "accounting", "payroll", "diot", "monitor"]);
+  assert.equal(new Set(iconIds).size, 5);
+  assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 5);
+});
