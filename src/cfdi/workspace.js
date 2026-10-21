@@ -1,14 +1,21 @@
 import { buildCfdiAnalysis, buildNoraCfdiContext, buildStoredAnalysis } from "./analysis.js";
 import { setAuthClient, updateAuthUser } from "../auth/client.js";
+import { addCfdiFilesToQueue, formatCfdiFileSize, reviewCfdiQueue } from "./upload-queue.js";
 
 export const cfdiState = {
   initialized: false, configStatus: "loading", configMessage: "Conectando con el almacenamiento privado…",
   client: null, user: null, authBusy: false, email: "", authMessage: "", authError: false,
-  analysis: null, fileCount: 0, status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "",
+  analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "",
   savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false,
 };
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+function renderBatchReview() {
+  const review = reviewCfdiQueue(cfdiState.queuedFiles);
+  if (!review.items.length) return "";
+  const processing = cfdiState.status === "processing";
+  return `<section class="cfdi-batch-review" aria-labelledby="cfdi-batch-title"><div class="cfdi-batch-review-head"><div><span>02 · REVISIÓN DEL LOTE</span><h3 id="cfdi-batch-title">${review.items.length} archivo(s) seleccionado(s)</h3><p>Peso total seleccionado: ${formatCfdiFileSize(review.totalBytes)}. El ZIP se valida también al extraerlo.</p></div><button type="button" data-cfdi-clear-queue ${processing ? "disabled" : ""}>Vaciar lote</button></div><ul class="cfdi-batch-files" aria-label="Archivos seleccionados para el lote">${review.items.map(({ file, index, valid, format, reason }) => `<li class="cfdi-batch-file${valid ? "" : " is-invalid"}"><div><b class="cfdi-batch-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name || "Archivo sin nombre")}</b><small>${format} · ${formatCfdiFileSize(file.size)}</small></div><span class="cfdi-batch-file-status${valid ? "" : " is-invalid"}">${valid ? "Listo para analizar" : escapeHtml(reason)}</span><button type="button" class="cfdi-batch-file-remove" data-cfdi-remove-file="${index}" aria-label="Quitar ${escapeHtml(file.name || "archivo sin nombre")} del lote" ${processing ? "disabled" : ""}>Quitar</button></li>`).join("")}</ul>${cfdiState.queueMessage ? `<p class="cfdi-batch-message" role="alert">${escapeHtml(cfdiState.queueMessage)}</p>` : ""}<div class="cfdi-batch-actions"><p>Los nombres y el XML permanecen en esta pestaña; no se envían al servidor ni se guardan en el historial.</p><button type="button" class="cfdi-batch-analyze" data-cfdi-analyze-batch ${!review.canAnalyze || processing ? "disabled" : ""}>${processing ? "Analizando lote…" : `Analizar lote (${review.items.length})`}</button></div></section>`;
+}
 const formatMoney = (amount, currency = "Sin moneda indicada") => {
   const value = Number(amount);
   if (!Number.isFinite(value)) return "—";
@@ -98,11 +105,11 @@ function renderProcessingStatus() {
 export function renderCfdiWorkspace() {
   const analysis = cfdiState.analysis;
   const currentTab = cfdiState.activeTab;
-  const body = !analysis ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>El análisis empieza aquí</b><p>Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador.</p></div>`
+  const body = !analysis ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>${cfdiState.queuedFiles.length ? "Lote listo para analizar" : "El análisis empieza aquí"}</b><p>${cfdiState.queuedFiles.length ? "Confirma la revisión del lote para analizarlo localmente; los resultados aparecerán aquí." : "Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador."}</p></div>`
     : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section><div class="cfdi-nora-handoff"><div><span>NORA · ACOMPAÑAMIENTO</span><b>¿Quieres interpretar una alerta o revisar una diferencia?</b><p>Solo se preparará un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando envíes tu pregunta en el Asistente abierto.</p></div><button type="button" data-cfdi-ask-nora>Pedir apoyo a Nora <span aria-hidden="true">↗</span></button></div><button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
   const pending = cfdiState.pendingRequest ? `<aside class="cfdi-origin-request"><div><span>DERIVADO DESDE ASISTENTE ABIERTO</span><p>${escapeHtml(cfdiState.pendingRequest)}</p></div><button type="button" data-cfdi-dismiss-request aria-label="Quitar solicitud de origen">×</button></aside>` : "";
-  const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
-  return `<main id="contenido" class="content cfdi-page" data-cfdi-page tabindex="-1"><header class="cfdi-hero"><div><p class="cfdi-eyebrow">MÓDULO INDEPENDIENTE · CFDI</p><h1>Analiza tus comprobantes.<br/><em>Con criterio y control.</em></h1><p>Lee XML y ZIP, relaciona complementos de pago con facturas y localiza diferencias para revisar. El XML permanece en tu navegador.</p></div><div class="cfdi-hero-visual" aria-hidden="true"><div class="cfdi-visual-icon"><span>XML</span><i>✓</i></div><p>Lectura y validación local</p></div><aside class="cfdi-local-badge"><span class="cfdi-local-pulse"></span><b>PROCESAMIENTO LOCAL</b><small>Sin carga de XML al servidor</small></aside></header>${pending}<section class="cfdi-workspace" aria-label="Carga y análisis de CFDI"><div class="cfdi-workspace-main"><section class="cfdi-upload-card" aria-labelledby="cfdi-upload-title"><div class="cfdi-upload-heading"><div><span>01 · CARGA CONTROLADA</span><h2 id="cfdi-upload-title">Añade uno o varios archivos</h2></div><span class="cfdi-format-pill">.XML · .ZIP</span></div><label class="cfdi-dropzone" for="cfdi-files" data-cfdi-drop><input id="cfdi-files" type="file" data-cfdi-files multiple accept=".xml,.zip,application/xml,text/xml,application/zip"/><span class="cfdi-upload-icon" aria-hidden="true">↑</span><b>${cfdiState.status === "processing" ? "Procesando localmente…" : "Selecciona o arrastra XML / ZIP"}</b><small>Hasta 100 XML · 5 MB por XML · 25 MB extraídos · ZIP de hasta 20 MB</small></label><p class="cfdi-file-count" data-cfdi-file-count>${cfdiState.fileCount ? `${cfdiState.fileCount} archivo(s) procesados en memoria` : "No se conserva el nombre de los archivos al guardar."}</p>${status}<p class="cfdi-privacy-note"><b>Privacidad:</b> el XML no se envía a Nora ni a Supabase. Guardar el resultado es opcional y puede conservar RFC, nombres, UUID y folios solo en tu cuenta privada.</p></section>${analysis ? body : `<section class="cfdi-preflight">${body}</section>`}</div><aside class="cfdi-storage-column">${renderStoragePanel()}</aside></section><footer class="cfdi-disclaimer"><b>Alcance del análisis</b><p>La lógica de extracción y prorrateo replica el parser de PDFC. Un pago sin factura cargada puede mostrar una estimación de IVA al 16%; se marca como estimación. Las alertas son comprobaciones aritméticas y de relación, no una validación ante el SAT ni un dictamen profesional.</p></footer></main>`;
+  const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
+  return `<main id="contenido" class="content cfdi-page" data-cfdi-page tabindex="-1"><header class="cfdi-hero"><div><p class="cfdi-eyebrow">MÓDULO INDEPENDIENTE · CFDI</p><h1>Analiza tus comprobantes.<br/><em>Con criterio y control.</em></h1><p>Lee XML y ZIP, relaciona complementos de pago con facturas y localiza diferencias para revisar. El XML permanece en tu navegador.</p></div><div class="cfdi-hero-visual" aria-hidden="true"><div class="cfdi-visual-icon"><span>XML</span><i>✓</i></div><p>Lectura y validación local</p></div><aside class="cfdi-local-badge"><span class="cfdi-local-pulse"></span><b>PROCESAMIENTO LOCAL</b><small>Sin carga de XML al servidor</small></aside></header>${pending}<section class="cfdi-workspace" aria-label="Carga y análisis de CFDI"><div class="cfdi-workspace-main"><section class="cfdi-upload-card" aria-labelledby="cfdi-upload-title"><div class="cfdi-upload-heading"><div><span>01 · CARGA CONTROLADA</span><h2 id="cfdi-upload-title">Añade uno o varios archivos</h2></div><span class="cfdi-format-pill">.XML · .ZIP</span></div><label class="cfdi-dropzone" for="cfdi-files" data-cfdi-drop><input id="cfdi-files" type="file" data-cfdi-files multiple ${cfdiState.status === "processing" ? "disabled" : ""} accept=".xml,.zip,application/xml,text/xml,application/zip"/><span class="cfdi-upload-icon" aria-hidden="true">↑</span><b>${cfdiState.status === "processing" ? "Procesando localmente…" : cfdiState.queuedFiles.length ? "Añade más archivos al lote" : "Selecciona o arrastra XML / ZIP"}</b><small>Hasta 100 archivos por lote · XML de hasta 5 MB · ZIP de hasta 20 MB · 25 MB XML extraídos</small></label><p class="cfdi-file-count" data-cfdi-file-count>${cfdiState.queuedFiles.length ? `${cfdiState.queuedFiles.length} archivo(s) en revisión; el análisis comienza al confirmar.` : cfdiState.fileCount ? `${cfdiState.fileCount} archivo(s) procesados en memoria` : "Los nombres solo se muestran durante la revisión; no se conservan al guardar."}</p>${renderBatchReview()}${status}<p class="cfdi-privacy-note"><b>Privacidad:</b> el XML no se envía a Nora ni a Supabase. Guardar el resultado es opcional y puede conservar RFC, nombres, UUID y folios solo en tu cuenta privada.</p></section>${analysis ? body : `<section class="cfdi-preflight">${body}</section>`}</div><aside class="cfdi-storage-column">${renderStoragePanel()}</aside></section><footer class="cfdi-disclaimer"><b>Alcance del análisis</b><p>La lógica de extracción y prorrateo replica el parser de PDFC. Un pago sin factura cargada puede mostrar una estimación de IVA al 16%; se marca como estimación. Las alertas son comprobaciones aritméticas y de relación, no una validación ante el SAT ni un dictamen profesional.</p></footer></main>`;
 }
 
 async function loadSupabaseClient() {
@@ -181,6 +188,8 @@ async function analyzeFiles(files) {
     cfdiState.processingStep = 2;
     document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
     await new Promise((resolve) => setTimeout(resolve, 140));
+    cfdiState.queuedFiles = [];
+    cfdiState.queueMessage = "";
     cfdiState.fileCount = files.length;
     cfdiState.activeTab = "overview";
     cfdiState.status = "ready";
@@ -192,6 +201,22 @@ async function analyzeFiles(files) {
     cfdiState.fileCount = 0;
     cfdiState.status = "error";
     cfdiState.error = error instanceof Error ? error.message : "El archivo no pudo analizarse.";
+  }
+  document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
+}
+
+function stageCfdiFiles(files) {
+  if (cfdiState.status === "processing") return;
+  const incoming = Array.from(files || []);
+  if (!incoming.length) return;
+  const result = addCfdiFilesToQueue(cfdiState.queuedFiles, incoming);
+  cfdiState.queuedFiles = result.files;
+  cfdiState.queueMessage = result.skipped
+    ? `${result.skipped} archivo(s) no se añadieron: el límite es de 100 por lote. Analiza el lote actual y selecciona los restantes después.`
+    : "";
+  if (cfdiState.status === "error") {
+    cfdiState.status = cfdiState.analysis ? "ready" : "empty";
+    cfdiState.error = "";
   }
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
 }
@@ -251,7 +276,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     if (!event.target.matches("[data-cfdi-files]")) return;
     const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (files.length) void analyzeFiles(files);
+    if (files.length) stageCfdiFiles(files);
   });
   app.addEventListener("dragover", (event) => {
     if (!event.target.closest("[data-cfdi-drop]")) return;
@@ -265,9 +290,35 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     event.preventDefault();
     drop.classList.remove("is-dragging");
     const files = Array.from(event.dataTransfer?.files || []);
-    if (files.length) void analyzeFiles(files);
+    if (files.length) stageCfdiFiles(files);
   });
   app.addEventListener("click", async (event) => {
+    const analyzeBatch = event.target.closest("[data-cfdi-analyze-batch]");
+    if (analyzeBatch) {
+      const review = reviewCfdiQueue(cfdiState.queuedFiles);
+      if (cfdiState.status !== "processing" && review.canAnalyze) void analyzeFiles([...cfdiState.queuedFiles]);
+      return;
+    }
+    const removeQueuedFile = event.target.closest("[data-cfdi-remove-file]");
+    if (removeQueuedFile) {
+      const index = Number(removeQueuedFile.dataset.cfdiRemoveFile);
+      if (cfdiState.status !== "processing" && Number.isInteger(index) && index >= 0) {
+        cfdiState.queuedFiles = cfdiState.queuedFiles.filter((_, fileIndex) => fileIndex !== index);
+        cfdiState.queueMessage = cfdiState.queuedFiles.length ? cfdiState.queueMessage : "";
+        if (cfdiState.status === "error") { cfdiState.status = cfdiState.analysis ? "ready" : "empty"; cfdiState.error = ""; }
+        onUpdate();
+      }
+      return;
+    }
+    if (event.target.closest("[data-cfdi-clear-queue]")) {
+      if (cfdiState.status !== "processing") {
+        cfdiState.queuedFiles = [];
+        cfdiState.queueMessage = "";
+        if (cfdiState.status === "error") { cfdiState.status = cfdiState.analysis ? "ready" : "empty"; cfdiState.error = ""; }
+        onUpdate();
+      }
+      return;
+    }
     const tab = event.target.closest("[data-cfdi-tab]");
     if (tab) { cfdiState.activeTab = tab.dataset.cfdiTab; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-reset]")) {

@@ -239,3 +239,33 @@
   .cfdi-dropzone:hover .cfdi-upload-icon, .cfdi-dropzone.is-dragging .cfdi-upload-icon { animation: none !important; }
   .cfdi-page button:not(:disabled), .cfdi-upload-icon { transition: none !important; }
 }
+
+
+/* Revisión previa de lotes del importador local. */
+.cfdi-batch-review { margin: 12px 0 2px; padding: 12px; border: 1px solid #35485b; border-radius: 8px; background: #0d1724; }
+.cfdi-batch-review-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cfdi-batch-review-head > div { min-width: 0; }
+.cfdi-batch-review-head > div > span { display: block; margin-bottom: 4px; color: #b2d96d; font: 8px "DM Mono", Consolas, monospace; letter-spacing: .09em; }
+.cfdi-batch-review-head h3 { margin: 0; color: #e8edf4; font-size: 12px; }
+.cfdi-batch-review-head p { margin: 4px 0 0; color: #8998a8; font-size: 9px; }
+.cfdi-batch-review-head button, .cfdi-batch-file-remove { flex: none; min-height: 28px; padding: 5px 8px; border: 1px solid #405166; border-radius: 5px; background: #152234; color: #bdc8d5; font-size: 8px; cursor: pointer; }
+.cfdi-batch-files { display: grid; gap: 0; margin: 9px 0 0; padding: 0; list-style: none; }
+.cfdi-batch-file { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #243448; }
+.cfdi-batch-file > div { min-width: 0; display: grid; gap: 3px; }
+.cfdi-batch-file-name { overflow: hidden; color: #dbe4ed; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.cfdi-batch-file small { color: #8291a2; font-size: 8px; }
+.cfdi-batch-file-status { color: #a7d9b8; font-size: 8px; }
+.cfdi-batch-file-status.is-invalid { color: #f0c56a; }
+.cfdi-batch-file.is-invalid .cfdi-batch-file-name { color: #e9c98e; }
+.cfdi-batch-message { margin: 8px 0 0; padding: 7px 8px; border: 1px solid #665331; border-radius: 5px; background: #272419; color: #f0c56a; font-size: 9px; line-height: 1.4; }
+.cfdi-batch-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 9px; padding-top: 9px; border-top: 1px solid #243448; }
+.cfdi-batch-actions p { margin: 0; color: #8795a5; font-size: 8px; line-height: 1.4; }
+.cfdi-batch-analyze { flex: none; min-height: 34px; padding: 7px 11px; border: 1px solid #577540; border-radius: 5px; background: #22341f; color: #c8e78b; font-size: 9px; font-weight: 650; cursor: pointer; }
+.cfdi-batch-analyze:hover:not(:disabled) { border-color: #b2d96d; background: #2a4025; }
+@media (max-width: 560px) {
+  .cfdi-batch-file { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; }
+  .cfdi-batch-file-status { grid-column: 1; }
+  .cfdi-batch-file-remove { grid-column: 2; grid-row: 1 / span 2; }
+  .cfdi-batch-actions { align-items: stretch; flex-direction: column; }
+  .cfdi-batch-analyze { width: 100%; }
+}

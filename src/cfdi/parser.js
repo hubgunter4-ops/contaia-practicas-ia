@@ -1,9 +1,9 @@
 import JSZip from "jszip";
+import { MAX_BATCH_FILES, MAX_UPLOAD_BYTES } from "./upload-queue.js";
 
-const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const MAX_XML_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_XML_BYTES = 25 * 1024 * 1024;
-const MAX_XML_FILES = 100;
+const MAX_XML_FILES = MAX_BATCH_FILES;
 const paymentForms = {
   "01": "01 - Efectivo", "02": "02 - Cheque nominativo", "03": "03 - Transferencia electrónica de fondos",
   "04": "04 - Tarjeta de crédito", "05": "05 - Monedero electrónico", "06": "06 - Dinero electrónico",
