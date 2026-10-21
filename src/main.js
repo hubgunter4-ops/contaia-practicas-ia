@@ -12,7 +12,7 @@ import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorksp
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
 
 const app = document.querySelector("#app");
 const state = {
@@ -1184,6 +1184,10 @@ function render() {
   const publicInfoRoute = location.pathname.replace(/^\/+|\/+$/g, "");
   if (Object.prototype.hasOwnProperty.call(PUBLIC_INFO_PAGES, publicInfoRoute)) {
     app.innerHTML = renderPublicInfoPage(publicInfoRoute);
+    return;
+  }
+  if (publicInfoRoute === "confirmar-correo") {
+    app.innerHTML = renderEmailConfirmationGate();
     return;
   }
   if (!currentUser()) {

@@ -143,6 +143,7 @@ export async function initializeCfdiWorkspace() {
   catch {
     cfdiState.configStatus = "error";
     cfdiState.configMessage = "No fue posible conectar con el historial privado. El análisis local sigue disponible.";
+    setAuthClient(null, null);
   }
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
 }

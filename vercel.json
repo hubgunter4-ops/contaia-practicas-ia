@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/registro", "destination": "/" },
+    { "source": "/confirmar-correo", "destination": "/" },
     { "source": "/descripcion/cfdi", "destination": "/" },
     { "source": "/descripcion/asistente", "destination": "/" },
     { "source": "/descripcion/anam", "destination": "/" },
