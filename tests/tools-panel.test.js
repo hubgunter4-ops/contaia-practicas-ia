@@ -55,3 +55,38 @@ test("cada herramienta muestra un SVG propio con nombre accesible", () => {
   assert.equal(new Set(iconIds).size, 5);
   assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 5);
 });
+
+
+test("cada herramienta distingue los cinco estados de conexión por ambiente", () => {
+  const html = renderToolsPanel({ workspace: {
+    selectedProfileId: "profile-1",
+    connections: [
+      { tool_key: "cfdi", environment: "sandbox", status: "pending" },
+      { tool_key: "accounting", environment: "production", status: "connected" },
+      { tool_key: "payroll", environment: "sandbox", status: "degraded" },
+      { tool_key: "diot", environment: "production", status: "error" },
+    ],
+  } });
+  const expectedStates = [
+    ["not_configured", "is-not-configured", "Sin configurar"],
+    ["pending", "is-pending", "Pendiente"],
+    ["connected", "is-connected", "Conectada"],
+    ["requires_review", "is-review", "Requiere revisión"],
+    ["error", "is-error", "Error"],
+  ];
+  for (const [key, className, label] of expectedStates) {
+    assert.ok(html.includes(`data-connection-status="${key}"`), `falta estado ${key}`);
+    assert.ok(html.includes(`tools-connection-status ${className}`), `falta estilo ${className}`);
+    assert.ok(html.includes(label), `falta etiqueta ${label}`);
+  }
+
+  const cards = html.match(/<article class="tools-card[\s\S]*?<\/article>/g) || [];
+  assert.equal(cards.length, TOOL_DEFINITIONS.length);
+  for (const card of cards) {
+    assert.match(card, /ESTADO DE INTEGRACIÓN/);
+    assert.equal((card.match(/class="tools-connection-status /g) || []).length, 2);
+    assert.match(card, /data-environment="sandbox"/);
+    assert.match(card, /data-environment="production"/);
+  }
+  assert.equal((html.match(/class="tools-connection-row" data-tool-key=/g) || []).length, 10);
+});

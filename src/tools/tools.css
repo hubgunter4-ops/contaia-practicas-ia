@@ -193,3 +193,32 @@
   .tools-card:hover .tools-ui-icon--payroll, .tools-card:hover .tools-ui-icon--diot,
   .tools-card:hover .tools-ui-icon--monitor { animation: none !important; }
 }
+
+
+/* Estados de integración: icono, etiqueta y contraste por categoría */
+.tools-card-connection { margin-top: 12px; padding: 9px 10px; border: 1px solid #d8e5d8; border-radius: 8px; background: #f7faf5; }
+.tools-card-connection-label, .tools-status-legend-label { color: #718474; font: 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.tools-card-connection-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.tools-connection-status { width: fit-content; max-width: 100%; display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid transparent; border-radius: 999px; font-size: 10px; font-weight: 650; line-height: 1.25; white-space: nowrap; }
+.tools-connection-status-icon { min-width: 12px; font-size: 12px; font-weight: 800; line-height: 1; text-align: center; }
+.tools-connection-status-environment { font-size: 9px; font-weight: 500; }
+.tools-connection-status.is-not-configured { border-color: #d8e2d6; background: #f0f4ed; color: #5f7063; }
+.tools-connection-status.is-pending { border-color: #e5d798; background: #fbf6df; color: #75601b; }
+.tools-connection-status.is-connected { border-color: #b8d8bc; background: #e7f4e8; color: #286344; }
+.tools-connection-status.is-review { border-color: #e9c58a; background: #fff3df; color: #805216; }
+.tools-connection-status.is-error { border-color: #e7b6b1; background: #fbeae8; color: #8c302d; }
+.tools-connection-status.is-disabled, .tools-connection-status.is-unknown { border-color: #d7d4ce; background: #f2f0ec; color: #66615a; }
+.tools-connection-loading { display: inline-block; margin-top: 7px; color: #718474; font-size: 11px; }
+.tools-status-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 14px; }
+.tools-status-legend-label { margin-right: 2px; }
+.tools-connection-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; }
+.tools-connection-row > div { min-width: 0; display: grid; gap: 3px; }
+.tools-connection-row > div b { overflow-wrap: anywhere; }
+.tools-connection-row .tools-connection-row-environment { color: #718474; font-size: 10px; }
+.tools-connection-row > .tools-connection-status { justify-self: start; }
+@media (max-width: 760px) {
+  .tools-connection-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .tools-connection-row > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 10px; }
+  .tools-connection-row > .button { width: 100%; }
+  .tools-status-legend { gap: 5px; }
+}

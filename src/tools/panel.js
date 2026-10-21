@@ -76,22 +76,60 @@ function toolIcon(id) {
   return `<svg class="tools-ui-icon tools-ui-icon--${iconId}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOOL_ICON_PATHS[iconId]}</svg>`;
 }
 
-function renderToolCard(tool) {
+const CONNECTION_STATES = Object.freeze({
+  not_configured: { label: "Sin configurar", className: "is-not-configured", icon: "○", description: "No hay un registro de conexión para este ambiente." },
+  pending: { label: "Pendiente", className: "is-pending", icon: "◷", description: "El registro está pendiente; esto no confirma una conexión real." },
+  connected: { label: "Conectada", className: "is-connected", icon: "✓", description: "El registro figura como conectado; confirma su estado con el proveedor." },
+  requires_review: { label: "Requiere revisión", className: "is-review", icon: "!", description: "La conexión necesita revisión antes de continuar." },
+  error: { label: "Error", className: "is-error", icon: "×", description: "El registro contiene un error que debe revisarse." },
+  disabled: { label: "Deshabilitada", className: "is-disabled", icon: "—", description: "La integración está deshabilitada." },
+  unknown: { label: "Estado desconocido", className: "is-unknown", icon: "?", description: "El servidor devolvió un estado no reconocido." },
+});
+const CONNECTION_ENVIRONMENTS = Object.freeze([
+  { key: "sandbox", label: "Pruebas" },
+  { key: "production", label: "Producción" },
+]);
+const CONNECTION_LEGEND_STATES = Object.freeze(["not_configured", "pending", "connected", "requires_review", "error"]);
+
+function normalizeConnectionStatus(status) {
+  if (["degraded", "review_required", "requires_review"].includes(status)) return "requires_review";
+  if (Object.hasOwn(CONNECTION_STATES, status)) return status;
+  return status ? "unknown" : "not_configured";
+}
+
+function renderConnectionStatusBadge(status, environment = "") {
+  const statusKey = normalizeConnectionStatus(status);
+  const state = CONNECTION_STATES[statusKey];
+  const environmentInfo = CONNECTION_ENVIRONMENTS.find((item) => item.key === environment);
+  const accessibleLabel = environmentInfo ? `${environmentInfo.label}: ${state.label}` : state.label;
+  return `<span class="tools-connection-status ${state.className}" data-connection-status="${statusKey}"${environmentInfo ? ` data-environment="${environmentInfo.key}"` : ""} aria-label="${escapeHtml(accessibleLabel)}" title="${escapeHtml(state.description)}"><span class="tools-connection-status-icon" aria-hidden="true">${state.icon}</span>${environmentInfo ? `<span class="tools-connection-status-environment">${escapeHtml(environmentInfo.label)} ·</span>` : ""}<span class="tools-connection-status-label">${escapeHtml(state.label)}</span></span>`;
+}
+
+function renderToolConnectionSummary(tool, workspace = {}) {
+  if (workspace.loading || workspace.connectionsLoading) {
+    return `<div class="tools-card-connection"><span class="tools-card-connection-label">ESTADO DE INTEGRACIÓN</span><span class="tools-connection-loading" role="status">Consultando estados…</span></div>`;
+  }
+  const connections = Array.isArray(workspace.connections) ? workspace.connections : [];
+  const badges = CONNECTION_ENVIRONMENTS.map(({ key }) => {
+    const connection = connections.find((item) => item.tool_key === tool.id && item.environment === key);
+    return renderConnectionStatusBadge(connection?.status ?? "not_configured", key);
+  }).join("");
+  return `<div class="tools-card-connection"><span class="tools-card-connection-label">ESTADO DE INTEGRACIÓN</span><div class="tools-card-connection-list">${badges}</div></div>`;
+}
+
+function renderToolCard(tool, workspace = {}) {
   const status = TOOL_STATUS[tool.status] ?? TOOL_STATUS.preparation;
   const isAvailable = tool.status === "available";
   return `<article class="tools-card ${status.className}" data-tool-card="${escapeHtml(tool.id)}">
-    <div class="tools-card-head"><span class="tools-card-icon" role="img" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${status.className}">${escapeHtml(status.label)}</span></div>
+    <div class="tools-card-head"><span class="tools-card-icon" role="img" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${status.className}" title="Disponibilidad funcional del módulo">${escapeHtml(status.label)}</span></div>
     <p class="tools-card-eyebrow">${escapeHtml(tool.eyebrow)}</p>
     <h2>${escapeHtml(tool.title)}</h2>
     <p class="tools-card-description">${escapeHtml(tool.description)}</p>
+    ${renderToolConnectionSummary(tool, workspace)}
     <div class="tools-card-foot"><small>${escapeHtml(tool.detail)}</small><button type="button" class="tools-card-action ${isAvailable ? "button-primary" : "button-quiet"}" data-tool-action="${escapeHtml(tool.id)}">${escapeHtml(tool.actionLabel)} <span aria-hidden="true">${isAvailable ? "↗" : "→"}</span></button></div>
   </article>`;
 }
 
-const CONNECTION_LABELS = Object.freeze({
-  not_configured: "Sin configurar", pending: "Pendiente", connected: "Conectada",
-  degraded: "Degradada", error: "Error", disabled: "Deshabilitada",
-});
 const TOOL_LABELS = Object.freeze(Object.fromEntries(TOOL_DEFINITIONS.map(({ id, title }) => [id, title])));
 
 function maskRfc(value = "") {
@@ -134,15 +172,11 @@ function renderConnections(workspace) {
   if (workspace.loading) return `<p class="tools-empty-state" role="status">Cargando conexiones…</p>`;
   if (!workspace.selectedProfileId) return `<p class="tools-empty-state">Crea o selecciona un perfil fiscal para consultar sus conexiones.</p>`;
   if (workspace.connectionsLoading) return `<p class="tools-empty-state" role="status">Cargando conexiones de este perfil…</p>`;
-  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.map((tool) => {
-    const connections = workspace.connections.filter((item) => item.tool_key === tool.id);
-    if (!connections.length) return `<article class="tools-connection-row"><div><b>${escapeHtml(tool.title)}</b><span>Sin registro</span></div><button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="sandbox">Registrar pendiente</button></article>`;
-    return connections.map((connection) => {
-      const status = CONNECTION_LABELS[connection.status] || "Estado desconocido";
-      const environment = connection.environment === "production" ? "Producción" : "Sandbox";
-      return `<article class="tools-connection-row"><div><b>${escapeHtml(tool.title)}</b><span>${escapeHtml(status)} · ${environment}</span></div><button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="${escapeHtml(connection.environment)}">Actualizar registro</button></article>`;
-    }).join("");
-  }).join("")}</div>`;
+  const connections = Array.isArray(workspace.connections) ? workspace.connections : [];
+  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
+    const connection = connections.find((item) => item.tool_key === tool.id && item.environment === key);
+    return `<article class="tools-connection-row" data-tool-key="${escapeHtml(tool.id)}" data-environment="${key}"><div><b>${escapeHtml(tool.title)}</b><span class="tools-connection-row-environment">${label}</span></div>${renderConnectionStatusBadge(connection?.status ?? "not_configured")}<button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="${key}">${connection ? "Actualizar registro" : "Registrar pendiente"}</button></article>`;
+  }).join("")).join("")}</div>`;
 }
 
 export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
@@ -165,9 +199,9 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
     ${currentError ? `<p class="tools-notice is-error" role="alert">${escapeHtml(currentError)}</p>` : ""}${currentNotice ? `<p class="tools-notice" role="status">${escapeHtml(currentNotice)}</p>` : ""}
     ${workspace.loading && !workspace.loaded ? `<p class="tools-load-status" role="status">Conectando con tu espacio privado…</p>` : ""}
     ${forms}
-    <section class="tools-connections" aria-labelledby="tools-connections-title"><div class="tools-section-heading"><div><p class="eyebrow">INTEGRACIONES</p><h2 id="tools-connections-title">Conexiones por perfil</h2></div><button type="button" class="button button-quiet" data-tools-ui="refresh" ${workspace.loading || workspace.saving ? "disabled" : ""}>Actualizar</button></div><p class="tools-connections-note">El estado mostrado es un registro administrativo; “Pendiente” no significa que exista una conexión real.</p>${renderConnections(workspace)}</section>
+    <section class="tools-connections" aria-labelledby="tools-connections-title"><div class="tools-section-heading"><div><p class="eyebrow">INTEGRACIONES</p><h2 id="tools-connections-title">Conexiones por perfil</h2></div><button type="button" class="button button-quiet" data-tools-ui="refresh" ${workspace.loading || workspace.saving ? "disabled" : ""}>Actualizar</button></div><p class="tools-connections-note">El estado es un registro administrativo: solo una verificación externa confirma una conexión. “Pendiente” no significa que exista una conexión real.</p><div class="tools-status-legend" aria-label="Leyenda de estados de conexión"><span class="tools-status-legend-label">Estados:</span>${CONNECTION_LEGEND_STATES.map((status) => renderConnectionStatusBadge(status)).join("")}</div>${renderConnections(workspace)}</section>
     <section class="tools-section-heading"><div><p class="eyebrow">MÓDULOS</p><h2>Elige una herramienta</h2></div><span class="tools-count">${availableCount} disponible · ${TOOL_DEFINITIONS.length - availableCount} en preparación o por conectar</span></section>
-    <section class="tools-grid" aria-label="Herramientas de ContaIA">${TOOL_DEFINITIONS.map(renderToolCard).join("")}</section>
+    <section class="tools-grid" aria-label="Herramientas de ContaIA">${TOOL_DEFINITIONS.map((tool) => renderToolCard(tool, workspace)).join("")}</section>
     <footer class="tools-disclaimer"><span aria-hidden="true">!</span><p><b>Control antes de enviar.</b> Las herramientas pueden preparar, validar y explicar información. El timbrado, la cancelación, la nómina y cualquier presentación fiscal requieren conexión autorizada y confirmación humana.</p></footer>
   </main>`;
 }
