@@ -1,0 +1,1 @@
+Prueba de despliegue automático en Vercel. Commit de verificación firmado por GitHub; no cambia la aplicación.
