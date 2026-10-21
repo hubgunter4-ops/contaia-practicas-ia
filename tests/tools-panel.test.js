@@ -4,18 +4,25 @@ import { renderToolsPanel, TOOL_DEFINITIONS } from "../src/tools/panel.js";
 
 test("el panel ofrece las herramientas fiscales con estados explícitos", () => {
   assert.equal(TOOL_DEFINITIONS.length, 5);
-  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "cfdi")?.status, "available");
-  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.status !== "available").length, 4);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "cfdi")?.availability, "ready");
+  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.availability !== "ready").length, 4);
+  assert.ok(TOOL_DEFINITIONS.every((tool) => tool.description && tool.actionLabel && tool.detail));
 });
 
 test("el panel renderiza el perfil fiscal, las tarjetas y el aviso de control", () => {
   const html = renderToolsPanel({ notice: "Configura tu empresa" });
-  assert.match(html, /Centro operativo/);
+  assert.match(html, /Herramientas fiscales con claridad/);
+  assert.match(html, /class="tool-shell-header tools-dashboard-header"/);
+  assert.doesNotMatch(html, /class="tool-shell-header tools-hero"/);
   assert.match(html, /Perfil fiscal/);
   assert.match(html, /CFDI 4\.0/);
   assert.match(html, /Monitor fiscal/);
   assert.match(html, /Configura tu empresa/);
   assert.match(html, /data-tool-action="cfdi"/);
+  assert.match(html, /Selecciona un perfil/);
+  assert.match(html, /Leer archivos de apoyo/);
+  assert.match(html, /data-section="advisor"/);
+  assert.match(html, /nora-idle\.webp/);
 });
 
 test("el panel lista perfiles por cuenta y oculta parcialmente el RFC", () => {
@@ -33,9 +40,23 @@ test("el panel lista perfiles por cuenta y oculta parcialmente el RFC", () => {
   assert.match(html, /Conexiones por perfil/);
 });
 
+test("bloquea el selector de perfil mientras se guarda una operación", () => {
+  const html = renderToolsPanel({ workspace: {
+    profiles: [
+      { id: "profile-1", legal_name: "ContaIA Uno", rfc: "CID010101AB1", active: true },
+      { id: "profile-2", legal_name: "ContaIA Dos", rfc: "AAA010101AAA", active: true },
+    ],
+    selectedProfileId: "profile-1", connections: [], saving: true,
+  } });
+  assert.match(html, /data-tools-profile-select disabled/);
+});
+
 test("los formularios explican el tratamiento del perfil y las conexiones pendientes", () => {
   const profileHtml = renderToolsPanel({ workspace: { profileForm: {}, profiles: [], connections: [] } });
   assert.match(profileHtml, /data-tools-profile-form/);
+  assert.match(profileHtml, /data-tool-shell="fiscal-profile"/);
+  assert.match(profileHtml, /<h2 id="tools-profile-form-title">Configura un perfil fiscal<\/h2>/);
+  assert.match(profileHtml, /tools-module-nora/);
   assert.match(profileHtml, /name="rfc"/);
   assert.match(profileHtml, /No ingreses contraseñas, e\.firma, CSD/);
   assert.match(profileHtml, /name="acknowledge" required/);
@@ -44,16 +65,29 @@ test("los formularios explican el tratamiento del perfil y las conexiones pendie
     connectionForm: { tool_key: "accounting" }, selectedProfileId: "profile-1", connections: [], profiles: [],
   } });
   assert.match(connectionHtml, /data-tools-connection-form/);
+  assert.match(connectionHtml, /data-tool-shell="connection-record"/);
+  assert.match(connectionHtml, /<h2 id="tools-connection-form-title">Registro de Contabilidad<\/h2>/);
+  assert.match(connectionHtml, /Sin configurar · pruebas/);
+  assert.match(connectionHtml, /tools-module-nora/);
   assert.match(connectionHtml, /No configura ni verifica una integración/);
+
+  const connectedRecordHtml = renderToolsPanel({ workspace: {
+    connectionForm: { tool_key: "cfdi", environment: "production" },
+    selectedProfileId: "profile-1", connections: [{ tool_key: "cfdi", environment: "production", status: "connected" }], profiles: [],
+  } });
+  assert.match(connectedRecordHtml, /Conectada · producción/);
+  assert.match(connectedRecordHtml, /confirma su estado con el proveedor/);
 });
 
 
 test("cada herramienta muestra un SVG propio con nombre accesible", () => {
   const html = renderToolsPanel();
-  const iconIds = [...html.matchAll(/class="tools-ui-icon tools-ui-icon--([a-z]+)"/g)].map((match) => match[1]);
+  const cards = [...html.matchAll(/<article class="tools-card[\s\S]*?<\/article>/g)].map(([card]) => card);
+  const iconIds = cards.map((card) => card.match(/class="tools-ui-icon tools-ui-icon--([a-z]+)"/)?.[1]);
   assert.deepEqual(iconIds, ["cfdi", "accounting", "payroll", "diot", "monitor"]);
   assert.equal(new Set(iconIds).size, 5);
   assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 5);
+  assert.match(html, /tools-ui-icon--folder/);
 });
 
 
@@ -89,4 +123,33 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
     assert.match(card, /data-environment="production"/);
   }
   assert.equal((html.match(/class="tools-connection-row" data-tool-key=/g) || []).length, 10);
+});
+
+test("el resumen cuenta estados guardados sin exponer títulos de alertas o vencimientos", () => {
+  const html = renderToolsPanel({ workspace: {
+    profiles: [{ id: "profile-1", legal_name: "Cuenta Demo", active: true }],
+    selectedProfileId: "profile-1", connections: [],
+    alerts: [
+      { status: "open", title: "ALERTA_PRIVADA" },
+      { status: "in_review", detail: "DETALLE_PRIVADO" },
+      { status: "resolved", title: "ALERTA_RESUELTA" },
+    ],
+    deadlines: [
+      { status: "pending", title: "VENCIMIENTO_PRIVADO" },
+      { status: "overdue" },
+      { status: "completed" },
+    ],
+  } });
+  assert.match(html, /4 asunto\(s\) requieren atención/);
+  assert.match(html, /1 alerta\(s\) abierta\(s\) · 1 en revisión · 1 vencimiento\(s\) pendiente\(s\) · 1 marcado\(s\) vencido\(s\)\./);
+  assert.doesNotMatch(html, /ALERTA_PRIVADA|DETALLE_PRIVADO|VENCIMIENTO_PRIVADO/);
+});
+
+test("un error de lectura no se presenta como cero alertas o vencimientos", () => {
+  const html = renderToolsPanel({ workspace: {
+    profiles: [{ id: "profile-1", legal_name: "Cuenta Demo", active: true }],
+    selectedProfileId: "profile-1", connections: [], alerts: [], deadlines: [], signalsError: "error de consulta",
+  } });
+  assert.match(html, /Consulta incompleta/);
+  assert.match(html, /no se asumen valores en cero/);
 });

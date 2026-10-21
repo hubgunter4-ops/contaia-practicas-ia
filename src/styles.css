@@ -2405,3 +2405,83 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 @media (prefers-reduced-motion: reduce) {
   .public-primary-cta, .public-card, .public-card-cta, .public-login, .public-nav a, .public-back-link, .public-footer a { transition: none !important; }
 }
+
+
+/* Confianza fiscal: tema delimitado a Herramientas y CFDI; no altera :root ni el Aula. */
+.app-shell--fiscal {
+  color-scheme: light;
+  --fiscal-petroleum: #123B43;
+  --fiscal-jade: #16866F;
+  --fiscal-ivory: #F5F4EC;
+  --fiscal-sand: #E4E6D8;
+  --fiscal-coral: #E98268;
+  --fiscal-validation: #D9B84C;
+  --fiscal-muted: #587075;
+  --fiscal-line: #d8ded5;
+  background: var(--fiscal-ivory);
+  color: var(--fiscal-petroleum);
+}
+.app-shell--fiscal .main-shell { background: var(--fiscal-ivory); color: var(--fiscal-petroleum); }
+.app-shell--fiscal .topbar { background: rgba(255,255,255,.9); border-bottom-color: var(--fiscal-line); }
+.app-shell--fiscal .breadcrumb, .app-shell--fiscal .topbar-right { color: var(--fiscal-muted); }
+.app-shell--fiscal .breadcrumb strong { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .edition-dot { background: var(--fiscal-jade); }
+.app-shell--fiscal .section-tab.is-active { color: var(--fiscal-jade); }
+
+/* Continuidad del curso: se alimenta exclusivamente de módulos y avance local reales. */
+.home-learning-dashboard { --learning-jade: #16866F; margin: 25px 0 31px; padding: 20px; border: 1px solid #d8e5d8; background: #fffdfa; box-shadow: 0 8px 22px rgba(32,55,45,.06); }
+.home-learning-top { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(230px,.8fr); gap: 20px; align-items: stretch; }
+.home-learning-progress { min-width: 0; }
+.home-learning-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.home-learning-heading h2 { margin: 0; color: #20372d; font-size: clamp(21px,2.4vw,30px); letter-spacing: -.03em; }
+.home-learning-count { flex: none; padding: 6px 9px; border: 1px solid var(--line); color: var(--learning-jade); font: 11px var(--mono); }
+.home-course-progress-track { height: 7px; margin: 15px 0 7px; overflow: hidden; background: #e8eee5; }
+.home-course-progress-track span { display: block; height: 100%; background: var(--learning-jade); transition: width .2s ease; }
+.home-course-progress-copy { margin: 0; color: #61756a; font-size: 12px; line-height: 1.45; }
+.home-next-module { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 15px; padding: 12px; border-left: 3px solid var(--gold); background: #f6f7ef; }
+.home-next-module > div { min-width: 0; display: grid; gap: 4px; }
+.home-next-module > div > span { color: #718474; font: 9px var(--mono); letter-spacing: .09em; }
+.home-next-module > div > b { color: #20372d; font-size: 15px; }
+.home-next-module .button-primary { flex: none; min-height: 39px; border-color: var(--learning-jade); background: var(--learning-jade); color: #fff; }
+.home-next-module .button-primary:hover:not(:disabled) { border-color: #116b59; background: #116b59; }
+.home-nora-card { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 10px; align-content: start; padding: 14px; border: 1px solid #d8e5d8; background: #f2f7f1; }
+.home-nora-avatar { display: block; width: 48px; height: 48px; border: 1px solid #bfd6cb; border-radius: 50%; background: #fff; object-fit: cover; }
+.home-nora-card .eyebrow { margin: 1px 0 5px; color: #688078; font-size: 8px; }
+.home-nora-card h3 { margin: 0 0 5px; color: #20372d; font-size: 16px; }
+.home-nora-card p:not(.eyebrow) { margin: 0; color: #61756a; font-size: 11px; line-height: 1.45; }
+.home-nora-link { grid-column: 2; justify-self: start; margin-top: 8px; padding: 0; border: 0; background: transparent; color: var(--wine); font-size: 11px; font-weight: 700; cursor: pointer; }
+.home-nora-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.home-course-route { display: grid; grid-template-columns: repeat(auto-fit,minmax(86px,1fr)); gap: 7px; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); list-style: none; }
+.home-route-step { min-width: 0; }
+.home-route-step button { width: 100%; min-height: 58px; display: grid; grid-template-columns: 25px minmax(0,1fr); align-items: start; gap: 7px; padding: 8px; border: 1px solid #e2e7df; background: #fff; color: #61756a; text-align: left; cursor: pointer; transition: border-color .18s ease, transform .18s ease, background-color .18s ease; }
+.home-route-step button:hover { transform: translateY(-2px); border-color: #9bbcaf; }
+.home-route-step button > span { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid #d8e5d8; border-radius: 50%; color: #718474; font: 9px var(--mono); }
+.home-route-step button > small { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: inherit; font-size: 9px; line-height: 1.3; }
+.home-route-step.is-current button { border-color: #16866F; background: #f2f7f3; color: #20372d; }
+.home-route-step.is-current button > span { border-color: #16866F; background: #16866F; color: #fff; }
+.home-route-step.is-complete button > span { border-color: #9bbcaf; background: #e5f1e7; color: #16866F; }
+.home-route-step.is-complete button > small { color: #4b7060; }
+.nora-context-avatar { display: block; width: 38px; height: 38px; border: 1px solid #bdd5c9; border-radius: 50%; background: #fff; object-fit: cover; }
+
+@media (max-width: 760px) {
+  :root { --mobile-nav-height: 70px; }
+  .mobile-bottom-nav { grid-template-columns: repeat(5,minmax(0,1fr)); gap: 2px; padding-inline: 5px; }
+  .mobile-nav-item { min-height: 48px; gap: 1px; border-radius: 8px; }
+  .mobile-nav-item small { font-size: 8px; }
+  .mobile-primary-action { display: none !important; }
+  .app-shell--fiscal .mobile-bottom-nav { border-top-color: var(--fiscal-line); background: rgba(255,255,255,.97); box-shadow: 0 -8px 25px rgba(18,59,67,.1); }
+  .app-shell--fiscal .mobile-nav-item { color: var(--fiscal-muted); }
+  .app-shell--fiscal .mobile-nav-item.is-active { background: #e6efeb; color: var(--fiscal-petroleum); }
+  .app-shell--fiscal .mobile-nav-item.is-active span { color: var(--fiscal-jade); }
+  .home-learning-dashboard { margin: 20px 0 25px; padding: 14px; }
+  .home-learning-top { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .home-learning-heading h2 { font-size: 22px; }
+  .home-next-module { align-items: stretch; flex-direction: column; }
+  .home-next-module .button { width: 100%; }
+  .home-course-route { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .home-nora-avatar { width: 42px; height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-course-progress-track span, .home-route-step button { transition: none !important; }
+  .home-route-step button:hover { transform: none; }
+}

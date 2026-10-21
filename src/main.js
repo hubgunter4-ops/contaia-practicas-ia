@@ -766,11 +766,11 @@ function sidebar() {
 
 function mobileNavigation() {
   return `<nav class="mobile-bottom-nav" aria-label="Navegación móvil">
-    <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home">${uiIcon("home")}<small>Recorrido</small></button>
-    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course">${uiIcon("book")}<small>Aula</small></button>
-    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "study"].includes(state.section) ? "is-active" : ""}" data-section="tools">${uiIcon("grid")}<small>Herramientas</small></button>
-    <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor">${uiIcon("nora")}<small>Nora</small></button>
-    <button type="button" class="mobile-primary-action" data-section="course" aria-label="Continuar con el aula">Continuar ${uiIcon("arrow")}</button>
+    <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home" aria-current="${state.section === "lab" ? "page" : "false"}">${uiIcon("home")}<small>Inicio</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}">${uiIcon("book")}<small>Curso</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "study" ? "is-active" : ""}" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">${uiIcon("book")}<small>Estudio</small></button>
+    <button type="button" class="mobile-nav-item ${["tools", "cfdi"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}">${uiIcon("nora")}<small>Nora</small></button>
   </nav>`;
 }
 
@@ -808,6 +808,22 @@ function topbar() {
   </header>`;
 }
 
+function renderHomeLearningDashboard() {
+  const completedCount = courseModules.filter(({ id }) => state.completedModules.has(id)).length;
+  const totalCount = courseModules.length;
+  const percent = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
+  const currentModule = courseModules.find(({ id }) => id === state.activeModuleId && !state.completedModules.has(id));
+  const nextModule = currentModule || courseModules.find(({ id }) => !state.completedModules.has(id)) || courseModules.at(-1);
+  const route = courseModules.map((module, index) => {
+    const complete = state.completedModules.has(module.id);
+    const current = module.id === nextModule?.id && !complete;
+    const status = complete ? "Completado" : current ? "En curso" : "Pendiente";
+    return `<li class="home-route-step ${complete ? "is-complete" : ""} ${current ? "is-current" : ""}"><button type="button" data-class-module="${escapeHtml(module.id)}" aria-label="Abrir módulo ${index + 1}: ${escapeHtml(module.title)} · ${status}"><span>${complete ? "✓" : String(index + 1).padStart(2, "0")}</span><small>${escapeHtml(module.title)}</small></button></li>`;
+  }).join("");
+  const homeNoraAvatar = completedCount === totalCount ? "celebrating" : "idle";
+  return `<section class="home-learning-dashboard" aria-label="Progreso de aprendizaje"><div class="home-learning-top"><div class="home-learning-progress"><div class="home-learning-heading"><div><p class="eyebrow">TU CURSO · AVANCE LOCAL</p><h2>Continúa donde lo dejaste</h2></div><span class="home-learning-count">${completedCount} / ${totalCount}</span></div><div class="home-course-progress-track" role="progressbar" aria-label="Módulos del curso completados" aria-valuenow="${completedCount}" aria-valuemin="0" aria-valuemax="${totalCount}"><span style="width:${percent}%"></span></div><p class="home-course-progress-copy">${completedCount === totalCount ? "Has completado los módulos disponibles; puedes volver a cualquiera para repasar." : `${completedCount} de ${totalCount} módulos completados · este avance permanece en este navegador.`}</p>${nextModule ? `<div class="home-next-module"><div><span>${completedCount === totalCount ? "REPASO RECOMENDADO" : "SIGUIENTE EN TU RUTA"}</span><b>${escapeHtml(nextModule.title)}</b></div><button type="button" class="button button-primary" data-class-module="${escapeHtml(nextModule.id)}">${completedCount === totalCount ? "Repasar módulo" : "Continuar módulo"} <span aria-hidden="true">→</span></button></div>` : `<p class="home-course-progress-copy">No hay módulos disponibles en esta vista.</p>`}</div><aside class="home-nora-card"><img class="home-nora-avatar" src="/assets/nora/nora-${homeNoraAvatar}.webp" alt="" aria-hidden="true" loading="lazy"/><div><p class="eyebrow">NORA · GUÍA DE APRENDIZAJE</p><h3>¿Quieres aclarar el siguiente paso?</h3><p>Pregunta sobre un concepto o procedimiento; comparte información solo cuando tú quieras y evita datos fiscales identificables.</p><button type="button" class="home-nora-link" data-section="advisor">Consultar a Nora <span aria-hidden="true">↗</span></button></div></aside></div><ol class="home-course-route" aria-label="Ruta visual de módulos">${route}</ol></section>`;
+}
+
 function renderHome() {
   const done = state.completed.size;
   const percent = Math.round((done / exercises.length) * 100);
@@ -827,6 +843,7 @@ function renderHome() {
       </div>
       <div class="hero-footer"><span><i>01</i> Prueba con casos ficticios</span><span><i>02</i> Recibe pistas y retroalimentación</span><span><i>03</i> Revisa una solución modelo</span></div>
     </section>
+    ${renderHomeLearningDashboard()}
     <section class="notice-strip" aria-label="Aviso de confidencialidad"><span class="notice-icon" aria-hidden="true">!</span><p><strong>Expediente seguro.</strong> No pegues información real, personal o confidencial. Los casos son educativos y no constituyen asesoría contable ni fiscal.</p><button type="button" data-nav="isr" class="notice-link">Ver el alcance <span aria-hidden="true">→</span></button></section>
     <section class="overview-row">
       <div class="section-heading"><div><p class="eyebrow">TU RECORRIDO</p><h2>Práctica en curso</h2></div><span class="count-pill">${done} de ${exercises.length} completadas</span></div>
@@ -1242,7 +1259,8 @@ function renderView() {
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
   const tutorPanel = ["advisor", "cfdi", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
-  app.innerHTML = `<div class="app-shell">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
+  const fiscalTheme = ["tools", "cfdi"].includes(state.section) ? "app-shell--fiscal" : "";
+  app.innerHTML = `<div class="app-shell ${fiscalTheme}">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
     if (placeholder) placeholder.replaceWith(persistentVideo);

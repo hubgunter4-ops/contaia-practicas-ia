@@ -8,9 +8,13 @@ const TOOL_KEYS = new Set(["cfdi", "accounting", "payroll", "diot", "monitor"]);
 export const toolsWorkspace = {
   profiles: [],
   connections: [],
+  alerts: [],
+  deadlines: [],
   selectedProfileId: "",
   loading: false,
   connectionsLoading: false,
+  signalsLoading: false,
+  signalsError: "",
   saving: false,
   loaded: false,
   error: "",
@@ -55,6 +59,13 @@ export async function loadToolsWorkspace() {
   const sequence = ++loadSequence;
   toolsWorkspace.loading = true;
   toolsWorkspace.error = "";
+  toolsWorkspace.profiles = [];
+  toolsWorkspace.connections = [];
+  toolsWorkspace.alerts = [];
+  toolsWorkspace.deadlines = [];
+  toolsWorkspace.connectionsLoading = false;
+  toolsWorkspace.signalsLoading = false;
+  toolsWorkspace.signalsError = "";
   notify();
   try {
     const result = await requestTools("profiles");
@@ -67,6 +78,14 @@ export async function loadToolsWorkspace() {
     await loadProfileConnections(toolsWorkspace.selectedProfileId);
   } catch (error) {
     if (sequence === loadSequence) {
+      toolsWorkspace.profiles = [];
+      toolsWorkspace.connections = [];
+      toolsWorkspace.alerts = [];
+      toolsWorkspace.deadlines = [];
+      toolsWorkspace.selectedProfileId = "";
+      toolsWorkspace.connectionsLoading = false;
+      toolsWorkspace.signalsLoading = false;
+      toolsWorkspace.signalsError = "";
       toolsWorkspace.error = error instanceof Error ? error.message : "No se pudieron cargar tus perfiles.";
       toolsWorkspace.loaded = false;
     }
@@ -82,27 +101,40 @@ export async function loadProfileConnections(profileId = toolsWorkspace.selected
   const sequence = ++connectionSequence;
   toolsWorkspace.selectedProfileId = profileId || "";
   toolsWorkspace.connections = [];
+  toolsWorkspace.alerts = [];
+  toolsWorkspace.deadlines = [];
   toolsWorkspace.error = "";
+  toolsWorkspace.signalsError = "";
   if (!profileId) {
     toolsWorkspace.connectionsLoading = false;
+    toolsWorkspace.signalsLoading = false;
     notify();
     return;
   }
   toolsWorkspace.connectionsLoading = true;
+  toolsWorkspace.signalsLoading = true;
   notify();
-  try {
-    const result = await requestTools("connections", { profileId });
-    if (sequence === connectionSequence && toolsWorkspace.selectedProfileId === profileId) {
-      toolsWorkspace.connections = Array.isArray(result.data) ? result.data : [];
-    }
-  } catch (error) {
-    if (sequence === connectionSequence) toolsWorkspace.error = error instanceof Error ? error.message : "No se pudieron cargar las conexiones.";
-  } finally {
-    if (sequence === connectionSequence) {
-      toolsWorkspace.connectionsLoading = false;
-      notify();
-    }
+  const [connectionsResult, alertsResult, deadlinesResult] = await Promise.allSettled([
+    requestTools("connections", { profileId }),
+    requestTools("alerts", { profileId }),
+    requestTools("deadlines", { profileId }),
+  ]);
+  if (sequence !== connectionSequence || toolsWorkspace.selectedProfileId !== profileId) return;
+  if (connectionsResult.status === "fulfilled") {
+    toolsWorkspace.connections = Array.isArray(connectionsResult.value.data) ? connectionsResult.value.data : [];
+  } else {
+    const error = connectionsResult.reason;
+    toolsWorkspace.error = error instanceof Error ? error.message : "No se pudieron cargar las conexiones.";
   }
+  if (alertsResult.status === "fulfilled" && deadlinesResult.status === "fulfilled") {
+    toolsWorkspace.alerts = Array.isArray(alertsResult.value.data) ? alertsResult.value.data : [];
+    toolsWorkspace.deadlines = Array.isArray(deadlinesResult.value.data) ? deadlinesResult.value.data : [];
+  } else {
+    toolsWorkspace.signalsError = "No se pudieron consultar todos los registros de alertas y vencimientos.";
+  }
+  toolsWorkspace.connectionsLoading = false;
+  toolsWorkspace.signalsLoading = false;
+  notify();
 }
 
 export function openFiscalProfileForm(profile = null) {
@@ -185,7 +217,7 @@ export async function saveToolConnection(input = {}) {
     toolsWorkspace.notice = existing
       ? "Registro actualizado sin cambiar el estado de la conexión. No se envió información al proveedor."
       : "Registro pendiente guardado. Esto no conecta ni envía información al proveedor.";
-    await loadProfileConnections(profileId);
+    if (toolsWorkspace.selectedProfileId === profileId) await loadProfileConnections(profileId);
     return true;
   } catch (error) {
     toolsWorkspace.error = error instanceof Error ? error.message : "No se pudo guardar el registro de conexión.";
@@ -200,8 +232,9 @@ export function resetToolsWorkspace() {
   loadSequence += 1;
   connectionSequence += 1;
   Object.assign(toolsWorkspace, {
-    profiles: [], connections: [], selectedProfileId: "", loading: false, connectionsLoading: false,
-    saving: false, loaded: false, error: "", notice: "", profileForm: null, connectionForm: null,
+    profiles: [], connections: [], alerts: [], deadlines: [], selectedProfileId: "", loading: false,
+    connectionsLoading: false, signalsLoading: false, signalsError: "", saving: false, loaded: false,
+    error: "", notice: "", profileForm: null, connectionForm: null,
   });
   notify();
 }

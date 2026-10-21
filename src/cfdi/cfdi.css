@@ -269,3 +269,117 @@
   .cfdi-batch-actions { align-items: stretch; flex-direction: column; }
   .cfdi-batch-analyze { width: 100%; }
 }
+
+
+/* Confianza fiscal · shell común claro para el analizador local CFDI */
+.app-shell--fiscal .content.cfdi-page { color-scheme: light; color: var(--fiscal-petroleum); font-family: var(--sans); }
+.app-shell--fiscal .cfdi-page .cfdi-hero { min-height: 0; align-items: end; border-color: var(--fiscal-line); border-radius: 11px; background: linear-gradient(110deg,#fff 0%,#f1f5ef 100%); box-shadow: 0 10px 26px rgba(18,59,67,.06); }
+.app-shell--fiscal .cfdi-page .tool-shell-copy { max-width: 760px; }
+.app-shell--fiscal .cfdi-page .tool-shell-eyebrow { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-hero h1 { color: var(--fiscal-petroleum); font-family: var(--sans); font-size: clamp(29px,3.5vw,43px); }
+.app-shell--fiscal .cfdi-page .tool-shell-description { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .tool-shell-status { white-space: normal; }
+.app-shell--fiscal .cfdi-page .tool-shell-action { min-width: 180px; }
+.app-shell--fiscal .cfdi-page .cfdi-workspace { gap: 12px; }
+.app-shell--fiscal .cfdi-page .cfdi-upload-card, .app-shell--fiscal .cfdi-page .cfdi-storage, .app-shell--fiscal .cfdi-page .cfdi-results, .app-shell--fiscal .cfdi-page .cfdi-preflight { border-color: var(--fiscal-line); border-radius: 9px; background: #fff; box-shadow: 0 7px 20px rgba(18,59,67,.04); color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-upload-card, .app-shell--fiscal .cfdi-page .cfdi-storage { padding: 15px; }
+.app-shell--fiscal .cfdi-page .cfdi-upload-heading h2, .app-shell--fiscal .cfdi-page .cfdi-section-title h2 { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-upload-heading > div > span, .app-shell--fiscal .cfdi-page .cfdi-section-title > div > span, .app-shell--fiscal .cfdi-page .cfdi-history-head > span { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-format-pill, .app-shell--fiscal .cfdi-page .cfdi-lock { border-color: var(--fiscal-line); background: #f7f8f4; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-dropzone { border-color: #9cbab0; border-radius: 8px; background: #f8faf6; }
+.app-shell--fiscal .cfdi-page .cfdi-dropzone:hover, .app-shell--fiscal .cfdi-page .cfdi-dropzone.is-dragging, .app-shell--fiscal .cfdi-page .cfdi-dropzone:focus-within { border-color: var(--fiscal-jade); background: #eef5f1; }
+.app-shell--fiscal .cfdi-page .cfdi-upload-icon { border-color: #b7d9ce; border-radius: 8px; background: #eaf5f0; color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-dropzone b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-dropzone small, .app-shell--fiscal .cfdi-page .cfdi-file-count { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-progress { border-color: #d6e1db; background: #f4f7f2; color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-progress.is-ready, .app-shell--fiscal .cfdi-page .cfdi-db-status.is-ready { border-color: #b7d9ce; background: #eaf5f0; color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-privacy-note { border-left-color: var(--fiscal-jade); background: #f2f5ef; color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-privacy-note b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-db-status { border-color: var(--fiscal-line); background: #f6f7f2; color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-db-status.is-offline { border-color: #d6e1db; background: #f4f7f2; color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-form, .app-shell--fiscal .cfdi-page .cfdi-save-form, .app-shell--fiscal .cfdi-page .cfdi-history-head, .app-shell--fiscal .cfdi-page .cfdi-auth-row { border-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-form > label, .app-shell--fiscal .cfdi-page .cfdi-save-form > label:not(.cfdi-consent), .app-shell--fiscal .cfdi-page .cfdi-history-head { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page input[type="email"], .app-shell--fiscal .cfdi-page .cfdi-save-form > input { border-color: var(--fiscal-line); background: #fff; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-form button, .app-shell--fiscal .cfdi-page .cfdi-save-form > button, .app-shell--fiscal .cfdi-page .cfdi-history-head button, .app-shell--fiscal .cfdi-page .cfdi-history-list button, .app-shell--fiscal .cfdi-page .cfdi-auth-row button { border-color: var(--fiscal-line); background: #f6f7f2; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-form button:hover:not(:disabled), .app-shell--fiscal .cfdi-page .cfdi-save-form > button:hover:not(:disabled), .app-shell--fiscal .cfdi-page .cfdi-history-list button:hover, .app-shell--fiscal .cfdi-page .cfdi-history-head button:hover:not(:disabled) { border-color: var(--fiscal-jade); background: #eef5f1; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-form > small, .app-shell--fiscal .cfdi-page .cfdi-consent, .app-shell--fiscal .cfdi-page .cfdi-history-list article small, .app-shell--fiscal .cfdi-page .cfdi-history-empty { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-consent input { accent-color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-auth-row { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-history-list article { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-history-list article b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-history-list button[data-cfdi-delete] { color: #883f30; }
+.app-shell--fiscal .cfdi-page .cfdi-success-text { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-error { color: #883f30; }
+.app-shell--fiscal .cfdi-page .cfdi-history-empty, .app-shell--fiscal .cfdi-page .cfdi-empty-state { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-empty-state b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-empty-state p { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-empty-state > span { border-color: #b7d9ce; background: #eaf5f0; color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-success { border-color: #b7d9ce; background: #eaf5f0; }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article > span, .app-shell--fiscal .cfdi-page .cfdi-metrics article > small { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article > b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article.has-alert { border-color: #e7d79b; background: #fbf6df; }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article.has-alert > b { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article.is-ok { border-color: #b7d9ce; background: #eaf5f0; }
+.app-shell--fiscal .cfdi-page .cfdi-metrics article.is-ok > b { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-total-block .cfdi-section-title small { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-currency-grid article { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-currency-grid article > b { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-currency-grid article > div { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-currency-grid article strong { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-alert { border-color: #e7d79b; background: #fbf6df; }
+.app-shell--fiscal .cfdi-page .cfdi-alert > i { background: var(--fiscal-validation); color: #4d401a; }
+.app-shell--fiscal .cfdi-page .cfdi-alert > div b { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-alert > div p { color: #6e6240; }
+.app-shell--fiscal .cfdi-page .cfdi-result-tabs { border-bottom-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-result-tabs button { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-result-tabs button:hover, .app-shell--fiscal .cfdi-page .cfdi-result-tabs button.is-active { border-bottom-color: var(--fiscal-jade); color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-table-wrap { border-color: var(--fiscal-line); background: #fff; }
+.app-shell--fiscal .cfdi-page .cfdi-table { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-table th { border-bottom-color: var(--fiscal-line); background: #eef1e9; color: #50696c; }
+.app-shell--fiscal .cfdi-page .cfdi-table td { border-bottom-color: #e8ebe4; color: #3f5a5e; }
+.app-shell--fiscal .cfdi-page .cfdi-table td b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-table td small { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-status-tag { border-color: var(--fiscal-line); color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-status-tag.is-linked { border-color: #b7d9ce; background: #eaf5f0; color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-status-tag.is-review { border-color: #e7d79b; background: #fbf6df; color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff { grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; border-color: #cddbd3; border-radius: 8px; background: #edf3eb; }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff .nora-context-avatar { border-color: #bdd5c9; background: #fff; color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff .nora-context-copy > p { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff .nora-context-copy h2 { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff .nora-context-copy > span { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-reset { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-parse-error { border-color: #edc0b3; background: #fbede8; }
+.app-shell--fiscal .cfdi-page .cfdi-parse-error b, .app-shell--fiscal .cfdi-page .cfdi-parse-error p { color: #78392e; }
+.app-shell--fiscal .cfdi-page .cfdi-parse-error button { border-color: #dca99c; background: #fff7f3; color: #78392e; }
+.app-shell--fiscal .cfdi-page .cfdi-disclaimer { border-color: var(--fiscal-line); border-radius: 8px; background: #e9eee4; color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-disclaimer b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page button:focus-visible, .app-shell--fiscal .cfdi-page input:focus-visible { outline-color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .open-cfdi-context { border-color: #b7d9ce; background: #eaf5f0; }
+.app-shell--fiscal .cfdi-page .open-cfdi-context > span { color: #126a57; }
+.app-shell--fiscal .cfdi-page .open-cfdi-context p { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .open-cfdi-context button { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-processing { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-processing-head span, .app-shell--fiscal .cfdi-page .cfdi-processing li { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-processing-head b, .app-shell--fiscal .cfdi-page .cfdi-processing li.is-active { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-processing li > span { border-color: var(--fiscal-line); color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-processing li.is-active > span { border-color: var(--fiscal-validation); background: #fbf6df; color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-processing li.is-complete { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-processing li.is-complete > span { border-color: #b7d9ce; background: #eaf5f0; color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-review { border-color: var(--fiscal-line); border-radius: 8px; background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-review-head > div > span { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-review-head h3 { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-review-head p, .app-shell--fiscal .cfdi-page .cfdi-batch-actions p { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-review-head button, .app-shell--fiscal .cfdi-page .cfdi-batch-file-remove { border-color: var(--fiscal-line); background: #fff; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-file { border-top-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-file-name { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-file small { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-file-status { color: #126a57; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-file-status.is-invalid, .app-shell--fiscal .cfdi-page .cfdi-batch-file.is-invalid .cfdi-batch-file-name { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-message { border-color: #e7d79b; background: #fbf6df; color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-actions { border-top-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-batch-analyze { border-color: var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
+.app-shell--fiscal .cfdi-page .cfdi-batch-analyze:hover:not(:disabled) { border-color: #116b59; background: #116b59; }
+
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff > button { border: 1px solid var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
+.app-shell--fiscal .cfdi-page .cfdi-nora-handoff > button:hover { background: #116b59; }
