@@ -1297,141 +1297,147 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 }
 
 
-/* Tema Aula en vivo · paleta lavanda, menta y tinta de la referencia */
+/* Aula de Aprende · Confianza fiscal, sin alterar las otras vistas. */
 .app-shell:has(.classroom-content) {
-  color-scheme: dark;
-  --wine: #aa91ff;
-  --wine-dark: #c0adff;
-  --gold: #9ce8c7;
-  --gold-pale: #303b42;
-  --paper: #191b28;
-  --paper-bright: #202333;
-  --ink: #f0eff7;
-  --muted: #b4b6c7;
-  --line: #383c50;
-  --green: #83cba9;
-  --green-pale: #263b38;
-  background: #191b28;
-  color: #f0eff7;
+  color-scheme: light;
+  --wine: var(--classroom-action);
+  --wine-dark: var(--fiscal-petroleum);
+  --gold: var(--fiscal-validation);
+  --gold-pale: #faf4dd;
+  --paper: var(--fiscal-ivory);
+  --paper-bright: #ffffff;
+  --ink: var(--fiscal-petroleum);
+  --muted: var(--fiscal-muted);
+  --line: var(--fiscal-line);
+  --green: var(--classroom-action);
+  --green-pale: #eaf4ef;
+  --red-pale: #fff0eb;
+  /* Variante jade para superar 4.5:1 con texto blanco pequeño. */
+  --classroom-action: #147D68;
+  --classroom-action-hover: #116B59;
+  --classroom-soft: #edf3ef;
+  --classroom-jade-rgb: 22, 134, 111;
+  background: var(--fiscal-ivory);
+  color: var(--fiscal-petroleum);
 }
-.app-shell:has(.classroom-content) .main-shell-live { background: #191b28; }
+.app-shell:has(.classroom-content) .main-shell-live { background: var(--fiscal-ivory); }
 .app-shell:has(.classroom-content) .topbar {
-  background: #202232;
-  border-color: #383b4c;
-  color: #d8d8e5;
+  background: #ffffff;
+  border-color: var(--fiscal-line);
+  color: var(--fiscal-petroleum);
 }
-.app-shell:has(.classroom-content) .section-tab { color: #b8b9ca; }
+.app-shell:has(.classroom-content) .section-tab { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .section-tab b,
 .app-shell:has(.classroom-content) .section-tab:hover,
 .app-shell:has(.classroom-content) .section-tab.is-active,
 .app-shell:has(.classroom-content) .section-tab.advisor-tab,
 .app-shell:has(.classroom-content) .section-tab.advisor-tab[aria-expanded="true"] {
-  color: #c0adff;
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .section-tab:hover,
 .app-shell:has(.classroom-content) .section-tab.is-active {
-  border-color: #514b70;
-  background: #292b3e;
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
 }
 .app-shell:has(.classroom-content) .section-tab.advisor-tab,
 .app-shell:has(.classroom-content) .section-tab.advisor-tab[aria-expanded="true"] {
-  border-color: #514b70;
-  background: #292b3e;
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
 }
-.app-shell:has(.classroom-content) .class-menu > summary i { color: #c0adff; }
+.app-shell:has(.classroom-content) .class-menu > summary i { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .class-menu-popover {
-  border-color: #45485c;
-  background: #202333;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .38);
+  border-color: var(--fiscal-line);
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(18, 59, 67, .12);
 }
-.app-shell:has(.classroom-content) .class-menu-item { color: #e4e3ed; }
-.app-shell:has(.classroom-content) .class-menu-item > span { color: #aaa9bd; }
-.app-shell:has(.classroom-content) .class-menu-item > i { color: #9ce8c7; }
+.app-shell:has(.classroom-content) .class-menu-item { color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) .class-menu-item > span { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .class-menu-item > i { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .class-menu-item:hover,
 .app-shell:has(.classroom-content) .class-menu-item.is-active {
-  border-color: #514b70;
-  background: #2b2d41;
-  color: #c0adff;
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
+  color: var(--classroom-action);
 }
-.app-shell:has(.classroom-content) .class-menu-popover > p { border-color: #383c50; color: #b4b6c7; }
+.app-shell:has(.classroom-content) .class-menu-popover > p { border-color: var(--fiscal-line); color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-heading {
-  border-left-color: #9ce8c7;
+  border-left-color: var(--classroom-action);
   border-radius: 24px;
-  background: #252838;
+  background: var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-heading h1,
-.app-shell:has(.classroom-content) .classroom-heading h1 em { color: #b29cff; }
-.app-shell:has(.classroom-content) .classroom-heading > div:first-child > p:last-child { color: #c0c1d0; }
+.app-shell:has(.classroom-content) .classroom-heading h1 em { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-heading > div:first-child > p:last-child { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-course-progress {
-  border-color: #41455a;
+  border-color: var(--fiscal-line);
   border-radius: 14px;
-  background: #1e2130;
+  background: #ffffff;
 }
 .app-shell:has(.classroom-content) .classroom-course-progress > span,
-.app-shell:has(.classroom-content) .classroom-course-progress > b small { color: #b4b6c7; }
-.app-shell:has(.classroom-content) .classroom-course-progress > b { color: #b29cff; }
-.app-shell:has(.classroom-content) .classroom-course-progress .progress-track { background: #383b50; }
-.app-shell:has(.classroom-content) .classroom-course-progress .progress-track span { background: #aa91ff; }
+.app-shell:has(.classroom-content) .classroom-course-progress > b small { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .classroom-course-progress > b { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-course-progress .progress-track { background: var(--fiscal-sand); }
+.app-shell:has(.classroom-content) .classroom-course-progress .progress-track span { background: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-portfolio-link,
-.app-shell:has(.classroom-content) .classroom-rail-link { color: #c0adff; }
+.app-shell:has(.classroom-content) .classroom-rail-link { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-rail,
 .app-shell:has(.classroom-content) .classroom-stage {
-  border-color: #383c50;
+  border-color: var(--fiscal-line);
   border-radius: 20px;
-  background: #202333;
+  background: #ffffff;
   box-shadow: none;
 }
 .app-shell:has(.classroom-content) .classroom-rail-heading,
-.app-shell:has(.classroom-content) .classroom-rail-footer { border-color: #383c50; }
+.app-shell:has(.classroom-content) .classroom-rail-footer { border-color: var(--fiscal-line); }
 .app-shell:has(.classroom-content) .classroom-rail-heading h2,
-.app-shell:has(.classroom-content) .classroom-rail-footer > b { color: #c0adff; }
+.app-shell:has(.classroom-content) .classroom-rail-footer > b { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-rail-heading > span,
-.app-shell:has(.classroom-content) .classroom-rail-footer p { color: #b4b6c7; }
-.app-shell:has(.classroom-content) .classroom-module-button { color: #c9c9d6; }
+.app-shell:has(.classroom-content) .classroom-rail-footer p { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .classroom-module-button { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-module-button:hover {
-  border-color: #484b61;
-  background: #292c3d;
+  border-color: var(--fiscal-line);
+  background: var(--classroom-soft);
 }
 .app-shell:has(.classroom-content) .classroom-module-button.is-active {
-  border-color: #6e619c;
-  background: #2b2d41;
-  color: #c0adff;
-  box-shadow: inset 2px 0 #aa91ff;
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
+  color: var(--classroom-action);
+  box-shadow: inset 2px 0 var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .classroom-module-number,
 .app-shell:has(.classroom-content) .classroom-module-mark,
-.app-shell:has(.classroom-content) .classroom-module-button.is-complete .classroom-module-number { color: #9ce8c7; }
-.app-shell:has(.classroom-content) .classroom-stage-heading h2 { color: #f0eff7; }
+.app-shell:has(.classroom-content) .classroom-module-button.is-complete .classroom-module-number { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-stage-heading h2 { color: var(--fiscal-petroleum); }
 .app-shell:has(.classroom-content) .classroom-outcome {
-  border-color: #4b4c64;
+  border-color: var(--fiscal-line);
   border-radius: 8px;
-  color: #c2b2ff;
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .classroom-phase-button {
-  border-color: #414458;
-  color: #b4b6c7;
+  border-color: var(--fiscal-line);
+  color: var(--fiscal-muted);
 }
-.app-shell:has(.classroom-content) .classroom-phase-button > span { color: #aaa9bd; }
-.app-shell:has(.classroom-content) .classroom-phase-button:hover:not(:disabled) { background: #292c3e; }
+.app-shell:has(.classroom-content) .classroom-phase-button > span { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .classroom-phase-button:hover:not(:disabled) { background: var(--classroom-soft); }
 .app-shell:has(.classroom-content) .classroom-phase-button.is-active {
-  border-color: #aa91ff;
-  color: #c0adff;
+  border-color: var(--classroom-action);
+  color: var(--classroom-action);
 }
-.app-shell:has(.classroom-content) .classroom-phase-button.is-past > span { color: #9ce8c7; }
+.app-shell:has(.classroom-content) .classroom-phase-button.is-past > span { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-scene {
-  border-color: #383c50;
+  border-color: var(--fiscal-line);
   border-radius: 18px;
-  background: radial-gradient(ellipse at 18% 82%, rgba(156, 232, 199, .08), transparent 43%), #1c1f2d;
+  background: radial-gradient(ellipse at 18% 82%, rgba(var(--classroom-jade-rgb), .08), transparent 43%), var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-scene-kicker,
 .app-shell:has(.classroom-content) .classroom-callout > span,
 .app-shell:has(.classroom-content) .classroom-example > span,
-.app-shell:has(.classroom-content) .classroom-action-counter { color: #b4a0ff; }
+.app-shell:has(.classroom-content) .classroom-action-counter { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-scene-copy h3,
 .app-shell:has(.classroom-content) .classroom-character figcaption b,
 .app-shell:has(.classroom-content) .classroom-action-card h4,
 .app-shell:has(.classroom-content) .classroom-action-how > b,
-.app-shell:has(.classroom-content) .classroom-demo-why b { color: #f0eff7; }
+.app-shell:has(.classroom-content) .classroom-demo-why b { color: var(--fiscal-petroleum); }
 .app-shell:has(.classroom-content) .classroom-scene-lead,
 .app-shell:has(.classroom-content) .classroom-callout p,
 .app-shell:has(.classroom-content) .classroom-concepts li span,
@@ -1441,7 +1447,7 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .app-shell:has(.classroom-content) .classroom-action-hint,
 .app-shell:has(.classroom-content) .classroom-steps li,
 .app-shell:has(.classroom-content) .classroom-demonstration article p,
-.app-shell:has(.classroom-content) .classroom-demo-why { color: #c5c6d3; }
+.app-shell:has(.classroom-content) .classroom-demo-why { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-callout,
 .app-shell:has(.classroom-content) .classroom-action-card,
 .app-shell:has(.classroom-content) .classroom-example,
@@ -1450,92 +1456,92 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 .app-shell:has(.classroom-content) .classroom-demonstration article:last-of-type,
 .app-shell:has(.classroom-content) .classroom-action-tool,
 .app-shell:has(.classroom-content) .classroom-action-card .classroom-action-how {
-  border-color: #3c4054;
-  background: #252838;
+  border-color: var(--fiscal-line);
+  background: var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-callout,
-.app-shell:has(.classroom-content) .classroom-action-card { border-left-color: #9ce8c7; }
+.app-shell:has(.classroom-content) .classroom-action-card { border-left-color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-guardrail {
-  border-left: 2px solid #9ce8c7;
-  background: #283438;
-  color: #c4d6d0;
+  border-left: 2px solid var(--classroom-action);
+  background: var(--classroom-soft);
+  color: var(--fiscal-muted);
 }
-.app-shell:has(.classroom-content) .classroom-action-how { border-color: #414458; }
-.app-shell:has(.classroom-content) .classroom-action-tool span { color: #b4b6c7; }
-.app-shell:has(.classroom-content) .classroom-steps li > span { color: #b29cff; }
+.app-shell:has(.classroom-content) .classroom-action-how { border-color: var(--fiscal-line); }
+.app-shell:has(.classroom-content) .classroom-action-tool span { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .classroom-steps li > span { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-character-glow {
-  background: radial-gradient(ellipse, rgba(170, 145, 255, .24), rgba(170, 145, 255, 0) 70%);
+  background: radial-gradient(ellipse, rgba(var(--classroom-jade-rgb), .24), rgba(var(--classroom-jade-rgb), 0) 70%);
 }
-.app-shell:has(.classroom-content) .classroom-character img { filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .32)); }
-.app-shell:has(.classroom-content) .classroom-character-status { color: #b4b6c7; }
+.app-shell:has(.classroom-content) .classroom-character img { filter: drop-shadow(0 12px 18px rgba(18, 59, 67, .10)); }
+.app-shell:has(.classroom-content) .classroom-character-status { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-narrate-button,
 .app-shell:has(.classroom-content) .classroom-practice-link,
 .app-shell:has(.classroom-content) .classroom-advisor-open {
-  border-color: #57516f;
+  border-color: var(--fiscal-line);
   border-radius: 9px;
-  background: #2a2c40;
-  color: #d0c5ff;
+  background: var(--fiscal-ivory);
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .classroom-narrate-button:hover:not(:disabled),
 .app-shell:has(.classroom-content) .classroom-practice-link:hover,
 .app-shell:has(.classroom-content) .classroom-advisor-open:hover {
-  border-color: #aa91ff;
-  background: #32334a;
+  border-color: var(--classroom-action);
+  background: var(--classroom-soft);
 }
 .app-shell:has(.classroom-content) .classroom-phase-next,
-.app-shell:has(.classroom-content) .classroom-next-class { color: #c0adff; }
-.app-shell:has(.classroom-content) .classroom-resources { border-color: #383c50; background: #202333; }
-.app-shell:has(.classroom-content) .classroom-resources > summary { color: #e7e5f0; }
-.app-shell:has(.classroom-content) .classroom-resource-body { color: #c5c6d3; }
+.app-shell:has(.classroom-content) .classroom-next-class { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-resources { border-color: var(--fiscal-line); background: #ffffff; }
+.app-shell:has(.classroom-content) .classroom-resources > summary { color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) .classroom-resource-body { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-resource-grid > div > b,
-.app-shell:has(.classroom-content) .classroom-tools > b { color: #d0c5ff; }
+.app-shell:has(.classroom-content) .classroom-tools > b { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-privacy,
 .app-shell:has(.classroom-content) .classroom-tool {
-  border-color: #3d4255;
-  background: #252838;
+  border-color: var(--fiscal-line);
+  background: var(--fiscal-ivory);
 }
-.app-shell:has(.classroom-content) .classroom-tool > div > b { color: #f0eff7; }
-.app-shell:has(.classroom-content) .classroom-tool a { color: #c0adff; }
+.app-shell:has(.classroom-content) .classroom-tool > div > b { color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) .classroom-tool a { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-live-video,
 .app-shell:has(.classroom-content) .classroom-live-placeholder {
-  border-color: #44485c;
-  background: #202333;
+  border-color: var(--fiscal-line);
+  background: #ffffff;
 }
-.app-shell:has(.classroom-content) .classroom-live-placeholder { color: #f0eff7; }
+.app-shell:has(.classroom-content) .classroom-live-placeholder { color: var(--fiscal-petroleum); }
 .app-shell:has(.classroom-content) .classroom-live-status,
-.app-shell:has(.classroom-content) .classroom-live-privacy { color: #b4b6c7; }
+.app-shell:has(.classroom-content) .classroom-live-privacy { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .classroom-live-button,
 .app-shell:has(.classroom-content) .classroom-stage-controls .classroom-narrate-button {
-  border-color: #57516f;
-  background: #2a2c40;
-  color: #d0c5ff;
+  border-color: var(--fiscal-line);
+  background: var(--fiscal-ivory);
+  color: var(--classroom-action);
 }
-.app-shell:has(.classroom-content) .classroom-live-button:hover:not(:disabled) { border-color: #aa91ff; }
+.app-shell:has(.classroom-content) .classroom-live-button:hover:not(:disabled) { border-color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .tutor-panel {
-  border-color: #41455a;
+  border-color: var(--fiscal-line);
   border-radius: 14px;
-  background: #202333;
-  color: #f0eff7;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .32);
+  background: #ffffff;
+  color: var(--fiscal-petroleum);
+  box-shadow: 0 12px 34px rgba(18, 59, 67, .10);
 }
-.app-shell:has(.classroom-content) .tutor-header { border-color: #383c50; background: #272a3b; }
+.app-shell:has(.classroom-content) .tutor-header { border-color: var(--fiscal-line); background: var(--fiscal-ivory); }
 .app-shell:has(.classroom-content) .tutor-identity h2,
-.app-shell:has(.classroom-content) .tutor-empty b { color: #c0adff; }
+.app-shell:has(.classroom-content) .tutor-empty b { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .tutor-kicker,
 .app-shell:has(.classroom-content) .tutor-status,
-.app-shell:has(.classroom-content) .tutor-disclaimer { color: #b4b6c7; }
-.app-shell:has(.classroom-content) .tutor-avatar { border-color: #aa91ff; background: #353047; color: #c0adff; }
-.app-shell:has(.classroom-content) .tutor-control { border-color: #484b61; color: #d0c5ff; }
+.app-shell:has(.classroom-content) .tutor-disclaimer { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .tutor-avatar { border-color: var(--classroom-action); background: var(--fiscal-ivory); color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .tutor-control { border-color: var(--fiscal-line); color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .tutor-message,
 .app-shell:has(.classroom-content) .tutor-form input,
-.app-shell:has(.classroom-content) .tutor-document-select { border-color: #41455a; background: #252838; color: #f0eff7; }
-.app-shell:has(.classroom-content) .tutor-message-user { border-color: #71639b; background: #343148; }
+.app-shell:has(.classroom-content) .tutor-document-select { border-color: var(--fiscal-line); background: var(--fiscal-ivory); color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) .tutor-message-user { border-color: var(--fiscal-line); background: var(--classroom-soft); }
 .app-shell:has(.classroom-content) .tutor-message p,
-.app-shell:has(.classroom-content) .tutor-empty { color: #d0d0dd; }
-.app-shell:has(.classroom-content) .tutor-message-label { color: #c0adff; }
-.app-shell:has(.classroom-content) :focus-visible { outline-color: #9ce8c7; }
+.app-shell:has(.classroom-content) .tutor-empty { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .tutor-message-label { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) :focus-visible { outline-color: var(--classroom-action); }
 @media (max-width: 760px) {
-  .app-shell:has(.classroom-content) .topbar { border-bottom-color: #383b4c; }
+  .app-shell:has(.classroom-content) .topbar { border-bottom-color: var(--fiscal-line); }
 }
 
 
@@ -1596,34 +1602,34 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 }
 .tools-menu-popover .section-tab > span { flex: 1; }
 .tools-menu-popover .advisor-tab { margin-top: 3px; border-top-color: #e2d7c6; }
-.app-shell:has(.classroom-content) .classroom-primary-route { border-color: #41455a; }
-.app-shell:has(.classroom-content) .classroom-primary-route > span { color: #9ce8c7; }
-.app-shell:has(.classroom-content) .classroom-primary-route > strong { color: #f0eff7; }
+.app-shell:has(.classroom-content) .classroom-primary-route { border-color: var(--fiscal-line); }
+.app-shell:has(.classroom-content) .classroom-primary-route > span { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-primary-route > strong { color: var(--fiscal-petroleum); }
 .app-shell:has(.classroom-content) .classroom-route-cta {
-  border-color: #aa91ff;
-  background: #aa91ff;
-  color: #191b28;
+  border-color: var(--classroom-action);
+  background: var(--classroom-action);
+  color: var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-route-cta:hover:not(:disabled) {
-  border-color: #c0adff;
-  background: #c0adff;
+  border-color: var(--classroom-action);
+  background: var(--classroom-action);
 }
-.app-shell:has(.classroom-content) .tools-menu > summary i { color: #c0adff; }
+.app-shell:has(.classroom-content) .tools-menu > summary i { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .tools-menu-popover {
-  border-color: #45485c;
-  background: #202333;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .38);
+  border-color: var(--fiscal-line);
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(18, 59, 67, .12);
 }
-.app-shell:has(.classroom-content) .tools-menu-popover .section-tab { color: #c9c9d6; }
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab { color: var(--fiscal-muted); }
 .app-shell:has(.classroom-content) .tools-menu-popover .section-tab:hover,
 .app-shell:has(.classroom-content) .tools-menu-popover .section-tab.is-active {
-  border-color: #514b70;
-  background: #2b2d41;
-  color: #c0adff;
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
+  color: var(--classroom-action);
 }
-.app-shell:has(.classroom-content) .tools-menu-group + .tools-menu-group { border-color: #514b70; }
-.app-shell:has(.classroom-content) .tools-menu-label { color: #a6a3bb; }
-.app-shell:has(.classroom-content) .tools-menu-popover .advisor-tab { border-color: #514b70; }
+.app-shell:has(.classroom-content) .tools-menu-group + .tools-menu-group { border-color: #a4bdb2; }
+.app-shell:has(.classroom-content) .tools-menu-label { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .tools-menu-popover .advisor-tab { border-color: #a4bdb2; }
 @media (max-width: 1000px) {
   .classroom-course-progress .classroom-primary-route { grid-column: 1 / -1; }
 }
@@ -1656,8 +1662,8 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 }
 .classroom-phase-explainer strong { color: var(--wine-dark); }
 .app-shell:has(.classroom-content) .classroom-progress-explainer,
-.app-shell:has(.classroom-content) .classroom-phase-explainer { color: #b4b6c7; }
-.app-shell:has(.classroom-content) .classroom-phase-explainer strong { color: #c0adff; }
+.app-shell:has(.classroom-content) .classroom-phase-explainer { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .classroom-phase-explainer strong { color: var(--classroom-action); }
 .app-shell:has(.classroom-content) .classroom-phase-button[disabled] { opacity: .46; }
 @media (max-width: 760px) {
   .classroom-progress-explainer,
@@ -1669,30 +1675,30 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   min-height: 62px;
   margin: 14px 0 16px;
   padding: 9px 12px;
-  border: 1px solid #41455a;
-  border-left: 4px solid #9ce8c7;
+  border: 1px solid var(--fiscal-line);
+  border-left: 4px solid var(--classroom-action);
   border-radius: 12px;
-  background: #252838;
+  background: var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-step-control {
   min-height: 44px;
-  color: #c5c6d3;
+  color: var(--fiscal-muted);
 }
 .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next,
 .app-shell:has(.classroom-content) .classroom-phase-controls .button-primary {
   min-height: 44px;
-  border-color: #aa91ff;
-  background: #aa91ff;
-  color: #191b28;
+  border-color: var(--classroom-action);
+  background: var(--classroom-action);
+  color: var(--fiscal-ivory);
 }
 .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next:hover:not(:disabled),
 .app-shell:has(.classroom-content) .classroom-phase-controls .button-primary:hover:not(:disabled) {
-  border-color: #c0adff;
-  background: #c0adff;
+  border-color: var(--classroom-action);
+  background: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-next-class {
   min-height: 44px;
-  color: #c0adff;
+  color: var(--classroom-action);
 }
 @media (max-width: 760px) {
   .app-shell:has(.classroom-content) .classroom-phase-controls {
@@ -1748,13 +1754,13 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .app-shell:has(.classroom-content) .classroom-action-card:hover {
-    border-color: #aa91ff;
-    box-shadow: 0 8px 22px rgba(170, 145, 255, .12);
+    border-color: var(--classroom-action);
+    box-shadow: 0 8px 22px rgba(var(--classroom-jade-rgb), .12);
     transform: translateY(-2px);
   }
   .app-shell:has(.classroom-content) .classroom-phase-controls .classroom-phase-next:hover:not(:disabled),
   .app-shell:has(.classroom-content) .classroom-route-cta:hover:not(:disabled) {
-    box-shadow: 0 5px 16px rgba(170, 145, 255, .22);
+    box-shadow: 0 5px 16px rgba(var(--classroom-jade-rgb), .22);
     transform: translateY(-1px);
   }
 }
@@ -1806,26 +1812,26 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   color: #35674f;
 }
 .app-shell:has(.classroom-content) .class-menu-status {
-  border-color: #484b61;
-  background: #202333;
-  color: #c5c6d3;
+  border-color: var(--fiscal-line);
+  background: #ffffff;
+  color: var(--fiscal-muted);
 }
 .app-shell:has(.classroom-content) .class-menu-item.is-complete .class-menu-status {
-  border-color: #557e6d;
-  background: rgba(156, 232, 199, .08);
-  color: #9ce8c7;
+  border-color: #a4bdb2;
+  background: rgba(var(--classroom-jade-rgb), .08);
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .class-menu-item.is-active:not(.is-complete) .class-menu-status {
-  border-color: #726295;
-  background: rgba(170, 145, 255, .1);
-  color: #c0adff;
+  border-color: #a4bdb2;
+  background: rgba(var(--classroom-jade-rgb), .1);
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .class-menu-item.is-next .class-menu-status {
-  border-color: #557e6d;
-  color: #9ce8c7;
+  border-color: #a4bdb2;
+  color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .class-menu-item.is-next:not(.is-active) {
-  border-left-color: #9ce8c7;
+  border-left-color: var(--classroom-action);
 }
 @media (max-width: 460px) {
   .class-menu-popover { width: min(380px, calc(100vw - 20px)); }
@@ -1849,9 +1855,9 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   color: #625b50;
   font-weight: 500;
 }
-.app-shell:has(.classroom-content) .class-menu-action { color: #bdaaff; }
-.app-shell:has(.classroom-content) .class-menu-item:not(.is-active) .class-menu-action { color: #c2c3d0; }
-.app-shell:has(.classroom-content) .class-menu-item.is-active.is-complete .class-menu-action { color: #9ce8c7; }
+.app-shell:has(.classroom-content) .class-menu-action { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .class-menu-item:not(.is-active) .class-menu-action { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .class-menu-item.is-active.is-complete .class-menu-action { color: var(--classroom-action); }
 .classroom-persistence-status {
   margin: 6px 0 10px;
   padding: 7px 9px;
@@ -1862,9 +1868,9 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   line-height: 1.4;
 }
 .app-shell:has(.classroom-content) .classroom-persistence-status {
-  border-left-color: #9ce8c7;
-  background: rgba(156, 232, 199, .08);
-  color: #b9e8d2;
+  border-left-color: var(--classroom-action);
+  background: rgba(var(--classroom-jade-rgb), .08);
+  color: var(--classroom-action);
 }
 @media (max-width: 460px) {
   .class-menu-item { grid-template-columns: 22px minmax(0, 1fr) auto auto 12px; gap: 4px; padding-inline: 5px; }
@@ -2250,12 +2256,12 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 .classroom-content .classroom-next-class:active:not(:disabled),
 .classroom-content .classroom-route-cta:active:not(:disabled),
 .classroom-content .classroom-live-button:active:not(:disabled) { transform: translateY(0) scale(.98); }
-.classroom-content .classroom-phase-button.is-active { box-shadow: 0 0 0 4px rgba(170,145,255,.12); }
+.classroom-content .classroom-phase-button.is-active { box-shadow: 0 0 0 4px rgba(var(--classroom-jade-rgb), .12); }
 .classroom-content .classroom-phase-button.is-past:not(:disabled) { animation: classroom-phase-check .42s ease both; }
-.classroom-content .classroom-action-done { box-shadow: 0 9px 22px rgba(170,145,255,.2); }
-.classroom-content .classroom-action-done:hover:not(:disabled) { box-shadow: 0 13px 28px rgba(170,145,255,.3); }
-.classroom-content .classroom-live-button[aria-pressed="true"] { border-color: #9ce8c7; color: #9ce8c7; box-shadow: 0 0 0 4px rgba(156,232,199,.1); }
-.classroom-content .classroom-live-button[aria-pressed="true"]::before { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; content: ""; background: #9ce8c7; box-shadow: 0 0 0 4px rgba(156,232,199,.12); animation: classroom-live-pulse 1.8s ease-in-out infinite; }
+.classroom-content .classroom-action-done { box-shadow: 0 9px 22px rgba(var(--classroom-jade-rgb), .2); }
+.classroom-content .classroom-action-done:hover:not(:disabled) { box-shadow: 0 13px 28px rgba(var(--classroom-jade-rgb), .3); }
+.classroom-content .classroom-live-button[aria-pressed="true"] { border-color: var(--classroom-action); color: var(--classroom-action); box-shadow: 0 0 0 4px rgba(var(--classroom-jade-rgb), .1); }
+.classroom-content .classroom-live-button[aria-pressed="true"]::before { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; content: ""; background: var(--classroom-action); box-shadow: 0 0 0 4px rgba(var(--classroom-jade-rgb), .12); animation: classroom-live-pulse 1.8s ease-in-out infinite; }
 .classroom-content .classroom-narrate-button[disabled] { opacity: .45; filter: grayscale(.25); }
 
 /* Clases · selector de recorrido y módulos */
@@ -2275,14 +2281,14 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 .class-menu-item.is-next:not(.is-active) { animation: class-next-nudge 2.6s ease-in-out infinite; }
 .class-menu-item.is-complete > i { animation: class-check-pop .38s cubic-bezier(.2,.85,.3,1.3) both; }
 .classroom-content .course-module-card summary { transition: padding-left .2s ease, background-color .2s ease, box-shadow .2s ease; }
-.classroom-content .course-module-card summary:hover { padding-left: 15px; box-shadow: inset 3px 0 0 #aa91ff; }
+.classroom-content .course-module-card summary:hover { padding-left: 15px; box-shadow: inset 3px 0 0 var(--classroom-action); }
 .classroom-content .course-module-toggle { transition: transform .24s cubic-bezier(.2,.8,.2,1), background-color .18s ease, color .18s ease; }
-.classroom-content .course-module-card[open] .course-module-toggle { background: rgba(170,145,255,.12); color: #aa91ff; }
-.classroom-content .course-practice-link:hover { box-shadow: 0 6px 14px rgba(170,145,255,.12); }
+.classroom-content .course-module-card[open] .course-module-toggle { background: rgba(var(--classroom-jade-rgb), .12); color: var(--classroom-action); }
+.classroom-content .course-practice-link:hover { box-shadow: 0 6px 14px rgba(var(--classroom-jade-rgb), .12); }
 @keyframes classroom-phase-check { from { opacity: .65; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
-@keyframes classroom-live-pulse { 0%,100% { opacity: .55; box-shadow: 0 0 0 3px rgba(156,232,199,.08); } 50% { opacity: 1; box-shadow: 0 0 0 7px rgba(156,232,199,.03); } }
+@keyframes classroom-live-pulse { 0%,100% { opacity: .55; box-shadow: 0 0 0 3px rgba(var(--classroom-jade-rgb, 156, 232, 199), .08); } 50% { opacity: 1; box-shadow: 0 0 0 7px rgba(var(--classroom-jade-rgb, 156, 232, 199), .03); } }
 @keyframes menu-popover-enter { from { opacity: 0; transform: translateY(-5px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes class-next-nudge { 0%,100% { box-shadow: 0 0 0 rgba(170,145,255,0); } 50% { box-shadow: 0 0 0 3px rgba(170,145,255,.11); } }
+@keyframes class-next-nudge { 0%,100% { box-shadow: 0 0 0 rgba(var(--classroom-jade-rgb, 170, 145, 255), 0); } 50% { box-shadow: 0 0 0 3px rgba(var(--classroom-jade-rgb, 170, 145, 255), .11); } }
 @keyframes class-check-pop { from { opacity: .35; transform: scale(.65); } 70% { transform: scale(1.22); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
   .classroom-content *, .class-menu *, .tools-menu * { animation: none !important; transition: none !important; }
@@ -2413,8 +2419,9 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 }
 
 
-/* Confianza fiscal: tema delimitado a Herramientas y CFDI; no altera :root ni el Aula. */
-.app-shell--fiscal {
+/* Confianza fiscal: tokens compartidos por Herramientas, CFDI y Aula; sin alterar :root. */
+.app-shell--fiscal,
+.app-shell:has(.classroom-content) {
   color-scheme: light;
   --fiscal-petroleum: #123B43;
   --fiscal-jade: #16866F;
@@ -2427,12 +2434,18 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
   background: var(--fiscal-ivory);
   color: var(--fiscal-petroleum);
 }
-.app-shell--fiscal .main-shell { background: var(--fiscal-ivory); color: var(--fiscal-petroleum); }
-.app-shell--fiscal .topbar { background: rgba(255,255,255,.9); border-bottom-color: var(--fiscal-line); }
-.app-shell--fiscal .breadcrumb, .app-shell--fiscal .topbar-right { color: var(--fiscal-muted); }
-.app-shell--fiscal .breadcrumb strong { color: var(--fiscal-petroleum); }
-.app-shell--fiscal .edition-dot { background: var(--fiscal-jade); }
-.app-shell--fiscal .section-tab.is-active { color: var(--fiscal-jade); }
+.app-shell--fiscal .main-shell,
+.app-shell:has(.classroom-content) .main-shell { background: var(--fiscal-ivory); color: var(--fiscal-petroleum); }
+.app-shell--fiscal .topbar,
+.app-shell:has(.classroom-content) .topbar { background: rgba(255,255,255,.9); border-bottom-color: var(--fiscal-line); }
+.app-shell--fiscal .breadcrumb, .app-shell--fiscal .topbar-right,
+.app-shell:has(.classroom-content) .breadcrumb, .app-shell:has(.classroom-content) .topbar-right { color: var(--fiscal-muted); }
+.app-shell--fiscal .breadcrumb strong,
+.app-shell:has(.classroom-content) .breadcrumb strong { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .edition-dot,
+.app-shell:has(.classroom-content) .edition-dot { background: var(--fiscal-jade); }
+.app-shell--fiscal .section-tab.is-active,
+.app-shell:has(.classroom-content) .section-tab.is-active { color: var(--fiscal-jade); }
 
 /* Continuidad del curso: se alimenta exclusivamente de módulos y avance local reales. */
 .home-learning-dashboard { --learning-jade: #16866F; margin: 25px 0 31px; padding: 20px; border: 1px solid #d8e5d8; background: #fffdfa; box-shadow: 0 8px 22px rgba(32,55,45,.06); }
@@ -2475,10 +2488,14 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
   .mobile-nav-item { min-height: 48px; gap: 1px; border-radius: 8px; }
   .mobile-nav-item small { font-size: 8px; }
   .mobile-primary-action { display: none !important; }
-  .app-shell--fiscal .mobile-bottom-nav { border-top-color: var(--fiscal-line); background: rgba(255,255,255,.97); box-shadow: 0 -8px 25px rgba(18,59,67,.1); }
-  .app-shell--fiscal .mobile-nav-item { color: var(--fiscal-muted); }
-  .app-shell--fiscal .mobile-nav-item.is-active { background: #e6efeb; color: var(--fiscal-petroleum); }
-  .app-shell--fiscal .mobile-nav-item.is-active span { color: var(--fiscal-jade); }
+  .app-shell--fiscal .mobile-bottom-nav,
+  .app-shell:has(.classroom-content) .mobile-bottom-nav { border-top-color: var(--fiscal-line); background: rgba(255,255,255,.97); box-shadow: 0 -8px 25px rgba(18,59,67,.1); }
+  .app-shell--fiscal .mobile-nav-item,
+  .app-shell:has(.classroom-content) .mobile-nav-item { color: var(--fiscal-muted); }
+  .app-shell--fiscal .mobile-nav-item.is-active,
+  .app-shell:has(.classroom-content) .mobile-nav-item.is-active { background: #e6efeb; color: var(--fiscal-petroleum); }
+  .app-shell--fiscal .mobile-nav-item.is-active span,
+  .app-shell:has(.classroom-content) .mobile-nav-item.is-active span { color: var(--fiscal-jade); }
   .home-learning-dashboard { margin: 20px 0 25px; padding: 14px; }
   .home-learning-top { grid-template-columns: minmax(0,1fr); gap: 12px; }
   .home-learning-heading h2 { font-size: 22px; }
@@ -2490,4 +2507,157 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 @media (prefers-reduced-motion: reduce) {
   .home-course-progress-track span, .home-route-step button { transition: none !important; }
   .home-route-step button:hover { transform: none; }
+}
+
+
+/* Aula de Aprende · jerarquía, estados y lectura de Confianza fiscal. */
+.app-shell:has(.classroom-content) .classroom-heading {
+  border: 1px solid var(--fiscal-line);
+  border-left: 4px solid var(--fiscal-jade);
+  background: var(--fiscal-sand);
+  box-shadow: 0 6px 22px rgba(18,59,67,.04);
+}
+.app-shell:has(.classroom-content) .classroom-heading h1 { color: var(--fiscal-petroleum); line-height: 1.05; }
+.app-shell:has(.classroom-content) .classroom-heading h1 em { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) .classroom-course-progress { background: #fff; }
+.app-shell:has(.classroom-content) .classroom-course-progress .progress-track { height: 6px; border-radius: 4px; }
+.app-shell:has(.classroom-content) .classroom-course-progress .progress-track span { background: var(--fiscal-jade); }
+.app-shell:has(.classroom-content) .classroom-course-progress > b { color: var(--fiscal-jade); }
+.app-shell:has(.classroom-content) .classroom-stage { box-shadow: 0 6px 22px rgba(18,59,67,.04); }
+.app-shell:has(.classroom-content) .classroom-scene {
+  background: radial-gradient(ellipse at 18% 82%, rgba(22,134,111,.07), transparent 43%), var(--fiscal-ivory);
+}
+.app-shell:has(.classroom-content) .classroom-callout,
+.app-shell:has(.classroom-content) .classroom-action-card,
+.app-shell:has(.classroom-content) .classroom-concepts li { background: #fff; }
+.app-shell:has(.classroom-content) .classroom-action-card .classroom-action-how,
+.app-shell:has(.classroom-content) .classroom-action-tool { background: var(--classroom-soft); }
+.app-shell:has(.classroom-content) :is(.classroom-example, .classroom-demonstration article:last-of-type) {
+  border-color: var(--fiscal-validation);
+  background: #faf4dd;
+}
+.app-shell:has(.classroom-content) .classroom-demonstration article:first-of-type { background: #fff; }
+.app-shell:has(.classroom-content) .classroom-guardrail {
+  border-left-color: var(--fiscal-validation);
+  background: #faf4dd;
+  color: var(--fiscal-petroleum);
+}
+.app-shell:has(.classroom-content) :is(.classroom-demonstration article span, .classroom-tool > div span, .classroom-material-pending, .classroom-storage-note) {
+  color: var(--fiscal-muted);
+}
+.app-shell:has(.classroom-content) .classroom-outcome {
+  border-color: #a4bdb2;
+  background: var(--classroom-soft);
+  color: var(--classroom-action);
+  font-size: 10px;
+}
+.app-shell:has(.classroom-content) .classroom-phase-button { min-height: 48px; border-bottom-color: var(--fiscal-line); }
+.app-shell:has(.classroom-content) .classroom-phase-button.is-active {
+  border-bottom-color: var(--fiscal-jade);
+  background: var(--classroom-soft);
+  color: var(--classroom-action-hover);
+  box-shadow: 0 0 0 2px rgba(22,134,111,.12);
+}
+.app-shell:has(.classroom-content) .classroom-phase-button.is-past { border-bottom-color: #a4bdb2; color: var(--classroom-action-hover); }
+.app-shell:has(.classroom-content) .classroom-phase-button.is-active > span { color: var(--classroom-action-hover); }
+.app-shell:has(.classroom-content) .classroom-phase-button > b { font-size: 11px; line-height: 1.35; }
+.app-shell:has(.classroom-content) .classroom-phase-button > span { font-size: 10px; }
+.app-shell:has(.classroom-content) :is(.button-primary, .classroom-route-cta, .classroom-phase-controls .button-primary) {
+  min-height: 44px;
+  border-color: var(--classroom-action);
+  background: var(--classroom-action);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 700;
+  text-align: left;
+}
+.app-shell:has(.classroom-content) :is(.button-primary, .classroom-route-cta, .classroom-phase-controls .button-primary):hover:not(:disabled) {
+  border-color: var(--classroom-action-hover);
+  background: var(--classroom-action-hover);
+  color: #fff;
+}
+.app-shell:has(.classroom-content) :is(.classroom-step-control, .classroom-next-class, .classroom-narrate-button, .classroom-live-button, .classroom-practice-link, .classroom-advisor-open) {
+  min-height: 44px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.app-shell:has(.classroom-content) .classroom-portfolio-link { min-height: 36px; font-size: 12px; }
+.app-shell:has(.classroom-content) .classroom-live-button[aria-pressed="true"] {
+  border-color: var(--fiscal-jade);
+  background: var(--classroom-soft);
+  color: var(--classroom-action);
+}
+.app-shell:has(.classroom-content) .class-menu-item::before { background: var(--fiscal-jade); }
+.app-shell:has(.classroom-content) .class-menu-item.is-active:not(.is-complete) .class-menu-status {
+  border-color: var(--fiscal-validation);
+  background: #faf4dd;
+  color: var(--fiscal-petroleum);
+}
+.app-shell:has(.classroom-content) :is(.onboarding-card, .onboarding-complete, .course-glossary) {
+  border: 1px solid var(--fiscal-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--fiscal-petroleum);
+}
+.app-shell:has(.classroom-content) :is(.onboarding-card h2, .course-glossary-toggle strong, .glossary-index-selected > b) { color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) :is(.onboarding-card p, .onboarding-card label, .onboarding-card legend, .onboarding-complete p, .classroom-content .eyebrow) { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) :is(.onboarding-check, .course-glossary-toggle > span:last-child, .course-glossary-toggle b, .glossary-index-term b) { color: var(--classroom-action); }
+.app-shell:has(.classroom-content) :is(.glossary-index-term, .glossary-index-selected, .tutor-document) {
+  border-color: var(--fiscal-line);
+  background: var(--fiscal-ivory);
+  color: var(--fiscal-petroleum);
+}
+.app-shell:has(.classroom-content) .glossary-index-entry { border-color: var(--fiscal-line); background: #fff; }
+.app-shell:has(.classroom-content) :is(.glossary-index-entry p, .glossary-index-entry small) { color: var(--fiscal-muted); font-size: 12px; line-height: 1.5; }
+.app-shell:has(.classroom-content) .glossary-index-entry button { color: var(--classroom-action-hover); font-size: 14px; }
+.app-shell:has(.classroom-content) .course-disclaimer {
+  border: 1px solid #e2d49a;
+  border-left: 3px solid var(--fiscal-validation);
+  border-radius: 8px;
+  background: #faf4dd;
+  color: var(--fiscal-petroleum);
+}
+.app-shell:has(.classroom-content) .course-disclaimer strong { color: var(--fiscal-petroleum); }
+.app-shell:has(.classroom-content) :is(input, textarea, select) { accent-color: var(--classroom-action); }
+.app-shell:has(.classroom-content) :is(.tutor-error, .tutor-document-error) {
+  border-left: 3px solid var(--fiscal-coral);
+  padding: 8px;
+  background: #fff0eb;
+  color: #823c2f;
+}
+.app-shell:has(.classroom-content) :focus-visible { outline: 3px solid var(--classroom-action); outline-offset: 3px; }
+.app-shell:has(.classroom-content) .classroom-stage:focus-visible { outline-offset: 4px; }
+.app-shell:has(.classroom-content) .classroom-scene-lead { font-size: 16px; line-height: 1.55; }
+.app-shell:has(.classroom-content) :is(.classroom-callout p, .classroom-action-instruction) { color: var(--fiscal-petroleum); font-size: 15px; line-height: 1.55; }
+.app-shell:has(.classroom-content) :is(.classroom-concepts li span, .classroom-example p, .classroom-demonstration article p, .classroom-action-how, .classroom-action-hint) { font-size: 14px; line-height: 1.5; }
+.app-shell:has(.classroom-content) .classroom-concepts li b { font-size: 14px; }
+.app-shell:has(.classroom-content) :is(.classroom-progress-explainer, .classroom-phase-explainer, .classroom-persistence-status, .classroom-demo-why, .classroom-resource-body, .classroom-live-privacy, .classroom-guardrail) { font-size: 12px; line-height: 1.5; }
+.app-shell:has(.classroom-content) :is(.classroom-callout > span, .classroom-example > span, .classroom-action-counter, .classroom-scene-kicker) { font-size: 10px; }
+.app-shell:has(.classroom-content) .classroom-resources > summary { min-height: 44px; font-size: 13px; }
+.app-shell:has(.classroom-content) .classroom-primary-route > span { font-size: 10px; }
+.app-shell:has(.classroom-content) .classroom-primary-route > strong { font-size: 16px; line-height: 1.35; }
+
+@media (max-width: 760px) {
+  .app-shell:has(.classroom-content) .classroom-content { padding-inline: 12px; }
+  .app-shell:has(.classroom-content) .classroom-heading { padding: 16px; border-radius: 16px; }
+  .app-shell:has(.classroom-content) .classroom-stage { border-radius: 14px; padding: 12px; }
+  .app-shell:has(.classroom-content) .classroom-stage-heading h2 { font-size: 19px; line-height: 1.25; }
+  .app-shell:has(.classroom-content) .classroom-scene { border-radius: 12px; }
+  .app-shell:has(.classroom-content) .classroom-heading > div:first-child > p:last-child { font-size: 15px; line-height: 1.5; }
+  .app-shell:has(.classroom-content) .classroom-phase-nav { overflow-x: auto; padding: 3px 2px 5px; }
+  .app-shell:has(.classroom-content) .classroom-phase-button { min-width: 68px; padding-inline: 5px; }
+  .app-shell:has(.classroom-content) .classroom-phase-button > b { font-size: 10px; }
+  .app-shell:has(.classroom-content) .classroom-demonstration { grid-template-columns: minmax(0,1fr); }
+  .app-shell:has(.classroom-content) .classroom-character figcaption b { font-size: 12px; }
+  .app-shell:has(.classroom-content) .classroom-character-status { font-size: 10px; }
+  .app-shell:has(.classroom-content) .classroom-course-progress { grid-template-columns: minmax(0,1fr); }
+  .app-shell:has(.classroom-content) .classroom-course-progress > * { grid-column: 1 / -1; min-width: 0; }
+  .app-shell:has(.classroom-content) .classroom-course-progress > span { font-size: 10px; }
+  .app-shell:has(.classroom-content) .classroom-course-progress > b { font-size: 24px; }
+  .app-shell:has(.classroom-content) .classroom-action-card { padding: 12px; }
+  .app-shell:has(.classroom-content) .classroom-concepts li { grid-template-columns: minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell:has(.classroom-content) :is(.classroom-stage, .classroom-scene, .classroom-phase-button):hover { transform: none; }
 }
