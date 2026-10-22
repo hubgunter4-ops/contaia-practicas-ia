@@ -66,6 +66,10 @@ export function buildCfdiTaxReport(analysis, businessRfc = "") {
   const purchases = [];
   const unclassified = [];
   for (const invoice of invoices) {
+    if (invoice.tipo === "E") {
+      unclassified.push(invoice);
+      continue;
+    }
     const issuerMatches = normalizedRfc(invoice.rfcEmisor) === normalizedBusinessRfc;
     const receiverMatches = normalizedRfc(invoice.rfcReceptor) === normalizedBusinessRfc;
     if (issuerMatches && !receiverMatches) sales.push(invoice);

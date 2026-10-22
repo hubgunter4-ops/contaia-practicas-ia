@@ -83,3 +83,55 @@ test("exporta un libro XLSX local con resumen, hallazgos, documentos y evidencia
   const readBack = XLSX.read(bytes, { type: "array" });
   assert.equal(XLSX.utils.sheet_to_json(readBack.Sheets.Documentos, { header: 1 })[1][1], INVOICE_UUID);
 });
+
+
+test("mantiene abierto un bloqueo aunque exista una decisión de reconocimiento", () => {
+  const current = buildJournalSources({ analysis: { facturas: [invoice({ taxDetails: [] })], pagos: [] } });
+  const first = auditFor(current, current.map((source) => source.sourceId));
+  const blocking = first.findings.find((entry) => entry.code === "CFDI-TAX-001");
+  assert.ok(blocking);
+  const acknowledged = auditFor(current, current.map((source) => source.sourceId), current.map((source) => source.sourceId), { [blocking.findingId]: { status: "acknowledged", note: "Revisado localmente." } });
+  const persisted = acknowledged.findings.find((entry) => entry.findingId === blocking.findingId);
+  assert.equal(persisted.status, "open");
+  assert.equal(acknowledged.status, "review");
+});
+
+test("bloquea fuentes fuera del periodo confirmado", () => {
+  const current = buildJournalSources({ analysis: { facturas: [invoice({ fecha: "2026-09-30T09:00:00" })], pagos: [] } });
+  const audit = auditFor(current, current.map((source) => source.sourceId));
+  const finding = audit.findings.find((entry) => entry.code === "CFDI-PERIOD-001");
+  assert.equal(finding?.severity, "blocking");
+  assert.equal(audit.status, "review");
+});
+
+test("distingue UUID duplicado con método, forma o impuestos incompatibles", () => {
+  const current = buildJournalSources({ analysis: { facturas: [invoice(), invoice({ metodoPago: "PUE", formaPagoCode: "03", taxDetails: [iva16("1000.00", "160.01")] })], pagos: [] } });
+  const audit = auditFor(current, current.map((source) => source.sourceId));
+  const finding = audit.findings.find((entry) => entry.code === "CFDI-DUP-001");
+  assert.equal(finding?.severity, "blocking");
+  assert.match(finding?.message || "", /incompatible/);
+});
+
+test("mide una nota E contra el saldo disponible después de pagos", () => {
+  const current = buildJournalSources({ analysis: {
+    facturas: [invoice(), creditNote()],
+    pagos: [payment({ rawAmounts: { prior: "1160.00", paid: "1144.00", remaining: "16.00" } })],
+  } });
+  const audit = auditFor(current, current.map((source) => source.sourceId));
+  assert.equal(audit.findings.some((entry) => entry.code === "CFDI-E-AMT-001"), true);
+});
+
+test("bloquea CFDI cancelados o con cancelación pendiente", () => {
+  const current = buildJournalSources({ analysis: { facturas: [invoice({ cancellationStatus: "canceled" })], pagos: [] } });
+  const audit = auditFor(current, current.map((source) => source.sourceId));
+  const finding = audit.findings.find((entry) => entry.code === "CFDI-CANCEL-001");
+  assert.equal(finding?.severity, "blocking");
+  assert.match(finding?.message || "", /cancelada/);
+});
+
+test("alinea la auditoría con la política MXN aunque exista equivalencia", () => {
+  const current = buildJournalSources({ analysis: { facturas: [invoice()], pagos: [payment({ monedaPago: "USD", equivalenciaDR: "20.000000" })] } });
+  const audit = auditFor(current, current.map((source) => source.sourceId));
+  const finding = audit.findings.find((entry) => entry.code === "CFDI-P-CUR-001");
+  assert.equal(finding?.severity, "blocking");
+});

@@ -49,10 +49,11 @@ function finding({ code, severity = "review", source, related = [], message, rea
   const sourceIds = [source, ...related].filter(Boolean).map((entry) => entry.sourceId).sort();
   const findingId = `finding:${code}:${localKey({ code, sourceIds, expected, observed, scope: scope.id })}`;
   const decision = decisions[findingId] || {};
+  const decisionStatus = severity === "blocking" ? "open" : decision.status || "open";
   return {
     findingId, code, severity: AUDIT_SEVERITIES.includes(severity) ? severity : "review",
     scope: scope.kind,
-    status: forcedStatus || decision.status || "open",
+    status: forcedStatus || decisionStatus,
     decisionNote: decision.note || "",
     documentRefs: sourceIds,
     eventRefs: [source, ...related].filter(Boolean).map((entry) => lifecycleEventKey(entry)),
@@ -101,13 +102,15 @@ function hasTaxEvidence(item) {
   return Array.isArray(item.taxObjectCodes) && item.taxObjectCodes.length > 0 && item.taxObjectCodes.every((code) => code === "01");
 }
 
-function currentDraftsFor(source, drafts) {
-  return (Array.isArray(drafts) ? drafts : []).filter((draft) => Array.isArray(draft.sourceRefs) && draft.sourceRefs.includes(source.sourceId));
+function currentDraftsFor(source, drafts, eventKinds = null) {
+  return (Array.isArray(drafts) ? drafts : []).filter((draft) => Array.isArray(draft.sourceRefs)
+    && draft.sourceRefs.includes(source.sourceId)
+    && (!eventKinds || eventKinds.includes(draft.eventKind)));
 }
 
 function sourceFingerprint(source) {
   const item = source?.cfdi || {};
-  return stableSnapshotKey({ uuid: item.uuid, tipo: item.tipo, date: sourceDate(source), currency: item.moneda, rawAmounts: item.rawAmounts, rfcEmisor: item.rfcEmisor, rfcReceptor: item.rfcReceptor, relations: item.cfdiRelations, payment: item.docRelacionado ? { doc: item.docRelacionado, ordinal: [item.paymentIndex, item.relatedIndex], paid: item.rawAmounts?.paid } : null });
+  return stableSnapshotKey({ uuid: item.uuid, tipo: item.tipo, date: sourceDate(source), currency: item.moneda, paymentCurrency: item.monedaPago, method: item.metodoPago, paymentForm: item.formaPagoCode, rawAmounts: item.rawAmounts, rfcEmisor: item.rfcEmisor, rfcReceptor: item.rfcReceptor, relations: item.cfdiRelations, taxDetails: item.taxDetails, taxObjectCodes: item.taxObjectCodes, equivalenciaDR: item.equivalenciaDR, payment: item.docRelacionado ? { doc: item.docRelacionado, ordinal: [item.paymentIndex, item.relatedIndex], paid: item.rawAmounts?.paid } : null });
 }
 
 export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSourceIds = scopeSourceIds, businessRfc = "", period = "", drafts = [], decisions = {} } = {}) {
@@ -132,6 +135,12 @@ export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSou
     add({ code: "CFDI-CONTEXT-001", severity: "blocking", source, message: "Falta confirmar RFC de empresa o periodo mensual.", reason: "La auditoría no puede atribuir papeles ni delimitar el alcance.", expected: "RFC válido y periodo AAAA-MM", observed: `${rfc || "RFC pendiente"} · ${period || "periodo pendiente"}`, recommendedAction: "Confirma el contexto local antes de interpretar el resultado." });
   }
 
+  if (validPeriod(period)) {
+    for (const source of scopeSources) {
+      if (sourceDate(source).slice(0, 7) !== period) add({ code: "CFDI-PERIOD-001", severity: "blocking", source, message: "La fuente está fuera del periodo confirmado.", reason: "La auditoría no mezcla meses ni presenta cobertura fuera del alcance declarado.", expected: period, observed: sourceDate(source) || "fecha pendiente", recommendedAction: "Cambia el periodo, ajusta la selección o documenta el alcance en otra revisión." });
+    }
+  }
+
   const invoiceByUuid = new Map();
   for (const source of scopeSources.filter((entry) => entry.kind !== "payment")) {
     const uuid = normalizeUuid(source.cfdi.uuid);
@@ -150,7 +159,8 @@ export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSou
     const role = companyRole(item, rfc);
     const draftsForSource = currentDraftsFor(source, drafts);
     if (role === "ambiguous") add({ code: "CFDI-I-ROLE-001", severity: "high", source, message: "El emisor/receptor no permite confirmar el papel de la empresa.", reason: "No se puede elegir una plantilla de venta o compra por inferencia.", expected: "Empresa identificada solo como emisor o receptor", observed: `${item.rfcEmisor || "sin RFC emisor"} / ${item.rfcReceptor || "sin RFC receptor"}`, recommendedAction: "Confirma el RFC de la empresa o excluye esta fuente de la preparación." });
-    if (!item.cancellationStatus || item.cancellationStatus === "unknown") add({ code: "CFDI-CANCEL-001", severity: "info", source, message: "Estado de cancelación no verificable con las fuentes seleccionadas.", reason: "El XML local no prueba vigencia o cancelación ante el SAT.", expected: "Evidencia autorizada de estado", observed: item.cancellationEvidence || "solo XML local", recommendedAction: "Conserva esta limitación; una consulta SAT requeriría autorización e integración separadas." });
+    if (["canceled", "cancellation_pending"].includes(item.cancellationStatus)) add({ code: "CFDI-CANCEL-001", severity: "blocking", source, message: "La fuente está cancelada o en cancelación pendiente.", reason: "No se puede presentar como evidencia lista para póliza mientras el estado no esté resuelto.", expected: "Fuente activa o decisión fuera de la preparación", observed: item.cancellationStatus, recommendedAction: "Excluye la fuente o resuelve su estado con evidencia autorizada antes de continuar." });
+    else if (!item.cancellationStatus || item.cancellationStatus === "unknown") add({ code: "CFDI-CANCEL-001", severity: "info", source, message: "Estado de cancelación no verificable con las fuentes seleccionadas.", reason: "El XML local no prueba vigencia o cancelación ante el SAT.", expected: "Evidencia autorizada de estado", observed: item.cancellationEvidence || "solo XML local", recommendedAction: "Conserva esta limitación; una consulta SAT requeriría autorización e integración separadas." });
     if (item.moneda !== "MXN") add({ code: "CFDI-MONEY-001", severity: "blocking", source, message: "La fuente usa moneda ausente o no soportada por el motor local.", reason: "No hay conversión automática habilitada.", expected: "MXN con importe exacto", observed: item.moneda || "moneda pendiente", recommendedAction: "Revisa la fuente o usa una política de divisas autorizada." });
     if ((type === "I" || type === "E") && !hasTaxEvidence(item)) add({ code: "CFDI-TAX-001", severity: "blocking", source, message: "No hay desglose fiscal original suficiente para la plantilla.", reason: "No se presume IVA cero ni se estima el impuesto.", expected: "Impuestos explícitos o ObjetoImp 01 original", observed: "desglose ausente", recommendedAction: "Vuelve a analizar el XML original o conserva el documento fuera de la póliza." });
     if (!draftsForSource.length && ["I", "E", "P"].includes(type)) add({ code: "CFDI-POL-001", severity: "info", source, message: "Documento elegible sin póliza sugerida en esta sesión.", reason: "La auditoría no crea ni aprueba pólizas automáticamente.", expected: "Borrador explicable o exclusión humana", observed: "sin propuesta local", recommendedAction: "Configura cuentas, decide aplicación si corresponde y genera la propuesta." });
@@ -190,9 +200,9 @@ export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSou
         const invoice = relation.inScope[0];
         const invoiceTotal = moneyAmount(invoice, "total", "total");
         if (invoiceTotal && BigInt(paid.minor) > BigInt(invoiceTotal.minor)) add({ code: "CFDI-P-BAL-002", severity: "high", source, related: [invoice], message: "El importe pagado excede el total de la factura relacionada.", reason: "No se interpreta como devolución o ajuste sin evidencia adicional.", expected: `≤ ${invoice.cfdi.rawAmounts?.total || "total factura"}`, observed: item.rawAmounts?.paid || "importe pendiente", recommendedAction: "Revisa notas de crédito, devoluciones o duplicidad antes de liquidar." });
-        if (item.moneda !== invoice.cfdi.moneda || item.monedaPago !== invoice.cfdi.moneda) {
-          if (!item.equivalenciaDR || !/^\d+(?:\.\d+)?$/.test(item.equivalenciaDR)) add({ code: "CFDI-P-CUR-001", severity: "blocking", source, related: [invoice], message: "Pago y documento relacionado usan monedas que requieren equivalencia verificable.", reason: "La conversión automática no está habilitada.", expected: "EquivalenciaDR original válida", observed: item.equivalenciaDR || "sin equivalencia", recommendedAction: "Revisa la evidencia de moneda antes de continuar." });
-        }
+        const unsupportedCurrency = [item.moneda, item.monedaPago, invoice.cfdi.moneda].some((currency) => currency !== "MXN");
+        const currencyMismatch = item.moneda !== invoice.cfdi.moneda || item.monedaPago !== invoice.cfdi.moneda;
+        if (unsupportedCurrency || (currencyMismatch && (!item.equivalenciaDR || !/^\d+(?:\.\d+)?$/.test(item.equivalenciaDR)))) add({ code: "CFDI-P-CUR-001", severity: "blocking", source, related: [invoice], message: "Pago o documento relacionado usan una divisa fuera de la política MXN local.", reason: "La conversión automática no está habilitada y una equivalencia no vuelve aprobable una divisa no soportada.", expected: "Pago, moneda relacionada y política local en MXN", observed: `${item.monedaPago || "moneda de pago pendiente"} · ${item.moneda || "moneda relacionada pendiente"} · ${item.equivalenciaDR || "sin equivalencia"}`, recommendedAction: "Revisa la evidencia de moneda o usa una política de divisas autorizada." });
       }
       if ((lifecycle.eventCounts.get(lifecycleEventKey(source)) || 0) > 1) add({ code: "CFDI-P-DUP-001", severity: "blocking", source, message: "La misma ocurrencia de pago se repite en las fuentes.", reason: "Puede duplicar una liquidación.", expected: "Una ocurrencia Pago/DoctoRelacionado", observed: lifecycleEventKey(source), recommendedAction: "Conserva una sola evidencia de esta ocurrencia." });
       if (item.objetoImpDR === "02" && (!Array.isArray(item.taxDetails) || !item.taxDetails.length)) add({ code: "CFDI-TAX-001", severity: "blocking", source, message: "Documento objeto de impuesto sin desglose DR explícito.", reason: "No se prorratea IVA desde la factura ligada.", expected: "ImpuestosDR originales", observed: "desglose DR ausente", recommendedAction: "Carga el XML completo o deja el evento en revisión." });
@@ -210,7 +220,18 @@ export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSou
           const target = relation.inScope[0];
           const adjustment = moneyAmount(source, "total", "total");
           const targetTotal = moneyAmount(target, "total", "total");
-          if (adjustment && targetTotal && BigInt(adjustment.minor) > BigInt(targetTotal.minor)) add({ code: "CFDI-E-AMT-001", severity: "blocking", source, related: [target], message: "El ajuste excede el importe total del documento relacionado.", reason: "No se fuerza una aplicación parcial ni se crea un saldo negativo.", expected: `≤ ${target.cfdi.rawAmounts?.total || "total origen"}`, observed: item.rawAmounts?.total || "importe pendiente", recommendedAction: "Revisa el documento origen y la aplicación de la nota." });
+          if (adjustment && targetTotal) {
+            const paidMinor = (allIndex.payments.get(normalizeUuid(target.cfdi.uuid)) || []).filter((entry) => scopeIds.has(entry.sourceId)).reduce((sum, entry) => {
+              const amount = moneyAmount(entry, "paid", "impPagado");
+              return amount ? sum + BigInt(amount.minor) : sum;
+            }, 0n);
+            const priorAdjustmentsMinor = scopeSources.filter((entry) => entry.sourceId !== source.sourceId && sourceType(entry) === "E" && (entry.cfdi.cfdiRelations || []).some((relation) => relation.type === "01" && (relation.uuids || []).map(normalizeUuid).includes(normalizeUuid(target.cfdi.uuid)))).reduce((sum, entry) => {
+              const amount = moneyAmount(entry, "total", "total");
+              return amount ? sum + BigInt(amount.minor) : sum;
+            }, 0n);
+            const availableMinor = BigInt(targetTotal.minor) - paidMinor - priorAdjustmentsMinor;
+            if (availableMinor < 0n || BigInt(adjustment.minor) > availableMinor) add({ code: "CFDI-E-AMT-001", severity: "blocking", source, related: [target], message: "El ajuste excede el saldo disponible del documento relacionado.", reason: "Se consideran pagos y ajustes previos de las fuentes seleccionadas; no se fuerza una aplicación parcial ni se crea un saldo negativo.", expected: `≤ ${availableMinor < 0n ? "saldo disponible no positivo" : `${availableMinor.toString()} centavos disponibles`}`, observed: item.rawAmounts?.total || "importe pendiente", recommendedAction: "Revisa pagos, notas previas y la aplicación de este ajuste." });
+          }
           if (companyRole(target.cfdi, rfc) !== role) add({ code: "CFDI-E-REL-001", severity: "high", source, related: [target], message: "El papel de empresa no coincide entre nota y documento relacionado.", reason: "La cuenta por cobrar/pagar afectada no es concluyente.", expected: "Mismo papel de empresa en ambos CFDI", observed: `${role} / ${companyRole(target.cfdi, rfc)}`, recommendedAction: "Confirma el RFC y la relación comercial." });
         }
       }
@@ -237,9 +258,9 @@ export function buildCfdiAudit({ sources = [], scopeSourceIds = [], availableSou
       openCount: findings.filter((entry) => entry.status === "open").length,
       outOfScopeCount: findings.filter((entry) => entry.status === "out_of_scope").length,
       coverage: {
-        recognized: invoices.filter((source) => currentDraftsFor(source, drafts).length).length,
-        liquidated: payments.filter((source) => currentDraftsFor(source, drafts).length).length,
-        adjusted: adjustmentSources.filter((source) => currentDraftsFor(source, drafts).length).length,
+        recognized: invoices.filter((source) => currentDraftsFor(source, drafts, ["sale_cash", "sale_credit", "purchase_cash", "purchase_credit"]).length).length,
+        liquidated: payments.filter((source) => currentDraftsFor(source, drafts, ["customer_collection", "supplier_payment"]).length).length,
+        adjusted: adjustmentSources.filter((source) => currentDraftsFor(source, drafts, ["issuer_credit_note", "supplier_credit_note"]).length).length,
         invoices: invoices.length,
         ppdInvoices: ppdInvoices.length,
         adjustments: adjustmentSources.length,

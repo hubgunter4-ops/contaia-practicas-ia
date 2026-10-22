@@ -43,3 +43,20 @@ test("genera un XLSX que conserva hojas, encabezados, filtros y datos fiscales",
   assert.ok(rows.some((row) => row[3] === "IVA 0% · base"));
   assert.ok(rows.some((row) => row[3] === "IEPS · 8%"));
 });
+
+
+test("mantiene las notas E fuera de ventas/compras y no convierte faltantes en cero", () => {
+  const note = { uuid: "NC-1", tipo: "E", fecha: "2026-09-03T10:00:00", rfcEmisor: "AAA010101AAA", rfcReceptor: "CLI010101BBB", moneda: "MXN", total: 100 };
+  const incomplete = { uuid: "INCOMPLETE-1", tipo: "I", fecha: "2026-09-04T10:00:00", rfcEmisor: "AAA010101AAA", rfcReceptor: "CLI010101BBB", moneda: "MXN", total: null };
+  const localAnalysis = { ...analysis, facturas: [...analysis.facturas, note, incomplete], pagos: [{ uuid: "PAGO-MISSING", docRelacionado: "INCOMPLETE-1", fechaPago: "2026-09-15T10:00:00", moneda: "MXN", saldoAnterior: null, impPagado: null, saldoInsoluto: null, relationStatus: "matched" }] };
+  const taxReport = buildCfdiTaxReport(localAnalysis, "AAA010101AAA");
+  assert.equal(taxReport.sales.invoiceCount, 2);
+  assert.equal(taxReport.purchases.invoiceCount, 1);
+  assert.equal(taxReport.unclassifiedCount, 1);
+  const spec = buildCfdiWorkbookSpec({ analysis: localAnalysis, taxReport, businessRfc: "AAA010101AAA" });
+  const invoiceRow = spec.sheets.find((sheet) => sheet.name === "Comprobantes").rows.find((row) => row[0] === "INCOMPLETE-1");
+  assert.equal(invoiceRow[16], "");
+  const paymentRow = spec.sheets.find((sheet) => sheet.name === "Pagos").rows.find((row) => row[0] === "PAGO-MISSING");
+  assert.deepEqual(paymentRow.slice(4, 7), ["", "", ""]);
+  assert.equal(paymentRow[9], "");
+});

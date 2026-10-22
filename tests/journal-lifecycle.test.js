@@ -495,3 +495,21 @@ test("bases e impuestos DR deben explicar el importe pagado, no solo cuadrar el 
   assert.ok(draft.errors.some((error) => /bases e impuestos DR no explican/.test(error)));
   assert.equal(draft.validation.canApprove, false);
 });
+
+
+test("cambiar las ocurrencias relacionadas del mismo REP incrementa la revisión", () => {
+  const inv = invoice({ uuid: "SNAP-INV" });
+  const firstPayment = payment({ uuid: "SNAP-PAY", docRelacionado: "SNAP-INV", rawAmounts: { prior: "1160.00", paid: "300.00", remaining: "860.00" } });
+  const secondPayment = payment({ uuid: "SNAP-PAY", docRelacionado: "SNAP-INV", relatedIndex: 2, rawAmounts: { prior: "860.00", paid: "280.00", remaining: "580.00" } });
+  const first = generate({ facturas: [inv], pagos: [firstPayment] });
+  const both = generate({ facturas: [inv], pagos: [firstPayment, secondPayment] });
+  const firstDraft = onlyDraft(first, 1);
+  const bothDraft = both.drafts.find((draft) => draft.eventKey === firstDraft.eventKey);
+  assert.ok(bothDraft);
+  assert.equal(firstDraft.evidenceSnapshot.length, 2);
+  assert.equal(bothDraft.evidenceSnapshot.length, 3);
+  assert.notEqual(firstDraft.generationKey, bothDraft.generationKey);
+  const merged = mergeLifecycleDrafts(first.drafts, both.drafts);
+  const mergedDraft = merged.find((draft) => draft.eventKey === firstDraft.eventKey);
+  assert.equal(mergedDraft.revision, 2);
+});

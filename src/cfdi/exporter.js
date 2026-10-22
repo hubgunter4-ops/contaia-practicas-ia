@@ -1,6 +1,11 @@
 const normalizedRfc = (value) => String(value || "").trim().toUpperCase();
 const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const valueOrBlank = (value) => value === null || value === undefined ? "" : value;
+const numberOrBlank = (value) => {
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : "";
+};
 const currencyOf = (invoice) => invoice?.moneda || "Sin moneda indicada";
 const dateOf = (value) => value ? String(value).slice(0, 19) : "";
 
@@ -22,6 +27,10 @@ function classifyInvoices(invoices, businessRfc) {
   const purchases = [];
   const unclassified = [];
   for (const invoice of invoices) {
+    if (invoice.tipo === "E") {
+      unclassified.push(invoice);
+      continue;
+    }
     const issuerMatches = normalizedBusinessRfc && normalizedRfc(invoice.rfcEmisor) === normalizedBusinessRfc;
     const receiverMatches = normalizedBusinessRfc && normalizedRfc(invoice.rfcReceptor) === normalizedBusinessRfc;
     if (issuerMatches && !receiverMatches) sales.push(invoice);
@@ -49,17 +58,19 @@ function invoiceRow(invoice) {
   return [
     valueOrBlank(invoice.uuid), valueOrBlank(invoice.serieFolio), invoice.tipo === "E" ? "Egreso" : "Ingreso", dateOf(invoice.fecha),
     valueOrBlank(invoice.rfcEmisor), valueOrBlank(invoice.nombreEmisor || invoice.emisor), valueOrBlank(invoice.rfcReceptor),
-    valueOrBlank(invoice.nombreReceptor || invoice.receptor), currencyOf(invoice), Number(invoice.subtotal || 0), Number(invoice.descuento || 0),
-    Number(invoice.baseIva0 || 0), Number(invoice.iva0 || 0), Number(invoice.baseIva16 || 0), Number(invoice.iva16 || 0),
-    Number(invoice.ieps || 0), Number(invoice.total || 0), rateLabel(invoice, "0"), rateLabel(invoice, "16"), invoiceQuality(invoice),
+    valueOrBlank(invoice.nombreReceptor || invoice.receptor), currencyOf(invoice), numberOrBlank(invoice.subtotal), numberOrBlank(invoice.descuento),
+    numberOrBlank(invoice.baseIva0), numberOrBlank(invoice.iva0), numberOrBlank(invoice.baseIva16), numberOrBlank(invoice.iva16),
+    numberOrBlank(invoice.ieps), numberOrBlank(invoice.total), rateLabel(invoice, "0"), rateLabel(invoice, "16"), invoiceQuality(invoice),
   ];
 }
 
 function paymentRow(payment) {
-  const difference = round2(Number(payment.saldoAnterior || 0) - Number(payment.impPagado || 0) - Number(payment.saldoInsoluto || 0));
+  const amounts = [payment.saldoAnterior, payment.impPagado, payment.saldoInsoluto];
+  const difference = amounts.every((value) => value !== null && value !== undefined && String(value).trim() !== "" && Number.isFinite(Number(value)))
+    ? round2(Number(amounts[0]) - Number(amounts[1]) - Number(amounts[2])) : "";
   return [
     valueOrBlank(payment.uuid), valueOrBlank(payment.docRelacionado), dateOf(payment.fechaPago), payment.moneda || "Sin moneda indicada",
-    Number(payment.saldoAnterior || 0), Number(payment.impPagado || 0), Number(payment.saldoInsoluto || 0),
+    numberOrBlank(payment.saldoAnterior), numberOrBlank(payment.impPagado), numberOrBlank(payment.saldoInsoluto),
     payment.relationStatus === "matched" ? "Factura encontrada" : "Requiere revisión", payment.taxEvidenceStatus === "missing" ? "No disponible · sin estimación" : payment.estimatedTax ? "Estimación histórica · revisar" : "Revisar desglose XML", difference,
   ];
 }
@@ -67,7 +78,7 @@ function paymentRow(payment) {
 function conceptRow(concept) {
   return [
     valueOrBlank(concept.uuid), valueOrBlank(concept.descripcion), valueOrBlank(concept.emisor), valueOrBlank(concept.claveProdServ),
-    Number(concept.cantidad || 0), Number(concept.importe || 0), Number(concept.iva16 || 0), Number(concept.ieps || 0),
+    numberOrBlank(concept.cantidad), numberOrBlank(concept.importe), numberOrBlank(concept.iva16), numberOrBlank(concept.ieps),
     concept.moneda || "Sin moneda indicada", valueOrBlank(concept.serieFolio),
   ];
 }

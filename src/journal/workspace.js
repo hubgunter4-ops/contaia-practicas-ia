@@ -465,6 +465,9 @@ export function bindJournalWorkspace(app, { getSources = () => ({}), onUpdate = 
       const sourceId = auditDecision.dataset.sourceId || "";
       const note = String(data.get("note") || "").trim();
       if (!findingId || !note) { journalState.error = "Escribe un motivo antes de guardar una decisión de auditoría."; onUpdate(); return; }
+      const activeAudit = buildAuditView(journalState.activeTab === "audit-partial" ? "partial" : "global").audit;
+      const activeFinding = activeAudit.findings.find((entry) => entry.findingId === findingId);
+      if (activeFinding?.severity === "blocking") { journalState.error = "Un hallazgo blocking permanece abierto; excluye la fuente o resuelve la evidencia antes de continuar."; onUpdate(); return; }
       const status = String(data.get("status") || "acknowledged");
       journalState.auditDecisions[findingId] = { status, note, savedAt: new Date().toISOString() };
       if (status === "excluded" && sourceId) {

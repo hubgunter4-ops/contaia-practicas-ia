@@ -130,6 +130,7 @@ function paymentLines(draft, source, role, accounts, lifecycle) {
   const invoice = linked.length === 1 ? linked[0].cfdi : null;
   if (invoice) {
     draft.sourceRefs.push(linked[0].sourceId);
+    draft.evidenceSourceRefs.push(linked[0].sourceId);
     draft.sources.push({ sourceId: linked[0].sourceId, label: linked[0].label, kind: "invoice", eventKind: "relation_evidence_only" });
     if (companyRole(invoice, draft.businessRfc) !== role
       || normalizeRfc(invoice.rfcEmisor) !== normalizeRfc(item.rfcEmisor)
@@ -164,6 +165,7 @@ function paymentLines(draft, source, role, accounts, lifecycle) {
   const allocationKeys = new Set();
   const allocationAmounts = [];
   for (const allocation of allocations) {
+    draft.evidenceSourceRefs.push(allocation.sourceId);
     const key = lifecycleEventKey(allocation);
     if (allocationKeys.has(key)) { draft.errors.push("Pago con ocurrencias duplicadas en su distribución."); continue; }
     allocationKeys.add(key);
@@ -281,6 +283,7 @@ function creditNoteLines(draft, source, role, accounts, lifecycle, application =
   const invoice = candidates.length === 1 ? candidates[0].cfdi : null;
   if (candidates.length === 1) {
     draft.sourceRefs.push(candidates[0].sourceId);
+    draft.evidenceSourceRefs.push(candidates[0].sourceId);
     draft.sources.push({ sourceId: candidates[0].sourceId, label: candidates[0].label, kind: "invoice", eventKind: "adjustment_evidence_only" });
     if (companyRole(invoice, draft.businessRfc) !== role) draft.errors.push("El RFC y el papel de empresa no coinciden entre nota de crédito y factura relacionada.");
     if (invoice.moneda !== "MXN") draft.errors.push("La factura relacionada de la nota no es MXN; no hay conversión automática.");
@@ -367,6 +370,7 @@ export function generateLifecycleDrafts({ sources = [], selectedSourceIds = [], 
       businessRfc: normalizeRfc(businessRfc), companySide: role, ruleVersion: 1, policyVersion: CFDI_JOURNAL_POLICY.version,
       catalogVersion: catalog?.version, sourceRefs: [source.sourceId],
       sources: [{ sourceId: source.sourceId, label: source.label, kind: source.kind, eventKind: source.eventKind }],
+      evidenceSourceRefs: [source.sourceId],
       lines: [], errors: [], warnings: [CFDI_JOURNAL_POLICY.disclaimer,
         "Estado de cancelación no verificable con el XML seleccionado; no se consultó al SAT."],
       warningsAcknowledged: false, status: "review", approvedAt: "", createdAt: new Date().toISOString() };
@@ -391,7 +395,8 @@ export function generateLifecycleDrafts({ sources = [], selectedSourceIds = [], 
     }
     draft.errors = unique(draft.errors);
     draft.warnings = unique(draft.warnings);
-    draft.evidenceSnapshot = copy(sources.filter((entry) => draft.sourceRefs.includes(entry.sourceId)).map((entry) => entry.cfdi));
+    const evidenceSourceIds = new Set(draft.evidenceSourceRefs || draft.sourceRefs);
+    draft.evidenceSnapshot = copy(sources.filter((entry) => evidenceSourceIds.has(entry.sourceId)).map((entry) => entry.cfdi));
     draft.catalogSnapshot = cloneCatalog(catalog);
     draft.accountsSnapshot = copy(accounts);
     draft.generationKey = stableSnapshotKey({ eventKey, evidence: draft.evidenceSnapshot, accounts, catalog: draft.catalogSnapshot, period, businessRfc: draft.businessRfc });
