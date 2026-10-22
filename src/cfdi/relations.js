@@ -1,32 +1,27 @@
-const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+const normalized = (value) => String(value || "").toLowerCase().trim();
+const explicitTaxes = (payment) => payment?.rawPaymentTaxes === true
+  || (Array.isArray(payment?.taxDetails) && payment.taxDetails.length > 0)
+  || payment?.objetoImpDR === "01" && Array.isArray(payment.taxDetails);
 
 export function enriquecerPagosConFacturas(pagos, facturas) {
   const invoices = new Map();
-  for (const factura of facturas) if (factura.uuid) invoices.set(String(factura.uuid).toLowerCase().trim(), factura);
-  return pagos.map((pago) => {
-    const linked = invoices.get(String(pago.docRelacionado || "").toLowerCase().trim());
-    if (!linked) {
-      if (pago.baseIVA16 === 0 && pago.iva16 === 0 && pago.impPagado > 0) {
-        const baseIVA16 = round2(pago.impPagado / 1.16);
-        return { ...pago, baseIVA16, iva16: round2(pago.impPagado - baseIVA16), exento: 0, estimatedTax: true, relationStatus: "unmatched" };
-      }
-      return { ...pago, relationStatus: "unmatched" };
-    }
-    const proportion = linked.total > 0 ? pago.impPagado / linked.total : 0;
-    const baseIVA16 = round2((linked.subtotal - (linked.descuento || 0)) * proportion);
-    const iva16 = round2(linked.iva16 * proportion);
-    const ivaRetenido = round2((linked.ivaRetenido || 0) * proportion);
-    const ieps = round2((linked.ieps || 0) * proportion);
-    const iepsBreakdown = {};
-    for (const [rate, amount] of Object.entries(linked.iepsBreakdown || {})) {
-      const scaled = round2(amount * proportion);
-      if (scaled > 0) iepsBreakdown[rate] = scaled;
-    }
-    return {
-      ...pago, baseIVA16, iva16, ivaRetenido, ieps,
-      exento: Math.max(0, round2(pago.impPagado - (baseIVA16 + iva16 + ieps - ivaRetenido))),
-      iepsBreakdown: Object.keys(pago.iepsBreakdown || {}).length ? pago.iepsBreakdown : iepsBreakdown,
-      relationStatus: "matched", linkedInvoiceTotal: linked.total,
-    };
+  const duplicates = new Set();
+  for (const invoice of Array.isArray(facturas) ? facturas : []) {
+    const uuid = normalized(invoice?.uuid);
+    if (!uuid) continue;
+    if (invoices.has(uuid)) { duplicates.add(uuid); invoices.delete(uuid); }
+    else if (!duplicates.has(uuid)) invoices.set(uuid, invoice);
+  }
+  return (Array.isArray(pagos) ? pagos : []).map((payment) => {
+    const reference = normalized(payment?.docRelacionado);
+    const invoice = invoices.get(reference);
+    const relationStatus = duplicates.has(reference) ? "ambiguous" : invoice ? "matched" : "unmatched";
+    if (explicitTaxes(payment)) return { ...payment, relationStatus,
+      taxEvidenceStatus: "source_explicit", ...(invoice ? { linkedInvoiceTotal: invoice.total } : {}) };
+    // Un enlace UUID no aporta el desglose DR. No se divide el pago entre 1.16,
+    // no se prorratea IVA de la factura y no se interpreta un residual como exento.
+    return { ...payment, relationStatus, taxEvidenceStatus: "missing",
+      baseIVA16: null, iva16: null, ivaRetenido: null, ieps: null, iepsBreakdown: {}, exento: null,
+      ...(invoice ? { linkedInvoiceTotal: invoice.total } : {}) };
   });
 }

@@ -15,13 +15,14 @@ async function mountJournalWorkspace(page) {
 }
 
 test.describe("Pólizas sugeridas · frontend local", () => {
-  test("genera una propuesta, cuadra cargos y abonos y exige reconocimiento antes de aprobar", async ({ page }) => {
+  test("genera una simulación manual pero no elude el ciclo CFDI sin originales", async ({ page }) => {
     await mountJournalWorkspace(page);
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
 
     await expect(page.getByRole("heading", { name: "Pólizas contables sugeridas" })).toBeVisible();
     await page.locator("[data-journal-source]").check();
+    await page.locator("[data-journal-generation-mode]").selectOption("manual");
     await page.locator("[data-journal-company-side]").selectOption("issuer");
     await page.locator("[data-journal-period]").fill("2025-03");
     await page.locator("[data-journal-generate]").click();
@@ -32,9 +33,8 @@ test.describe("Pólizas sugeridas · frontend local", () => {
     await expect(page.locator("[data-journal-approve]")).toBeDisabled();
 
     await page.locator("[data-journal-ack]").check();
-    await expect(page.locator("[data-journal-approve]")).toBeEnabled();
-    await page.locator("[data-journal-approve]").click();
-    await expect(page.locator(".journal-approved-note")).toContainText("Aprobada localmente");
+    await expect(page.locator("[data-journal-approve]")).toBeDisabled();
+    await expect(page.locator(".journal-draft-detail")).toContainText("modo Ciclo CFDI");
     await expect(page.locator(".journal-disclaimer")).toContainText("No constituyen determinación fiscal");
     expect(requests.filter((url) => /\/api\/|supabase|documents/i.test(url))).toEqual([]);
   });

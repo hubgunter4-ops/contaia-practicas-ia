@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import * as XLSX from "xlsx";
 
 async function mountCfdiTaxWorkspace(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -51,5 +52,27 @@ test.describe("CFDI · ventas, compras e IEPS", () => {
     await page.locator("[data-cfdi-tax-report]").press("Enter");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     expect(await page.locator(".cfdi-tax-sides").evaluate((element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length)).toBe(1);
+  });
+
+  test("descarga una hoja fiscal avanzada local con pestañas separadas", async ({ page }) => {
+    await mountCfdiTaxWorkspace(page);
+    await page.locator("[data-cfdi-open-tax-report]").click();
+    await page.locator("[data-cfdi-business-rfc]").fill("AAA010101AAA");
+    await page.locator("[data-cfdi-tax-report]").press("Enter");
+    const requests = [];
+    page.on("request", (request) => requests.push(request.url()));
+    const download = await Promise.all([
+      page.waitForEvent("download"),
+      page.locator("[data-cfdi-export-xlsx]").click(),
+    ]).then(([artifact]) => artifact);
+    expect(download.suggestedFilename()).toMatch(/^contaia-libro-fiscal-2026-09\.xlsx$/);
+    const stream = await download.createReadStream();
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const workbook = XLSX.read(Buffer.concat(chunks), { type: "buffer" });
+    expect(workbook.SheetNames).toEqual(["Resumen", "Comprobantes", "Ventas", "Compras", "Impuestos", "Pagos", "Conceptos"]);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Ventas, { header: 1 })[1][0]).toBe("venta-1");
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Compras, { header: 1 })[1][0]).toBe("compra-1");
+    expect(requests.filter((url) => /\/api\/|supabase|documents/i.test(url))).toEqual([]);
   });
 });

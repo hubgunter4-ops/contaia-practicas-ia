@@ -1,4 +1,5 @@
 import { normalizeCurrency, moneyFromMinor, normalizeMoney } from "./money.js";
+import { stableSnapshotKey } from "./cfdi-lifecycle.js";
 
 function safeDate(value) {
   const text = String(value ?? "");
@@ -7,8 +8,14 @@ function safeDate(value) {
 }
 
 function sourceId(prefix, value, index) {
-  const base = String(value || `row-${index + 1}`).replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 90);
-  return `${prefix}:${base || index + 1}:${index + 1}`;
+  const base = String(value || "missing").replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 160);
+  return `${prefix}:${base}`;
+}
+
+function localFingerprint(item) {
+  let hash = 2166136261;
+  for (const character of stableSnapshotKey(item)) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
+  return `unverified-${hash.toString(16)}`;
 }
 
 function currencyFor(item) {
@@ -17,24 +24,28 @@ function currencyFor(item) {
 
 function cfdiSource({ item, index, kind }) {
   const isPayment = kind === "payment";
-  const rawAmount = isPayment ? item.impPagado : item.total;
+  const isAdjustment = !isPayment && item?.tipo === "E";
+  const rawAmount = isPayment ? item.rawAmounts?.paid ?? item.impPagado : item.rawAmounts?.total ?? item.total;
   const currency = currencyFor(item);
-  const amount = normalizeMoney(rawAmount, currency, { quality: "derived_from_number" });
+  const amount = normalizeMoney(rawAmount, currency);
   const uuid = item.uuid || item.docRelacionado || "";
-  const label = isPayment ? `Pago ${item.serieFolio || item.docRelacionado || uuid || index + 1}` : `Factura ${item.serieFolio || uuid || index + 1}`;
+  const identity = String(item.uuid || localFingerprint(item)).trim().toLowerCase();
+  const occurrence = isPayment ? `${identity}:${item.paymentIndex || "legacy"}:${item.relatedIndex || `${item.docRelacionado || "missing"}:${item.numParcialidad || "missing"}:${item.fechaPago || "missing"}`}` : identity;
+  const label = isPayment ? `Pago ${item.serieFolio || item.docRelacionado || uuid || index + 1}` : isAdjustment ? `Nota de crédito ${item.serieFolio || uuid || index + 1}` : `Factura ${item.serieFolio || uuid || index + 1}`;
   const warnings = [];
   if (!currency) warnings.push("La moneda CFDI no es un código ISO de tres letras.");
   if (!amount) warnings.push("El importe CFDI no está disponible con precisión utilizable.");
   if (!item.uuid) warnings.push("La fuente no tiene UUID visible; su identidad solo es local a esta corrida.");
   if (isPayment && item.estimatedTax) warnings.push("El análisis marcó una estimación; no se usa como determinación fiscal.");
   return {
-    sourceId: sourceId(isPayment ? "cfdi-payment" : "cfdi-invoice", uuid, index),
+    sourceId: sourceId(isPayment ? "cfdi-payment" : "cfdi-invoice", occurrence, index),
     kind,
-    eventKind: isPayment ? "payment_settlement_candidate" : "invoice_accrual_candidate",
+    eventKind: isPayment ? "payment_settlement_candidate" : isAdjustment ? "credit_note_adjustment_candidate" : "invoice_accrual_candidate",
     label,
     date: safeDate(isPayment ? item.fechaPago : item.fecha),
     amount,
     currency,
+    cfdi: JSON.parse(JSON.stringify(item)),
     companySide: "unknown",
     relationStatus: isPayment ? String(item.relationStatus || "unmatched") : "",
     warnings,

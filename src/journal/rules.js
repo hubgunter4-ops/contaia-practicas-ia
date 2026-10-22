@@ -94,6 +94,9 @@ export function generateJournalDraft({ rule, selectedSources = [], companyLocalI
   const warnings = ["Plantilla local de revisión; no es una póliza contabilizada ni una determinación fiscal."];
   const ruleErrors = validateRule(rule);
   errors.push(...ruleErrors);
+  if (selectedSources.some((source) => source.cfdi)) {
+    errors.push("Fuentes CFDI: utiliza el modo Ciclo CFDI. Los análisis históricos sin decimales originales deben reanalizarse; la plantilla manual no elude PUE/PPD/REP.");
+  }
   for (const kind of rule?.sourceKinds || []) {
     if (!selectedSources.some((source) => source.kind === kind)) errors.push(`Selecciona una fuente de tipo ${kind === "bank_movement" ? "movimiento bancario" : kind === "payment" ? "pago CFDI" : "factura"}.`);
   }

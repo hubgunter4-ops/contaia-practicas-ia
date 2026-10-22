@@ -156,6 +156,22 @@
 .cfdi-tax-empty { padding: 10px; border: 1px dashed #52665a; border-radius: 6px; background: #14251e; }
 .cfdi-tax-empty b { color: #e1efdf; font-size: 10px; }
 .cfdi-tax-empty p { margin: 4px 0 0; color: #aab8aa; font-size: 9px; line-height: 1.45; }
+.cfdi-workbook-export { display: grid; gap: 11px; padding: 13px; border: 1px solid #3a5a62; border-radius: 8px; background: linear-gradient(110deg, #12232c, #142b29); }
+.cfdi-workbook-export .cfdi-section-title { margin-bottom: 0; }
+.cfdi-workbook-export .cfdi-section-title > div > span { color: #91d7c1; }
+.cfdi-workbook-export .cfdi-section-title h2 { color: #e3f2ec; }
+.cfdi-workbook-export .cfdi-section-title p { margin: 5px 0 0; color: #a6bbb6; font-size: 9px; line-height: 1.45; }
+.cfdi-workbook-badge { flex: none; padding: 5px 8px; border: 1px solid #477267; border-radius: 999px; color: #a6e3cf; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-workbook-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cfdi-workbook-grid > div { display: grid; gap: 4px; min-width: 0; padding: 9px; border: 1px solid #2f5055; border-radius: 6px; background: rgba(13, 23, 36, .62); }
+.cfdi-workbook-grid b { color: #d4eee5; font-size: 9px; }
+.cfdi-workbook-grid span { color: #91aaa5; font-size: 8px; line-height: 1.4; }
+.cfdi-workbook-actions { display: flex; align-items: center; gap: 10px; }
+.cfdi-workbook-actions .button { flex: none; min-height: 36px; }
+.cfdi-workbook-actions small { color: #91aaa5; font-size: 8px; line-height: 1.45; }
+.cfdi-workbook-message { margin: 0; padding: 8px 10px; border-radius: 6px; font-size: 9px; line-height: 1.4; }
+.cfdi-workbook-message.is-success { border: 1px solid #3c745d; background: #142f29; color: #a6e3c6; }
+.cfdi-workbook-message.is-error { border: 1px solid #76504a; background: #302126; color: #f0c5be; }
 .cfdi-page .cfdi-total-block, .cfdi-page .cfdi-alert-list { display: grid; gap: 9px; }
 .cfdi-page .cfdi-total-block .cfdi-section-title small { color: #8c99a8; font-size: 8px; }
 .cfdi-currency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
@@ -220,6 +236,9 @@
   .cfdi-tax-cta { align-items: stretch; flex-direction: column; }
   .cfdi-tax-cta > button, .cfdi-tax-form button { width: 100%; }
   .cfdi-tax-sides { grid-template-columns: minmax(0, 1fr); }
+  .cfdi-workbook-grid { grid-template-columns: minmax(0, 1fr); }
+  .cfdi-workbook-actions { align-items: stretch; flex-direction: column; }
+  .cfdi-workbook-actions .button { width: 100%; }
 }
 @media (max-width: 420px) {
   .cfdi-page .cfdi-metrics { gap: 6px; }

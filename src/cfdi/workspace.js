@@ -1,4 +1,5 @@
 import { buildCfdiAnalysis, buildCfdiTaxReport, buildNoraCfdiContext, buildStoredAnalysis } from "./analysis.js";
+import { buildCfdiWorkbookDownload, buildCfdiWorkbookSpec } from "./exporter.js";
 import { setAuthClient, updateAuthUser } from "../auth/client.js";
 import { MAX_BATCH_FILES, addCfdiFilesToQueue, formatCfdiFileSize, reviewCfdiQueue } from "./upload-queue.js";
 import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js";
@@ -6,7 +7,7 @@ import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js"
 export const cfdiState = {
   initialized: false, configStatus: "loading", configMessage: "Conectando con el almacenamiento privado…",
   client: null, user: null, authBusy: false, email: "", authMessage: "", authError: false,
-  analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "", taxReportOpen: false, taxReport: null, taxReportBusinessRfc: "",
+  analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "", taxReportOpen: false, taxReport: null, taxReportBusinessRfc: "", exportBusy: false, exportNotice: "", exportError: false,
   savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false,
 };
 
@@ -18,6 +19,7 @@ function renderBatchReview() {
   return `<section class="cfdi-batch-review" aria-labelledby="cfdi-batch-title"><div class="cfdi-batch-review-head"><div><span>02 · REVISIÓN DEL LOTE</span><h3 id="cfdi-batch-title">${review.items.length} archivo(s) seleccionado(s)</h3><p>Peso total seleccionado: ${formatCfdiFileSize(review.totalBytes)}. El ZIP se valida también al extraerlo.</p></div><button type="button" data-cfdi-clear-queue ${processing ? "disabled" : ""}>Vaciar lote</button></div><ul class="cfdi-batch-files" aria-label="Archivos seleccionados para el lote">${review.items.map(({ file, index, valid, format, reason }) => `<li class="cfdi-batch-file${valid ? "" : " is-invalid"}"><div><b class="cfdi-batch-file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name || "Archivo sin nombre")}</b><small>${format} · ${formatCfdiFileSize(file.size)}</small></div><span class="cfdi-batch-file-status${valid ? "" : " is-invalid"}">${valid ? "Listo para analizar" : escapeHtml(reason)}</span><button type="button" class="cfdi-batch-file-remove" data-cfdi-remove-file="${index}" aria-label="Quitar ${escapeHtml(file.name || "archivo sin nombre")} del lote" ${processing ? "disabled" : ""}>Quitar</button></li>`).join("")}</ul>${cfdiState.queueMessage ? `<p class="cfdi-batch-message" role="alert">${escapeHtml(cfdiState.queueMessage)}</p>` : ""}<div class="cfdi-batch-actions"><p>Los nombres y el XML permanecen en esta pestaña; no se envían al servidor ni se guardan en el historial.</p><button type="button" class="cfdi-batch-analyze" data-cfdi-analyze-batch ${!review.canAnalyze || processing ? "disabled" : ""}>${processing ? "Analizando lote…" : `Analizar lote (${review.items.length})`}</button></div></section>`;
 }
 const formatMoney = (amount, currency = "Sin moneda indicada") => {
+  if (amount === null || amount === undefined || amount === "") return "—";
   const value = Number(amount);
   if (!Number.isFinite(value)) return "—";
   if (!/^[A-Z]{3}$/.test(currency)) return `${new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 }).format(value)} · ${currency === "Sin moneda indicada" ? "moneda no indicada" : escapeHtml(currency)}`;
@@ -58,6 +60,11 @@ function renderTaxReport(analysis) {
   return `<section class="cfdi-tax-report" aria-labelledby="cfdi-tax-report-title"><div class="cfdi-section-title"><div><span>COMERCIO / EMPRESA · REPORTE LOCAL</span><h2 id="cfdi-tax-report-title">Ventas y compras por impuestos</h2></div><button type="button" class="cfdi-tax-close" data-cfdi-close-tax-report>Cerrar</button></div><p class="cfdi-tax-explanation">El RFC se usa solo en esta pestaña: ventas = RFC emisor; compras = RFC receptor. Los CFDI tipo E se mantienen como ajustes del conjunto y no se convierten automáticamente en ventas nuevas. IVA 0% no equivale a exento. No se mezclan monedas.</p><form class="cfdi-tax-form" data-cfdi-tax-report><label for="cfdi-business-rfc">RFC de tu comercio o empresa</label><div><input id="cfdi-business-rfc" data-cfdi-business-rfc name="businessRfc" maxlength="13" autocomplete="off" value="${escapeHtml(cfdiState.taxReportBusinessRfc)}" placeholder="Ej. ABC010101ABC" required/><button type="submit">Generar reporte local</button></div><small>No se envía a Nora ni se agrega a una solicitud remota por esta acción.</small></form>${report ? `<p class="cfdi-tax-status" role="status">Reporte generado con ${report.sales.invoiceCount + report.purchases.invoiceCount} comprobante(s) clasificado(s). ${report.unclassifiedCount ? `${report.unclassifiedCount} quedó(aron) fuera por no coincidir con emisor/receptor.` : "Todos los comprobantes coincidieron con una de las dos vistas."}</p><div class="cfdi-tax-sides">${renderTaxSide("Ventas", "La empresa aparece como emisor", report.sales)}${renderTaxSide("Compras", "La empresa aparece como receptor", report.purchases)}</div>` : `<div class="cfdi-tax-empty"><b>Falta contexto de empresa</b><p>Captura el RFC del comercio/empresa para separar ventas y compras. Sin ese dato, ContaIA no atribuye el papel fiscal por intuición.</p></div>`}</section>`;
 }
 
+function renderWorkbookExport(analysis) {
+  const buttonLabel = cfdiState.exportBusy ? "Preparando libro local…" : "Descargar hoja fiscal avanzada (.xlsx)";
+  return `<section class="cfdi-workbook-export" aria-labelledby="cfdi-workbook-title"><div class="cfdi-section-title"><div><span>EXPORTACIÓN LOCAL · XLSX</span><h2 id="cfdi-workbook-title">Hoja de cálculo fiscal avanzada</h2><p>Organiza el análisis en pestañas separadas para revisión y trabajo posterior.</p></div><span class="cfdi-workbook-badge">${cfdiState.exportBusy ? "Preparando" : "7 hojas"}</span></div><div class="cfdi-workbook-grid"><div><b>Incluye</b><span>Resumen · comprobantes · ventas · compras · impuestos · pagos · conceptos</span></div><div><b>Origen</b><span>Datos extraídos y cálculos de esta sesión; sin XML incrustado</span></div><div><b>Alcance</b><span>Hoja de trabajo local; no es declaración, envío ni acuse del SAT</span></div></div><div class="cfdi-workbook-actions"><button type="button" class="button button-primary" data-cfdi-export-xlsx ${cfdiState.exportBusy ? "disabled" : ""}>${buttonLabel} <span aria-hidden="true">↓</span></button><small>La descarga se genera en este navegador. ${cfdiState.taxReportBusinessRfc ? `Ventas y compras usan el RFC ${escapeHtml(cfdiState.taxReportBusinessRfc)}.` : "Sin RFC de empresa, las hojas Ventas y Compras quedarán sin atribución."}</small></div>${cfdiState.exportNotice ? `<p class="cfdi-workbook-message ${cfdiState.exportError ? "is-error" : "is-success"}" role="status">${escapeHtml(cfdiState.exportNotice)}</p>` : ""}</section>`;
+}
+
 function renderCurrencyTotals(analysis) {
   if (!analysis.summary.totalsByCurrency.length) return "";
   return `<section class="cfdi-total-block" aria-label="Totales agrupados por moneda"><div class="cfdi-section-title"><div><span>LECTURA DE CONJUNTO</span><h2>Importes por moneda</h2></div><small>No se suman monedas distintas</small></div><div class="cfdi-currency-grid">${analysis.summary.totalsByCurrency.map((total) => `<article><b>${escapeHtml(total.currency)}</b><div><span>Facturado</span><strong>${formatMoney(total.invoiced, total.currency)}</strong></div><div><span>Pagado</span><strong>${formatMoney(total.paid, total.currency)}</strong></div><div><span>Saldo pendiente reportado</span><strong>${formatMoney(total.remaining, total.currency)}</strong></div></article>`).join("")}</div></section>`;
@@ -70,6 +77,8 @@ function renderAlerts(analysis) {
     payment_balance_difference: "Saldo anterior − importe pagado − saldo insoluto no cuadra",
     payment_exceeds_invoice: "Importe pagado mayor al total de la factura relacionada",
     estimated_tax_unmatched: "Estimación de IVA al 16% aplicada a pago sin factura vinculada",
+    payment_tax_missing: "Complemento sin desglose DR original: no se estimaron impuestos",
+    amount_missing: "Importes originales faltantes: no se sustituyeron por cero",
   };
   if (!analysis.summary.alerts.length) return `<div class="cfdi-empty-state cfdi-success"><b>Sin alertas básicas</b><p>El parser no detectó diferencias en las comprobaciones disponibles. Esto no valida la autenticidad ni el cumplimiento fiscal del CFDI.</p></div>`;
   return `<section class="cfdi-alert-list" aria-label="Alertas para revisión"><div class="cfdi-section-title"><div><span>CRITERIO · NO DICTAMEN</span><h2>Conviene revisar</h2></div></div>${analysis.summary.alerts.map((alert) => `<article class="cfdi-alert cfdi-alert-${alert.severity}"><i aria-hidden="true">!</i><div><b>${escapeHtml(labels[alert.code] || "Resultado para revisar")}</b><p>${alert.count} registro(s). Confirma documentos y reglas aplicables antes de concluir.</p></div></article>`).join("")}</section>`;
@@ -85,7 +94,7 @@ function renderPayments(analysis) {
   return `<div class="cfdi-table-wrap"><table class="cfdi-table"><thead><tr><th>Documento relacionado</th><th>Fecha de pago</th><th>Saldo anterior</th><th>Pagado</th><th>Saldo insoluto</th><th>Relación / nota</th></tr></thead><tbody>${analysis.pagos.map((payment) => {
     const currency = payment.moneda || "MXN";
     const difference = Math.round((Number(payment.saldoAnterior) - Number(payment.impPagado) - Number(payment.saldoInsoluto)) * 100) / 100;
-    const note = payment.relationStatus === "matched" ? "Factura encontrada" : payment.estimatedTax ? "Sin factura · impuesto estimado" : "Sin factura cargada";
+    const note = `${payment.relationStatus === "matched" ? "Factura encontrada" : payment.relationStatus === "ambiguous" ? "Relación ambigua" : "Sin factura cargada"}${payment.taxEvidenceStatus === "missing" ? " · impuestos no disponibles" : ""}`;
     return `<tr><td><b>${abbreviate(payment.docRelacionado)}</b></td><td>${escapeHtml(formatDate(payment.fechaPago))}</td><td class="numeric">${formatMoney(payment.saldoAnterior, currency)}</td><td class="numeric">${formatMoney(payment.impPagado, currency)}</td><td class="numeric">${formatMoney(payment.saldoInsoluto, currency)}</td><td><span class="cfdi-status-tag ${payment.relationStatus === "matched" ? "is-linked" : "is-review"}">${escapeHtml(note)}</span>${Math.abs(difference) > 0.01 ? `<small>Diferencia aritmética: ${formatMoney(difference, currency)}</small>` : ""}</td></tr>`;
   }).join("")}</tbody></table></div>`;
 }
@@ -125,7 +134,7 @@ export function renderCfdiWorkspace() {
   const currentTab = cfdiState.activeTab;
   const body = !analysis
     ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>${cfdiState.queuedFiles.length ? "Lote listo para analizar" : "El análisis empieza aquí"}</b><p>${cfdiState.queuedFiles.length ? "Confirma la revisión del lote para analizarlo localmente; los resultados aparecerán aquí." : "Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador."}</p></div>`
-    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderTaxReport(analysis)}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
+    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderTaxReport(analysis)}${renderWorkbookExport(analysis)}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
   const pending = cfdiState.pendingRequest ? `<aside class="cfdi-origin-request"><div><span>DERIVADO DESDE ASISTENTE ABIERTO</span><p>${escapeHtml(cfdiState.pendingRequest)}</p></div><button type="button" data-cfdi-dismiss-request aria-label="Quitar solicitud de origen">×</button></aside>` : "";
   const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
   const statusLabel = cfdiState.status === "processing" ? "Analizando localmente" : cfdiState.error ? "Requiere revisión" : cfdiState.analysis ? "Análisis listo" : cfdiState.queuedFiles.length ? "Lote en revisión" : "Disponible · análisis local";
@@ -211,6 +220,9 @@ async function analyzeFiles(files) {
   cfdiState.operationMessage = "";
   cfdiState.taxReport = null;
   cfdiState.taxReportOpen = false;
+  cfdiState.taxReportBusinessRfc = "";
+  cfdiState.exportNotice = "";
+  cfdiState.exportError = false;
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
   try {
     const { parseFiles } = await import("/vendor/cfdi-parser.js");
@@ -234,6 +246,7 @@ async function analyzeFiles(files) {
     cfdiState.fileCount = 0;
     cfdiState.status = "error";
     cfdiState.error = error instanceof Error ? error.message : "El archivo no pudo analizarse.";
+    cfdiState.exportNotice = "";
   }
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
 }
@@ -303,6 +316,38 @@ async function saveAnalysis(form) {
   }
 }
 
+function triggerWorkbookDownload(bytes, filename) {
+  const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+  return true;
+}
+
+async function downloadAdvancedWorkbook(onUpdate) {
+  if (!cfdiState.analysis || cfdiState.exportBusy) return;
+  cfdiState.exportBusy = true;
+  cfdiState.exportNotice = "Preparando el libro en este navegador…";
+  cfdiState.exportError = false;
+  onUpdate();
+  try {
+    const xlsx = await import("/vendor/reconciliation-xlsx.js");
+    const spec = buildCfdiWorkbookSpec({ analysis: cfdiState.analysis, taxReport: cfdiState.taxReport, businessRfc: cfdiState.taxReportBusinessRfc });
+    const bytes = buildCfdiWorkbookDownload(xlsx, spec);
+    triggerWorkbookDownload(bytes, spec.fileName);
+    cfdiState.exportNotice = `Libro descargado localmente con ${spec.sheets.length} hojas. No es una declaración ni se envió al SAT.`;
+  } catch (error) {
+    cfdiState.exportError = true;
+    cfdiState.exportNotice = error instanceof Error ? error.message : "No se pudo generar el libro XLSX local.";
+  } finally {
+    cfdiState.exportBusy = false;
+    onUpdate();
+  }
+}
+
 export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => {} } = {}) {
   document.addEventListener("contaia:cfdi-updated", onUpdate);
   app.addEventListener("change", (event) => {
@@ -333,6 +378,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     }
     if (event.target.closest("[data-cfdi-open-tax-report]")) { cfdiState.taxReportOpen = true; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-close-tax-report]")) { cfdiState.taxReportOpen = false; cfdiState.taxReport = null; onUpdate(); return; }
+    if (event.target.closest("[data-cfdi-export-xlsx]")) { void downloadAdvancedWorkbook(onUpdate); return; }
     const analyzeBatch = event.target.closest("[data-cfdi-analyze-batch]");
     if (analyzeBatch) {
       const review = reviewCfdiQueue(cfdiState.queuedFiles);
@@ -362,7 +408,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     const tab = event.target.closest("[data-cfdi-tab]");
     if (tab) { cfdiState.activeTab = tab.dataset.cfdiTab; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-reset]")) {
-      cfdiState.analysis = null; cfdiState.fileCount = 0; cfdiState.status = "empty"; cfdiState.error = ""; cfdiState.operationMessage = ""; cfdiState.taxReport = null; cfdiState.taxReportOpen = false; cfdiState.taxReportBusinessRfc = ""; onUpdate(); return;
+      cfdiState.analysis = null; cfdiState.fileCount = 0; cfdiState.status = "empty"; cfdiState.error = ""; cfdiState.operationMessage = ""; cfdiState.taxReport = null; cfdiState.taxReportOpen = false; cfdiState.taxReportBusinessRfc = ""; cfdiState.exportBusy = false; cfdiState.exportNotice = ""; cfdiState.exportError = false; onUpdate(); return;
     }
     if (event.target.closest("[data-cfdi-dismiss-request]")) { cfdiState.pendingRequest = ""; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-ask-nora]")) {
@@ -387,6 +433,9 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
         cfdiState.status = "ready";
         cfdiState.taxReport = null;
         cfdiState.taxReportOpen = false;
+        cfdiState.taxReportBusinessRfc = "";
+        cfdiState.exportNotice = "";
+        cfdiState.exportError = false;
         cfdiState.operationMessage = "Análisis recuperado de tu historial. El XML original no está guardado.";
         cfdiState.operationError = false;
       } catch {
@@ -414,6 +463,8 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
       const businessRfc = String(new FormData(taxForm).get("businessRfc") || "").trim().toUpperCase();
       cfdiState.taxReportBusinessRfc = businessRfc;
       cfdiState.taxReport = buildCfdiTaxReport(cfdiState.analysis, businessRfc);
+      cfdiState.exportNotice = "";
+      cfdiState.exportError = false;
       onUpdate();
       return;
     }

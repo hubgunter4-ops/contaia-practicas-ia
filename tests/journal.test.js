@@ -30,9 +30,9 @@ test("genera factura de ingreso con dos partidas y bloquea hasta confirmar emiso
   assert.ok(draft.errors.some((error) => /papel de la empresa/.test(error)));
   const acknowledged = { ...draft, companySide: "issuer", errors: draft.errors.filter((error) => !/papel de la empresa/.test(error)), warningsAcknowledged: true };
   const validation = validateJournalDraft(acknowledged, createJournalCatalog("company-local"));
-  assert.deepEqual(validation.errors, []);
+  assert.ok(validation.errors.some((error) => /modo Ciclo CFDI/.test(error)));
   assert.equal(validation.totalsByCurrency[0].difference, "0");
-  assert.equal(validation.canApprove, true);
+  assert.equal(validation.canApprove, false);
 });
 
 test("un cobro con movimiento y pago de distinto importe queda bloqueado por diferencia exacta", () => {
