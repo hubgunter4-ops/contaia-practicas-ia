@@ -48,7 +48,7 @@ function resolvePublicPath(pathname) {
     return null;
   }
   let relative;
-  if (decoded === "/" || decoded === "/registro" || decoded === "/confirmar-correo" || /^\/descripcion\/(cfdi|asistente|anam|curso)\/?$/.test(decoded)) relative = "public/index.html";
+  if (decoded === "/" || decoded === "/registro" || decoded === "/confirmar-correo" || decoded === "/recuperar-contrasena" || /^\/descripcion\/(cfdi|asistente|anam|curso)\/?$/.test(decoded)) relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
   else if (/^\/brand\/contaia-logo(?:-(?:64|192))?\.png$/.test(decoded)) relative = `public${decoded}`;
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";

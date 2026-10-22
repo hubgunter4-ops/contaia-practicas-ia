@@ -100,6 +100,7 @@ test.describe("Experiencia pública de ContaIA", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Correo o alias")).toBeVisible();
     await expect(dialog.getByLabel("Contraseña")).toBeVisible();
+    await expect(dialog.getByRole("link", { name: "Crear una cuenta" })).toHaveAttribute("href", "/registro");
   });
 
   test("el registro directo ofrece los campos básicos sin abrir el aula", async ({ page }) => {

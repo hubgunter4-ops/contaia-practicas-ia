@@ -14,6 +14,8 @@
 .auth-message { margin: 5px 0 0; padding: 9px 10px; font-size: 12px; line-height: 1.4; }
 .auth-message.is-error { border: 1px solid #e2b9b3; background: var(--red-pale); color: #863d3b; }
 .auth-message.is-success { border: 1px solid #b8d1bd; background: var(--green-pale); color: #35634e; }
+.auth-recovery-link { margin: 13px 0 0; text-align: center; font-size: 12px; }
+.auth-recovery-link a { color: var(--wine); font-weight: 700; text-underline-offset: 3px; }
 .auth-note { margin: 18px 0 0; color: #968b7d; font-size: 11px; line-height: 1.4; }
 @media (max-width: 760px) { .auth-controls { gap: 5px; } .auth-user { display: none; } .auth-panel { padding: 29px 22px; } }
 

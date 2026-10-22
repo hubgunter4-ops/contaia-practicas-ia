@@ -71,7 +71,7 @@ await build({
 });
 await build({
   stdin: {
-    contents: 'export { read, utils } from "xlsx";\n',
+    contents: 'export { read, write, utils } from "xlsx";\n',
     resolveDir: root,
     sourcefile: "reconciliation-xlsx-entry.js",
     loader: "js",

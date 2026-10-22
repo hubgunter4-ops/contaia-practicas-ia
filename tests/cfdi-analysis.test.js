@@ -12,27 +12,28 @@ const linkedPayment = {
   saldoInsoluto: 580, baseIVA16: 0, iva16: 0, ivaRetenido: 0, ieps: 0, moneda: "MXN", fileName: "pago.xml",
 };
 
-test("calcula el prorrateo de pago a factura como el parser PDFC y agrupa por moneda", () => {
+test("enlaza UUID y agrupa por moneda sin prorratear impuestos faltantes", () => {
   const result = buildCfdiAnalysis({ facturas: [invoice], pagos: [linkedPayment], conceptos: [{ uuid: invoice.uuid, moneda: "MXN", importe: 1000 }] });
   assert.equal(result.pagos[0].relationStatus, "matched");
-  assert.equal(result.pagos[0].baseIVA16, 500);
-  assert.equal(result.pagos[0].iva16, 80);
-  assert.equal(result.pagos[0].exento, 0);
+  assert.equal(result.pagos[0].baseIVA16, null);
+  assert.equal(result.pagos[0].iva16, null);
+  assert.equal(result.pagos[0].exento, null);
   assert.equal(result.summary.matchedPayments, 1);
-  assert.equal(result.summary.alerts.length, 0);
+  assert.ok(result.summary.alerts.some((alert) => alert.code === "payment_tax_missing"));
   assert.deepEqual(result.summary.totalsByCurrency, [{ currency: "MXN", invoiced: 1160, paid: 580, remaining: 580 }]);
 });
 
-test("marca pagos sin factura e IVA estimado, y omite identificadores del contexto de Nora", () => {
+test("marca pagos sin factura e impuestos no disponibles y omite identificadores de Nora", () => {
   const unmatched = { ...linkedPayment, docRelacionado: "UUID-AUSENTE", impPagado: 116, saldoAnterior: 116, saldoInsoluto: 0 };
   const result = buildCfdiAnalysis({ facturas: [], pagos: [unmatched], conceptos: [] });
   assert.equal(result.pagos[0].relationStatus, "unmatched");
-  assert.equal(result.pagos[0].estimatedTax, true);
-  assert.ok(result.summary.alerts.some((alert) => alert.code === "estimated_tax_unmatched"));
+  assert.equal(result.pagos[0].estimatedTax, undefined);
+  assert.equal(result.pagos[0].iva16, null);
+  assert.ok(result.summary.alerts.some((alert) => alert.code === "payment_tax_missing"));
   const context = buildNoraCfdiContext(result);
   const encoded = JSON.stringify(context);
   assert.match(encoded, /"status":"analyzed"/);
-  assert.match(encoded, /"estimatedTax":true/);
+  assert.match(encoded, /"estimatedTax":false/);
   for (const privateValue of ["UUID-AUSENTE", "UUID-PAGO-PRIVADO", "UUID-FACTURA-PRIVADO", "RFC-EMISOR-PRIVADO", "factura.xml", "pago.xml"]) assert.equal(encoded.includes(privateValue), false);
 });
 
@@ -77,4 +78,11 @@ test("no asigna ventas o compras sin el RFC explícito del comercio", () => {
   assert.equal(result.sales.invoiceCount, 0);
   assert.equal(result.purchases.invoiceCount, 0);
   assert.equal(result.unclassifiedCount, 1);
+});
+
+
+test("el resumen no convierte importes faltantes en cero ni confirma su aritmética", () => {
+  const result = buildCfdiAnalysis({ facturas: [{ uuid: "missing-total", moneda: "MXN" }], pagos: [{ uuid: "missing-payment", moneda: "MXN", docRelacionado: "missing-total" }] });
+  assert.deepEqual(result.summary.totalsByCurrency, [{ currency: "MXN", invoiced: null, paid: null, remaining: null }]);
+  assert.ok(result.summary.alerts.some((alert) => alert.code === "amount_missing"));
 });

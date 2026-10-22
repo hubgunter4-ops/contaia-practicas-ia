@@ -8,17 +8,387 @@ import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
-import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
-import { bindReconciliationWorkspace, reconciliationState, renderReconciliationWorkspace, resetReconciliationWorkspace } from "./reconciliation/workspace.js";
-import { bindJournalWorkspace, journalState, renderJournalWorkspace, resetJournalWorkspace } from "./journal/workspace.js";
-import { bindDiotWorkspace, diotState, renderDiotWorkspace, resetDiotWorkspace } from "./diot/workspace.js";
+import { cfdiState, resetCfdiWorkspace } from "./cfdi/workspace.js";
+import { resetReconciliationWorkspace } from "./reconciliation/workspace.js";
+import { journalState, resetJournalWorkspace } from "./journal/workspace.js";
+import { diotState, resetDiotWorkspace } from "./diot/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { authState, currentUser, getAuthDestinationTarget, initializeAuthClient, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, updatePassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { createIslandManager } from "./app/island-manager.js";
+import { createIslandRegistry } from "./app/island-registry.js";
+import { CapabilityExpiredError, createSourceCapabilityBroker } from "./app/source-capabilities.js";
 
 const app = document.querySelector("#app");
 let lastPageTransitionKey = "";
+const sourceCapabilityBroker = createSourceCapabilityBroker();
+const reconciliationIslandRegistry = createIslandRegistry({ reconciliation: () => import("./reconciliation/island.js") });
+let reconciliationIslandManager = null;
+let reconciliationIslandHost = null;
+let reconciliationIslandSyncId = 0;
+const cfdiIslandRegistry = createIslandRegistry({ cfdi: () => import("./cfdi/island.js") });
+let cfdiIslandManager = null;
+let cfdiIslandHost = null;
+let cfdiIslandSyncId = 0;
+const journalIslandRegistry = createIslandRegistry({ journal: () => import("./journal/island.js") });
+let journalIslandManager = null;
+let journalIslandHost = null;
+let journalIslandSyncId = 0;
+const diotIslandRegistry = createIslandRegistry({ diot: () => import("./diot/island.js") });
+let diotIslandManager = null;
+let diotIslandHost = null;
+let diotIslandSyncId = 0;
+const learningIslandRegistry = createIslandRegistry({
+  course: () => import("./learn/island.js"),
+  lab: () => import("./learn/island.js"),
+  study: () => import("./learn/island.js"),
+});
+let learningIslandManager = null;
+let learningIslandHost = null;
+let learningIslandSyncId = 0;
+let pendingJournalHandoff = null;
+let pendingJournalBankHandoff = null;
+let pendingDiotHandoff = null;
+
+async function syncReconciliationIsland() {
+  const syncId = ++reconciliationIslandSyncId;
+  const host = app.querySelector("[data-reconciliation-island-host]");
+  if (!host) {
+    const previousManager = reconciliationIslandManager;
+    reconciliationIslandManager = null;
+    reconciliationIslandHost = null;
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (reconciliationIslandManager && reconciliationIslandHost === host) return;
+  const previousManager = reconciliationIslandManager;
+  reconciliationIslandManager = null;
+  reconciliationIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== reconciliationIslandSyncId || !app.contains(host)) return;
+  const manager = createIslandManager({
+    host,
+    registry: reconciliationIslandRegistry,
+    initialSessionEpoch: 0,
+    capabilitiesFor: () => ({
+      getAnalysis: () => cfdiState.analysis,
+      onHandoffSources: handleReconciliationSourceHandoff,
+      registerSourceProvider: (owner, provider) => sourceCapabilityBroker.registerSourceProvider(owner, provider),
+    }),
+  });
+  reconciliationIslandManager = manager;
+  reconciliationIslandHost = host;
+  try {
+    await manager.navigate("reconciliation", { reason: "navigation" });
+  } catch (error) {
+    if (reconciliationIslandManager === manager) {
+      reconciliationIslandManager = null;
+      reconciliationIslandHost = null;
+      host.innerHTML = `<p class="recon-error" role="alert">No se pudo montar la isla de Conciliación: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
+
+function handleCfdiAskNora(context, prompt) {
+  state.openAssistant.cfdiContext = context;
+  state.openAssistant.draft = prompt;
+  state.openAssistant.messages.push({ role: "assistant", text: "Preparé un resumen CFDI para esta consulta. No se ha enviado; revisa la pregunta y pulsa Enviar cuando decidas compartirlo con Nora." });
+  state.openAssistant.messages = state.openAssistant.messages.slice(-20);
+  state.section = "advisor";
+  render();
+  app.querySelector("[data-open-input]")?.focus({ preventScroll: true });
+}
+
+function handleCfdiSourceHandoff(target) {
+  if (!["diot", "journal"].includes(target)) return;
+  try {
+    sourceCapabilityBroker.clear();
+    pendingJournalHandoff = null;
+    pendingJournalBankHandoff = null;
+    pendingDiotHandoff = null;
+    const lease = sourceCapabilityBroker.request({ owner: "cfdi", target, explicitUserAction: true, selection: "current-analysis" });
+    if (target === "journal") {
+      pendingJournalHandoff = lease;
+    } else {
+      pendingDiotHandoff = lease;
+    }
+    state.section = target;
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+  } catch (error) {
+    cfdiState.operationError = true;
+    cfdiState.operationMessage = error instanceof CapabilityExpiredError
+      ? "La capacidad de fuentes expiró. Mantén abierto este análisis y vuelve a pulsar la acción."
+      : (error?.message || "No se pudo entregar el análisis a la herramienta destino.");
+    if (state.section === "cfdi") render();
+  }
+}
+
+function handleReconciliationSourceHandoff(sourceIds = null) {
+  try {
+    sourceCapabilityBroker.clear();
+    pendingJournalHandoff = null;
+    const lease = sourceCapabilityBroker.request({ owner: "reconciliation", target: "journal", sourceIds, explicitUserAction: true, selection: "analyzed-movements" });
+    pendingJournalBankHandoff = lease;
+    state.section = "journal";
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+  } catch (error) {
+    const host = app.querySelector("[data-reconciliation-page]");
+    const message = error instanceof CapabilityExpiredError ? "La selección bancaria expiró; vuelve a generar y entregar los movimientos." : (error?.message || "No se pudo entregar la selección bancaria.");
+    if (host) {
+      const notice = document.createElement("p");
+      notice.className = "recon-error";
+      notice.setAttribute("role", "alert");
+      notice.textContent = message;
+      host.prepend(notice);
+    }
+  }
+}
+
+async function syncCfdiIsland() {
+  const syncId = ++cfdiIslandSyncId;
+  const host = app.querySelector("[data-cfdi-island-host]");
+  if (!host) {
+    const previousManager = cfdiIslandManager;
+    cfdiIslandManager = null;
+    cfdiIslandHost = null;
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (cfdiIslandManager && cfdiIslandHost === host) return;
+  const previousManager = cfdiIslandManager;
+  cfdiIslandManager = null;
+  cfdiIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== cfdiIslandSyncId || !app.contains(host)) return;
+  const manager = createIslandManager({
+    host,
+    registry: cfdiIslandRegistry,
+    initialSessionEpoch: 0,
+    capabilitiesFor: () => ({
+      onAskNora: handleCfdiAskNora,
+      onHandoffSources: handleCfdiSourceHandoff,
+      getAnalysis: () => cfdiState.analysis,
+      registerSourceProvider: (owner, provider) => sourceCapabilityBroker.registerSourceProvider(owner, provider),
+    }),
+  });
+  cfdiIslandManager = manager;
+  cfdiIslandHost = host;
+  try {
+    await manager.navigate("cfdi", { reason: "navigation" });
+  } catch (error) {
+    if (cfdiIslandManager === manager) {
+      cfdiIslandManager = null;
+      cfdiIslandHost = null;
+      host.innerHTML = `<p class="cfdi-error" role="alert">No se pudo montar la isla CFDI: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
+
+async function syncJournalIsland() {
+  const syncId = ++journalIslandSyncId;
+  const host = app.querySelector("[data-journal-island-host]");
+  if (!host) {
+    const previousManager = journalIslandManager;
+    journalIslandManager = null;
+    journalIslandHost = null;
+    if (pendingJournalHandoff) {
+      sourceCapabilityBroker.clear();
+      pendingJournalHandoff = null;
+    }
+    if (pendingJournalBankHandoff) {
+      sourceCapabilityBroker.clear();
+      pendingJournalBankHandoff = null;
+    }
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (journalIslandManager && journalIslandHost === host) return;
+  const previousManager = journalIslandManager;
+  journalIslandManager = null;
+  journalIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== journalIslandSyncId || !app.contains(host)) return;
+  const manager = createIslandManager({
+    host,
+    registry: journalIslandRegistry,
+    initialSessionEpoch: 0,
+    capabilitiesFor: () => ({
+      onAssistantSend: (message) => { void sendJournalAssistantMessage(message); },
+      onAssistantCancel: cancelJournalAssistant,
+      consumeSourceHandoff: () => {
+        const lease = pendingJournalHandoff;
+        pendingJournalHandoff = null;
+        if (!lease) return null;
+        return sourceCapabilityBroker.consume(lease.token, { target: "journal", sessionEpoch: lease.sessionEpoch });
+      },
+      consumeBankHandoff: () => {
+        const lease = pendingJournalBankHandoff;
+        pendingJournalBankHandoff = null;
+        if (!lease) return null;
+        return sourceCapabilityBroker.consume(lease.token, { target: "journal", sessionEpoch: lease.sessionEpoch });
+      },
+    }),
+  });
+  journalIslandManager = manager;
+  journalIslandHost = host;
+  try {
+    await manager.navigate("journal", { reason: "navigation" });
+  } catch (error) {
+    if (journalIslandManager === manager) {
+      journalIslandManager = null;
+      journalIslandHost = null;
+      host.innerHTML = `<p class="journal-inline-error" role="alert">No se pudo montar la isla de Pólizas: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
+
+async function syncDiotIsland() {
+  const syncId = ++diotIslandSyncId;
+  const host = app.querySelector("[data-diot-island-host]");
+  if (!host) {
+    const previousManager = diotIslandManager;
+    diotIslandManager = null;
+    diotIslandHost = null;
+    if (pendingDiotHandoff) {
+      sourceCapabilityBroker.clear();
+      pendingDiotHandoff = null;
+    }
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (diotIslandManager && diotIslandHost === host) return;
+  const previousManager = diotIslandManager;
+  diotIslandManager = null;
+  diotIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== diotIslandSyncId || !app.contains(host)) return;
+  const manager = createIslandManager({
+    host,
+    registry: diotIslandRegistry,
+    initialSessionEpoch: 0,
+    capabilitiesFor: () => ({
+      onAssistantSend: (message) => { void sendDiotAssistantMessage(message); },
+      onAssistantCancel: cancelDiotAssistant,
+      consumeCfdiHandoff: () => {
+        const lease = pendingDiotHandoff;
+        pendingDiotHandoff = null;
+        if (!lease) return null;
+        return sourceCapabilityBroker.consume(lease.token, { target: "diot", sessionEpoch: lease.sessionEpoch });
+      },
+    }),
+  });
+  diotIslandManager = manager;
+  diotIslandHost = host;
+  try {
+    await manager.navigate("diot", { reason: "navigation" });
+  } catch (error) {
+    if (diotIslandManager === manager) {
+      diotIslandManager = null;
+      diotIslandHost = null;
+      host.innerHTML = `<p class="diot-issue is-error" role="alert">No se pudo montar la isla DIOT: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
+
+function isLearningSection(section = state.section) {
+  return ["course", "lab", "study"].includes(section);
+}
+
+function renderLearningIslandContent() {
+  if (state.section === "course") return renderCourse();
+  if (state.section === "study") return renderStudy();
+  const exercise = exercises.find((item) => item.id === state.current);
+  return exercise ? renderExercise(exercise) : renderHome();
+}
+
+function resetLearningEphemeral() {
+  state.glossary = null;
+  state.glossaryOpen = false;
+  state.demoModuleId = null;
+  state.openCourseModuleId = null;
+  state.studyQuery = "";
+  state.studyKind = "all";
+  state.studyVisibleCount = 60;
+  state.studySelectedId = "";
+  state.studyDraftNote = "";
+}
+
+async function syncLearningIsland() {
+  const syncId = ++learningIslandSyncId;
+  const host = app.querySelector("[data-learning-island-host]");
+  if (!host) {
+    const previousManager = learningIslandManager;
+    learningIslandManager = null;
+    learningIslandHost = null;
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (learningIslandManager && learningIslandHost === host) return;
+  const previousManager = learningIslandManager;
+  learningIslandManager = null;
+  learningIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== learningIslandSyncId || !app.contains(host) || !isLearningSection()) return;
+  const manager = createIslandManager({
+    host,
+    registry: learningIslandRegistry,
+    initialSessionEpoch: 0,
+    capabilitiesFor: () => ({
+      renderContent: renderLearningIslandContent,
+      onEvent: (type, event) => handleLearningEvent(type, event),
+      onDestroy: resetLearningEphemeral,
+    }),
+  });
+  learningIslandManager = manager;
+  learningIslandHost = host;
+  try {
+    await manager.navigate(state.section, { reason: "navigation" });
+  } catch (error) {
+    if (learningIslandManager === manager) {
+      learningIslandManager = null;
+      learningIslandHost = null;
+      host.innerHTML = `<p class="progress-storage-note" role="alert">No se pudo montar la isla educativa: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
 const state = {
   section: "course",
   current: "home",
@@ -107,7 +477,7 @@ async function initializeStudyDatabase() {
   } catch {
     state.studyDbWarning = "No se pudo abrir la base de estudio. Puedes seguir usando el curso y el laboratorio.";
   }
-  if (state.section === "study") render();
+  if (state.section === "study") refreshLearningIsland();
 }
 
 function selectedStudyNote(itemId) {
@@ -201,7 +571,7 @@ function advanceClassroomPhase() {
   state.coursePhaseIndex = nextPhase;
   if (nextPhase === 2) state.practiceStepIndex = 0;
   resetTutor();
-  render();
+  refreshLearningIsland();
   narrateClassroomInstruction();
 }
 
@@ -216,7 +586,7 @@ function completePracticeInstruction() {
     state.coursePhaseIndex = 3;
   }
   resetTutor();
-  render();
+  refreshLearningIsland();
   narrateClassroomInstruction();
 }
 
@@ -620,13 +990,21 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
   }
 }
 
+function refreshJournalIsland() {
+  if (state.section === "journal" && journalIslandManager) {
+    journalIslandManager.update();
+    return;
+  }
+  render();
+}
+
 async function sendJournalAssistantMessage(text) {
   const question = String(text || "").trim();
   const assistant = journalState.assistant;
   if (!question || assistant.pending) return;
   if (!state.tutor.providers.length) {
     assistant.error = "Nora no está configurada en este momento. Puedes revisar el catálogo y las validaciones localmente.";
-    render();
+    refreshJournalIsland();
     return;
   }
   const requestId = (assistant.requestId || 0) + 1;
@@ -638,7 +1016,7 @@ async function sendJournalAssistantMessage(text) {
   assistant.messages.push({ role: "user", text: question }, { role: "assistant", text: "", streaming: true });
   assistant.messages = assistant.messages.slice(-20);
   assistant.pending = true;
-  render();
+  refreshJournalIsland();
   const responseMessage = assistant.messages.at(-1);
   const history = assistant.messages.slice(-10, -1).map(({ role, text: content }) => ({ role, content }));
   try {
@@ -665,7 +1043,7 @@ async function sendJournalAssistantMessage(text) {
     if (journalState.assistant.requestId === requestId) {
       assistant.pending = false;
       assistant.abortController = null;
-      render();
+      refreshJournalIsland();
       app.querySelector("[data-journal-assistant-form] textarea")?.focus({ preventScroll: true });
     }
   }
@@ -677,6 +1055,22 @@ function cancelJournalAssistant() {
   journalState.assistant.abortController = null;
   journalState.assistant.pending = false;
   journalState.assistant.error = "";
+  refreshJournalIsland();
+}
+
+function refreshLearningIsland() {
+  if (isLearningSection() && learningIslandManager) {
+    learningIslandManager.update();
+    return;
+  }
+  render();
+}
+
+function refreshDiotIsland() {
+  if (state.section === "diot" && diotIslandManager) {
+    diotIslandManager.update();
+    return;
+  }
   render();
 }
 
@@ -686,7 +1080,7 @@ async function sendDiotAssistantMessage(text) {
   if (!question || assistant.pending) return;
   if (!state.tutor.providers.length) {
     assistant.error = "Nora no está configurada en este momento. Puedes revisar el flujo y las incidencias localmente.";
-    render();
+    refreshDiotIsland();
     return;
   }
   const requestId = (assistant.requestId || 0) + 1;
@@ -698,7 +1092,7 @@ async function sendDiotAssistantMessage(text) {
   assistant.messages.push({ role: "user", text: question }, { role: "assistant", text: "", streaming: true });
   assistant.messages = assistant.messages.slice(-20);
   assistant.pending = true;
-  render();
+  refreshDiotIsland();
   const responseMessage = assistant.messages.at(-1);
   const history = assistant.messages.slice(-10, -1).map(({ role, text: content }) => ({ role, content }));
   try {
@@ -725,7 +1119,7 @@ async function sendDiotAssistantMessage(text) {
     if (diotState.assistant.requestId === requestId) {
       assistant.pending = false;
       assistant.abortController = null;
-      render();
+      refreshDiotIsland();
       app.querySelector("[data-diot-assistant-form] textarea")?.focus({ preventScroll: true });
     }
   }
@@ -737,7 +1131,7 @@ function cancelDiotAssistant() {
   diotState.assistant.abortController = null;
   diotState.assistant.pending = false;
   diotState.assistant.error = "";
-  render();
+  refreshDiotIsland();
 }
 
 async function stopAnamSession({ silent = false } = {}) {
@@ -1137,7 +1531,16 @@ function renderPublicInfoPage(pageId) {
   const page = PUBLIC_INFO_PAGES[pageId];
   if (!page) return "";
   const cards = page.cards.map(([title, text], index) => `<article class="public-info-card"><span>${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></article>`).join("");
-  const recovery = page.recovery ? `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label><div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}"/><button class="public-primary-cta" type="submit">${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${authState.message ? `<p class="public-recovery-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : ""}</form>` : "";
+  const recoveryTarget = getAuthDestinationTarget();
+  const recoveryDisabled = authState.busy || !authState.ready || !window.__contaiaAuth?.client;
+  const recoveryMessage = authState.message ? `<p class="public-recovery-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : "";
+  const recovery = page.recovery
+    ? authState.recoveryComplete
+      ? `<div class="public-recovery-complete">${recoveryMessage}<a class="public-primary-cta" href="${recoveryTarget}">Continuar a ContaIA <span aria-hidden="true">→</span></a></div>`
+      : authState.recoveryMode
+        ? `<form class="public-recovery-form" data-recovery-update-form><p class="public-recovery-kicker">ENLACE VERIFICADO</p><label for="recovery-new-password">Nueva contraseña</label><div><input id="recovery-new-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" ${recoveryDisabled ? "disabled" : ""}/><span aria-hidden="true"></span></div><label for="recovery-confirm-password">Confirma tu nueva contraseña</label><div><input id="recovery-confirm-password" name="passwordConfirmation" type="password" autocomplete="new-password" required minlength="8" maxlength="128" ${recoveryDisabled ? "disabled" : ""}/><button class="public-primary-cta" type="submit" ${recoveryDisabled ? "disabled" : ""}>${authState.busy ? "Guardando…" : "Actualizar contraseña"}<span aria-hidden="true">→</span></button></div><small>Usa al menos 8 caracteres. Esta contraseña reemplazará la anterior.</small>${recoveryMessage}</form>`
+        : `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label><div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}" ${recoveryDisabled ? "disabled" : ""}/><button class="public-primary-cta" type="submit" ${recoveryDisabled ? "disabled" : ""}>${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${recoveryMessage}</form>`
+    : "";
   return `<div class="public-landing public-info-page public-info-${escapeHtml(pageId)}"><header class="public-header"><a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a><nav class="public-nav" aria-label="Productos de ContaIA"><a href="/descripcion/curso">Aprende</a><a href="/descripcion/cfdi">Herramientas</a><a href="/descripcion/asistente">Nora</a></nav><button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button></header><main id="contenido" class="public-main public-info-main" tabindex="-1"><a class="public-back-link" href="/">← Volver a ContaIA</a><section class="public-info-hero"><div class="public-info-icon" aria-hidden="true">${uiIcon(page.icon)}</div><p class="public-kicker">${escapeHtml(page.eyebrow)}</p><h1>${escapeHtml(page.title)}</h1><p class="public-lede">${escapeHtml(page.summary)}</p>${recovery}<div class="public-info-actions"><a class="public-primary-cta" href="${page.primary[1]}">${escapeHtml(page.primary[0])}<span aria-hidden="true">→</span></a><a class="public-secondary-cta" href="${page.secondary[1]}">${escapeHtml(page.secondary[0])}</a></div></section><section class="public-info-grid" aria-label="Información de ContaIA">${cards}</section></main><footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/ayuda">Ayuda</a></footer>${renderAuthPanel()}</div>`;
 }
 
@@ -1323,6 +1726,11 @@ function render() {
   lastPageTransitionKey = pageKey;
   const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   renderView();
+  void syncLearningIsland();
+  void syncJournalIsland();
+  void syncDiotIsland();
+  void syncCfdiIsland();
+  void syncReconciliationIsland();
   if (pageChanged && !reduceMotion) {
     const page = app.querySelector("#contenido, .auth-gate") || app.firstElementChild;
     if (page) {
@@ -1374,12 +1782,12 @@ function renderView() {
     state.publicDestinationApplied = true;
   }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
-  const content = state.section === "course" ? renderCourse()
+  const content = isLearningSection() ? '<div data-learning-island-host aria-live="polite"></div>'
     : state.section === "advisor" ? renderOpenAssistant()
-      : state.section === "cfdi" ? renderCfdiWorkspace()
-    : state.section === "reconciliation" ? renderReconciliationWorkspace({ analysis: cfdiState.analysis })
-      : state.section === "journal" ? renderJournalWorkspace({ analysis: cfdiState.analysis, bankRows: reconciliationState.movements, bankFileName: reconciliationState.fileName })
-      : state.section === "diot" ? renderDiotWorkspace({ analysis: cfdiState.analysis })
+      : state.section === "cfdi" ? '<div data-cfdi-island-host aria-live="polite"></div>'
+      : state.section === "reconciliation" ? '<div data-reconciliation-island-host aria-live="polite"></div>'
+      : state.section === "journal" ? '<div data-journal-island-host aria-live="polite"></div>'
+      : state.section === "diot" ? '<div data-diot-island-host aria-live="polite"></div>'
       : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice, workspace: toolsWorkspace })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
@@ -1424,10 +1832,301 @@ function checkAnswer(exercise) {
   }
   state.tutor.avatarState = state.completed.has(exercise.id) ? "celebrating" : "explaining";
   persistProgress();
-  render();
+  refreshLearningIsland();
+}
+
+function handleLearningClick(event) {
+  const classroomModule = event.target.closest("[data-class-module]");
+  if (classroomModule) {
+    const moduleId = classroomModule.dataset.classModule;
+    if (!courseModules.some(({ id }) => id === moduleId)) return;
+    const continuingCurrentClass = moduleId === state.activeModuleId;
+    state.section = "course";
+    if (!continuingCurrentClass) {
+      resetTutor();
+      state.activeModuleId = moduleId;
+      state.coursePhaseIndex = 0;
+      state.highestUnlockedPhase = 0;
+      state.practiceStepIndex = 0;
+    }
+    refreshLearningIsland();
+    if (!continuingCurrentClass) narrateClassroomInstruction();
+    document.querySelector("#classroom-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  const classroomPhase = event.target.closest("[data-class-phase]");
+  if (classroomPhase) {
+    const phaseIndex = Number(classroomPhase.dataset.classPhase);
+    if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length || phaseIndex > state.highestUnlockedPhase) return;
+    resetTutor();
+    state.coursePhaseIndex = phaseIndex;
+    refreshLearningIsland();
+    narrateClassroomInstruction();
+    return;
+  }
+  const glossaryTerm = event.target.closest("[data-glossary-term]");
+  if (glossaryTerm) {
+    state.glossary = { moduleId: glossaryTerm.dataset.glossaryModule, term: glossaryTerm.dataset.glossaryTerm };
+    refreshLearningIsland();
+    return;
+  }
+  const demo = event.target.closest("[data-module-demo]");
+  if (demo) {
+    state.demoModuleId = state.demoModuleId === demo.dataset.moduleDemo ? null : demo.dataset.moduleDemo;
+    refreshLearningIsland();
+    return;
+  }
+  const moduleToggle = event.target.closest("[data-module-toggle]");
+  if (moduleToggle) {
+    const moduleId = moduleToggle.dataset.moduleToggle;
+    if (!courseModules.some((module) => module.id === moduleId)) return;
+    if (state.completedModules.has(moduleId)) state.completedModules.delete(moduleId);
+    else {
+      state.completedModules.add(moduleId);
+      state.activeModuleId = moduleId;
+      state.tutor.avatarState = "celebrating";
+    }
+    persistProgress();
+    refreshLearningIsland();
+    return;
+  }
+  const nav = event.target.closest("[data-nav]");
+  if (nav) {
+    const destination = nav.dataset.nav;
+    if (state.section !== "lab" || state.current !== destination) resetTutor(destination);
+    state.section = "lab";
+    state.current = destination;
+    state.tutor.collapsed = true;
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const studyOpen = event.target.closest("[data-study-open]");
+  if (studyOpen) {
+    state.studySelectedId = studyOpen.dataset.studyOpen;
+    state.studyDraftNote = selectedStudyNote(state.studySelectedId)?.content ?? "";
+    refreshLearningIsland();
+    document.querySelector("#study-note")?.focus({ preventScroll: true });
+    return;
+  }
+  const studyNavigate = event.target.closest("[data-study-navigate]");
+  if (studyNavigate) {
+    const item = state.studyItems.find((entry) => entry.id === studyNavigate.dataset.studyNavigate);
+    if (!item) return;
+    const destination = item.destination ?? {};
+    if (destination.section === "external") {
+      try {
+        const url = new URL(destination.url);
+        if (url.protocol !== "https:") return;
+        window.open(url.href, "_blank", "noopener,noreferrer");
+      } catch { /* Nunca abrir URLs no válidas o con protocolos activos. */ }
+      return;
+    }
+    if (destination.section === "lab") {
+      resetTutor(destination.exerciseId);
+      state.section = "lab";
+      state.current = destination.exerciseId;
+      state.tutor.collapsed = true;
+    } else {
+      state.section = "course";
+      state.openCourseModuleId = destination.moduleId ?? null;
+      if (destination.moduleId) state.activeModuleId = destination.moduleId;
+      if (destination.glossaryTerm) {
+        state.glossaryOpen = true;
+        state.glossary = { moduleId: "global", term: destination.glossaryTerm };
+      }
+    }
+    render();
+    document.querySelector("#contenido")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const action = event.target.closest("[data-action]");
+  if (!action) return;
+  if (action.dataset.action === "tutor-open") {
+    state.tutor.collapsed = false;
+    render();
+    document.querySelector("[data-tutor-input]")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "classroom-narrate") {
+    if (state.anam.status === "live" && state.anam.client) narrateClassroomInstruction();
+    else if (tutorSpeaker.enabled && state.tutor.avatarState === "explaining") {
+      tutorSpeaker.stop();
+      state.tutor.avatarState = "idle";
+    } else narrateClassroomInstruction({ browserFallback: true });
+    refreshTutorPanel();
+    return;
+  }
+  if (action.dataset.action === "classroom-next-phase") {
+    advanceClassroomPhase();
+    return;
+  }
+  if (action.dataset.action === "classroom-practice-step-done") {
+    completePracticeInstruction();
+    return;
+  }
+  if (action.dataset.action === "classroom-complete") {
+    const moduleId = action.dataset.moduleId;
+    if (!courseModules.some(({ id }) => id === moduleId)) return;
+    state.completedModules.add(moduleId);
+    state.activeModuleId = moduleId;
+    state.tutor.avatarState = "celebrating";
+    persistProgress();
+    refreshLearningIsland();
+    return;
+  }
+  if (action.dataset.action === "download-portfolio") {
+    downloadPortfolio();
+    return;
+  }
+  if (action.dataset.action === "toggle-glossary") {
+    state.glossaryOpen = !state.glossaryOpen;
+    refreshLearningIsland();
+    return;
+  }
+  if (action.dataset.action === "study-close") {
+    state.studySelectedId = "";
+    state.studyDraftNote = "";
+    refreshLearningIsland();
+    return;
+  }
+  if (action.dataset.action === "study-more") {
+    state.studyVisibleCount += 60;
+    const root = action.closest("[data-learning-island]") || app;
+    const results = root.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    return;
+  }
+  if (action.dataset.action === "study-export") {
+    void downloadStudyDatabase();
+    return;
+  }
+  if (action.dataset.action === "study-delete-note") {
+    if (!state.studyDb || !action.dataset.noteId) return;
+    const db = state.studyDb;
+    void db.deleteNote(action.dataset.noteId).then(async () => {
+      if (state.studyDb !== db) return;
+      state.studyNotes = await db.listNotes();
+      state.studyDraftNote = "";
+      refreshLearningIsland();
+    }).catch(() => { state.studyDbWarning = "No se pudo eliminar la nota local."; refreshLearningIsland(); });
+    return;
+  }
+  if (action.dataset.action === "complete-onboarding") {
+    if (!state.onboardingDraft) return;
+    persistOnboarding();
+    refreshLearningIsland();
+    document.querySelector("[data-testid='onboarding-complete']")?.focus({ preventScroll: true });
+    return;
+  }
+  if (action.dataset.action === "reset-onboarding") {
+    state.onboardingLevel = "";
+    state.onboardingDraft = "";
+    try { progressStorage?.removeItem("contaia.onboarding.v1"); } catch { /* Si el almacenamiento falla, queda en memoria. */ }
+    refreshLearningIsland();
+    return;
+  }
+  const exercise = exercises.find((item) => item.id === action.dataset.id);
+  if (!exercise) return;
+  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
+  if (action.dataset.action === "mark-reviewed") {
+    const feedback = state.feedback.get(exercise.id);
+    if (!["prompt", "written"].includes(exercise.kind) || !state.attempted.has(exercise.id) || feedback?.status === "incompleto") return;
+    state.completed.add(exercise.id);
+    persistProgress();
+    refreshLearningIsland();
+    return;
+  }
+  if (action.dataset.action === "hint" && stage !== "hint") return;
+  if (action.dataset.action === "solution" && stage !== "example") return;
+  if (action.dataset.action === "check") checkAnswer(exercise);
+  if (action.dataset.action === "hint") state.hints.add(exercise.id);
+  if (action.dataset.action === "solution") state.revealed.add(exercise.id);
+  if (action.dataset.action === "hint" || action.dataset.action === "solution") refreshLearningIsland();
+}
+
+function handleLearningSubmit(event) {
+  const studyForm = event.target.closest("[data-study-note-form]");
+  if (!studyForm) return;
+  event.preventDefault();
+  if (!state.studyDb || !state.studySelectedId) return;
+  state.studyDraftNote = studyForm.querySelector("[data-study-note]")?.value ?? state.studyDraftNote;
+  const db = state.studyDb;
+  void db.saveNote({ id: `note:${state.studySelectedId}`, itemId: state.studySelectedId, content: state.studyDraftNote, updatedAt: Date.now() }).then(async () => {
+    if (state.studyDb !== db) return;
+    state.studyNotes = await db.listNotes();
+    refreshLearningIsland();
+    document.querySelector("#study-note")?.focus({ preventScroll: true });
+  }).catch(() => { state.studyDbWarning = "Escribe una nota breve para guardarla en la base local."; refreshLearningIsland(); });
+}
+
+function handleLearningToggle(event) {
+  const moduleCard = event.target.closest?.("details[data-course-module]");
+  if (!moduleCard) return;
+  state.activeModuleId = moduleCard.dataset.courseModule;
+  state.openCourseModuleId = moduleCard.open ? moduleCard.dataset.courseModule : "__none__";
+  refreshTutorPanel();
+}
+
+function handleLearningInput(event) {
+  if (event.target.matches("[data-study-search]")) {
+    state.studyQuery = event.target.value;
+    state.studyVisibleCount = 60;
+    const root = event.target.closest("[data-learning-island]") || app;
+    const results = root.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    const count = root.querySelector(".study-browser .count-pill");
+    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
+    return;
+  }
+  if (event.target.matches("[data-study-note]")) {
+    state.studyDraftNote = event.target.value;
+    return;
+  }
+  if (event.target.matches("[data-answer]")) {
+    state.answers.set(event.target.dataset.answer, event.target.value);
+    const counter = event.target.closest(".writing-prompt")?.querySelector(".field-meta span:last-child");
+    if (counter) counter.textContent = `${event.target.value.length} / 1600`;
+  }
+}
+
+function handleLearningChange(event) {
+  if (event.target.matches("[data-study-filter]")) {
+    state.studyKind = event.target.value;
+    state.studyVisibleCount = 60;
+    const root = event.target.closest("[data-learning-island]") || app;
+    const results = root.querySelector("[data-study-results]");
+    if (results) results.innerHTML = renderStudyResults();
+    const count = root.querySelector(".study-browser .count-pill");
+    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
+    return;
+  }
+  if (event.target.matches("[name='onboarding-level']")) {
+    state.onboardingDraft = event.target.value;
+    const button = event.target.closest("[data-learning-island]")?.querySelector("[data-action='complete-onboarding']");
+    if (button) button.disabled = false;
+    return;
+  }
+  if (event.target.matches("[data-choice]")) {
+    state.selections.set(event.target.dataset.choice, event.target.value);
+    const exercise = exercises.find((item) => item.id === event.target.dataset.choice);
+    if (exercise) state.feedback.delete(exercise.id);
+    refreshLearningIsland();
+  }
+}
+
+function handleLearningEvent(type, event) {
+  if (type === "click") handleLearningClick(event);
+  else if (type === "submit") handleLearningSubmit(event);
+  else if (type === "toggle") handleLearningToggle(event);
+  else if (type === "input") handleLearningInput(event);
+  else if (type === "change") handleLearningChange(event);
 }
 
 app.addEventListener("click", (event) => {
+  if (event.target.closest?.("[data-learning-island]")) return;
   if (event.target.closest("[data-action='auth-close']") && !event.target.closest("[data-auth-panel]")) {
     authState.open = false;
     render();
@@ -1513,112 +2212,6 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
-  const classroomModule = event.target.closest("[data-class-module]");
-  if (classroomModule) {
-    const moduleId = classroomModule.dataset.classModule;
-    if (!courseModules.some(({ id }) => id === moduleId)) return;
-    const continuingCurrentClass = moduleId === state.activeModuleId;
-    state.section = "course";
-    if (!continuingCurrentClass) {
-      resetTutor();
-      state.activeModuleId = moduleId;
-      state.coursePhaseIndex = 0;
-      state.highestUnlockedPhase = 0;
-      state.practiceStepIndex = 0;
-    }
-    render();
-    if (!continuingCurrentClass) narrateClassroomInstruction();
-    document.querySelector("#classroom-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-  const classroomPhase = event.target.closest("[data-class-phase]");
-  if (classroomPhase) {
-    const phaseIndex = Number(classroomPhase.dataset.classPhase);
-    if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length || phaseIndex > state.highestUnlockedPhase) return;
-    resetTutor();
-    state.coursePhaseIndex = phaseIndex;
-    render();
-    narrateClassroomInstruction();
-    return;
-  }
-  const glossaryTerm = event.target.closest("[data-glossary-term]");
-  if (glossaryTerm) {
-    state.glossary = { moduleId: glossaryTerm.dataset.glossaryModule, term: glossaryTerm.dataset.glossaryTerm };
-    render();
-    return;
-  }
-  const demo = event.target.closest("[data-module-demo]");
-  if (demo) {
-    state.demoModuleId = state.demoModuleId === demo.dataset.moduleDemo ? null : demo.dataset.moduleDemo;
-    render();
-    return;
-  }
-  const moduleToggle = event.target.closest("[data-module-toggle]");
-  if (moduleToggle) {
-    const moduleId = moduleToggle.dataset.moduleToggle;
-    if (!courseModules.some((module) => module.id === moduleId)) return;
-    if (state.completedModules.has(moduleId)) state.completedModules.delete(moduleId);
-    else {
-      state.completedModules.add(moduleId);
-      state.activeModuleId = moduleId;
-      state.tutor.avatarState = "celebrating";
-    }
-    persistProgress();
-    render();
-    return;
-  }
-  const nav = event.target.closest("[data-nav]");
-  if (nav) {
-    const destination = nav.dataset.nav;
-    if (state.section !== "lab" || state.current !== destination) resetTutor(destination);
-    state.section = "lab";
-    state.current = destination;
-    state.tutor.collapsed = true;
-    render();
-    document.querySelector("#contenido")?.focus({ preventScroll: true });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-  const studyOpen = event.target.closest("[data-study-open]");
-  if (studyOpen) {
-    state.studySelectedId = studyOpen.dataset.studyOpen;
-    state.studyDraftNote = selectedStudyNote(state.studySelectedId)?.content ?? "";
-    render();
-    document.querySelector("#study-note")?.focus({ preventScroll: true });
-    return;
-  }
-  const studyNavigate = event.target.closest("[data-study-navigate]");
-  if (studyNavigate) {
-    const item = state.studyItems.find((entry) => entry.id === studyNavigate.dataset.studyNavigate);
-    if (!item) return;
-    const destination = item.destination ?? {};
-    if (destination.section === "external") {
-      try {
-        const url = new URL(destination.url);
-        if (url.protocol !== "https:") return;
-        window.open(url.href, "_blank", "noopener,noreferrer");
-      } catch { /* Nunca abrir URLs no válidas o con protocolos activos. */ }
-      return;
-    }
-    if (destination.section === "lab") {
-      resetTutor(destination.exerciseId);
-      state.section = "lab";
-      state.current = destination.exerciseId;
-      state.tutor.collapsed = true;
-    } else {
-      state.section = "course";
-      state.openCourseModuleId = destination.moduleId ?? null;
-      if (destination.moduleId) state.activeModuleId = destination.moduleId;
-      if (destination.glossaryTerm) {
-        state.glossaryOpen = true;
-        state.glossary = { moduleId: "global", term: destination.glossaryTerm };
-      }
-    }
-    render();
-    document.querySelector("#contenido")?.focus({ preventScroll: true });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
   const action = event.target.closest("[data-action]");
   if (!action) return;
   if (action.dataset.action === "auth-toggle") {
@@ -1697,109 +2290,19 @@ app.addEventListener("click", (event) => {
     render();
     return;
   }
-  if (action.dataset.action === "classroom-narrate") {
-    if (state.anam.status === "live" && state.anam.client) {
-      narrateClassroomInstruction();
-    } else if (tutorSpeaker.enabled && state.tutor.avatarState === "explaining") {
-      tutorSpeaker.stop();
-      state.tutor.avatarState = "idle";
-    } else {
-      narrateClassroomInstruction({ browserFallback: true });
-    }
-    refreshTutorPanel();
-    return;
-  }
-  if (action.dataset.action === "classroom-next-phase") {
-    advanceClassroomPhase();
-    return;
-  }
-  if (action.dataset.action === "classroom-practice-step-done") {
-    completePracticeInstruction();
-    return;
-  }
-  if (action.dataset.action === "anam-toggle") {
-    if (state.anam.status === "live" || state.anam.status === "connecting") void stopAnamSession();
-    else void startAnamSession();
-    return;
-  }
-  if (action.dataset.action === "classroom-complete") {
-    const moduleId = action.dataset.moduleId;
-    if (!courseModules.some(({ id }) => id === moduleId)) return;
-    state.completedModules.add(moduleId);
-    state.activeModuleId = moduleId;
-    state.tutor.avatarState = "celebrating";
-    persistProgress();
-    render();
-    return;
-  }
-  if (action.dataset.action === "download-portfolio") {
-    downloadPortfolio();
-    return;
-  }
-  if (action.dataset.action === "toggle-glossary") {
-    state.glossaryOpen = !state.glossaryOpen;
-    render();
-    return;
-  }
-  if (action.dataset.action === "study-close") {
-    state.studySelectedId = "";
-    state.studyDraftNote = "";
-    render();
-    return;
-  }
-  if (action.dataset.action === "study-more") {
-    state.studyVisibleCount += 60;
-    const results = document.querySelector("[data-study-results]");
-    if (results) results.innerHTML = renderStudyResults();
-    return;
-  }
-  if (action.dataset.action === "study-export") {
-    downloadStudyDatabase();
-    return;
-  }
-  if (action.dataset.action === "study-delete-note") {
-    if (!state.studyDb || !action.dataset.noteId) return;
-    state.studyDb.deleteNote(action.dataset.noteId).then(async () => {
-      state.studyNotes = await state.studyDb.listNotes();
-      state.studyDraftNote = "";
-      render();
-    }).catch(() => { state.studyDbWarning = "No se pudo eliminar la nota local."; render(); });
-    return;
-  }
-  if (action.dataset.action === "complete-onboarding") {
-    if (!state.onboardingDraft) return;
-    persistOnboarding();
-    render();
-    document.querySelector("[data-testid='onboarding-complete']")?.focus({ preventScroll: true });
-    return;
-  }
-  if (action.dataset.action === "reset-onboarding") {
-    state.onboardingLevel = "";
-    state.onboardingDraft = "";
-    try { progressStorage?.removeItem("contaia.onboarding.v1"); } catch { /* Se mantiene en memoria. */ }
-    render();
-    return;
-  }
-  const exercise = exercises.find((item) => item.id === action.dataset.id);
-  if (!exercise) return;
-  const stage = getGuidedStage({ attempted: state.attempted.has(exercise.id), hintSeen: state.hints.has(exercise.id), solutionSeen: state.revealed.has(exercise.id) });
-  if (action.dataset.action === "mark-reviewed") {
-    const feedback = state.feedback.get(exercise.id);
-    if (!["prompt", "written"].includes(exercise.kind) || !state.attempted.has(exercise.id) || feedback?.status === "incompleto") return;
-    state.completed.add(exercise.id);
-    persistProgress();
-    render();
-    return;
-  }
-  if (action.dataset.action === "hint" && stage !== "hint") return;
-  if (action.dataset.action === "solution" && stage !== "example") return;
-  if (action.dataset.action === "check") checkAnswer(exercise);
-  if (action.dataset.action === "hint") state.hints.add(exercise.id);
-  if (action.dataset.action === "solution") state.revealed.add(exercise.id);
-  if (action.dataset.action === "hint" || action.dataset.action === "solution") render();
 });
 
 app.addEventListener("submit", (event) => {
+  if (event.target.closest?.("[data-learning-island]")) return;
+  const recoveryUpdateForm = event.target.closest("[data-recovery-update-form]");
+  if (recoveryUpdateForm) {
+    event.preventDefault();
+    const formData = new FormData(recoveryUpdateForm);
+    authState.recoveryPassword = String(formData.get("password") || "");
+    authState.recoveryPasswordConfirmation = String(formData.get("passwordConfirmation") || "");
+    void updatePassword();
+    return;
+  }
   const recoveryForm = event.target.closest("[data-recovery-form]");
   if (recoveryForm) {
     event.preventDefault();
@@ -1867,17 +2370,6 @@ app.addEventListener("submit", (event) => {
     void saveToolConnection({ tool_key: formData.get("tool_key"), environment: formData.get("environment") });
     return;
   }
-  const studyForm = event.target.closest("[data-study-note-form]");
-  if (studyForm) {
-    event.preventDefault();
-    if (!state.studyDb || !state.studySelectedId) return;
-    state.studyDb.saveNote({ id: `note:${state.studySelectedId}`, itemId: state.studySelectedId, content: state.studyDraftNote, updatedAt: Date.now() }).then(async () => {
-      state.studyNotes = await state.studyDb.listNotes();
-      render();
-      document.querySelector("#study-note")?.focus({ preventScroll: true });
-    }).catch(() => { state.studyDbWarning = "Escribe una nota breve para guardarla en la base local."; render(); });
-    return;
-  }
   const form = event.target.closest("[data-tutor-form]");
   if (!form) return;
   event.preventDefault();
@@ -1889,40 +2381,16 @@ app.addEventListener("submit", (event) => {
   sendTutorMessage(text, { includeDocument: true, openMode: form.hasAttribute("data-open-form") });
 });
 
-app.addEventListener("toggle", (event) => {
-  const moduleCard = event.target.closest?.("details[data-course-module]");
-  if (!moduleCard) return;
-  state.activeModuleId = moduleCard.dataset.courseModule;
-  state.openCourseModuleId = moduleCard.open ? moduleCard.dataset.courseModule : "__none__";
-  refreshTutorPanel();
-}, true);
-
 app.addEventListener("input", (event) => {
+  if (event.target.closest?.("[data-learning-island]")) return;
   if (event.target.matches("#auth-identifier")) {
     authState.identifier = event.target.value;
     return;
   }
-  if (event.target.matches("[data-study-search]")) {
-    state.studyQuery = event.target.value;
-    state.studyVisibleCount = 60;
-    const results = document.querySelector("[data-study-results]");
-    if (results) results.innerHTML = renderStudyResults();
-    const count = document.querySelector(".study-browser .count-pill");
-    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
-    return;
-  }
-  if (event.target.matches("[data-study-note]")) {
-    state.studyDraftNote = event.target.value;
-    return;
-  }
-  if (event.target.matches("[data-answer]")) {
-    state.answers.set(event.target.dataset.answer, event.target.value);
-    const counter = event.target.closest(".writing-prompt")?.querySelector(".field-meta span:last-child");
-    if (counter) counter.textContent = `${event.target.value.length} / 1600`;
-  }
 });
 
 app.addEventListener("change", (event) => {
+  if (event.target.closest?.("[data-learning-island]")) return;
   if (event.target.matches("[data-tools-profile-select]")) {
     state.toolsNotice = "";
     void loadProfileConnections(event.target.value);
@@ -1945,62 +2413,14 @@ app.addEventListener("change", (event) => {
     refreshTutorPanel();
     return;
   }
-  if (event.target.matches("[data-study-filter]")) {
-    state.studyKind = event.target.value;
-    state.studyVisibleCount = 60;
-    const results = document.querySelector("[data-study-results]");
-    if (results) results.innerHTML = renderStudyResults();
-    const count = document.querySelector(".study-browser .count-pill");
-    if (count) count.textContent = `${searchStudyItems(state.studyItems, state.studyQuery, state.studyKind).length} resultados`;
-    return;
-  }
-  if (event.target.matches("[name='onboarding-level']")) {
-    state.onboardingDraft = event.target.value;
-    const button = document.querySelector("[data-action='complete-onboarding']");
-    if (button) button.disabled = false;
-    return;
-  }
-  if (event.target.matches("[data-choice]")) {
-    state.selections.set(event.target.dataset.choice, event.target.value);
-    const exercise = exercises.find((item) => item.id === event.target.dataset.choice);
-    if (exercise) state.feedback.delete(exercise.id);
-    render();
-  }
 });
 
 render();
 app.addEventListener("pointerup", rememberTutorPanelSize, { passive: true });
 app.addEventListener("mouseup", rememberTutorPanelSize, { passive: true });
-bindCfdiWorkspace(app, {
-  onUpdate: () => { if (state.section === "cfdi") render(); },
-  onAskNora: (context, prompt) => {
-    state.openAssistant.cfdiContext = context;
-    state.openAssistant.draft = prompt;
-    state.openAssistant.messages.push({ role: "assistant", text: "Preparé un resumen CFDI para esta consulta. No se ha enviado; revisa la pregunta y pulsa Enviar cuando decidas compartirlo con Nora." });
-    state.openAssistant.messages = state.openAssistant.messages.slice(-20);
-    state.section = "advisor";
-    render();
-    app.querySelector("[data-open-input]")?.focus({ preventScroll: true });
-  },
-});
-bindReconciliationWorkspace(app, {
-  getAnalysis: () => cfdiState.analysis,
-  onUpdate: () => { if (state.section === "reconciliation") render(); },
-});
-bindJournalWorkspace(app, {
-  getSources: () => ({ analysis: cfdiState.analysis, bankRows: reconciliationState.movements, bankFileName: reconciliationState.fileName }),
-  onUpdate: () => { if (state.section === "journal") render(); },
-  onAssistantSend: (message) => { void sendJournalAssistantMessage(message); },
-  onAssistantCancel: cancelJournalAssistant,
-});
-bindDiotWorkspace(app, {
-  onUpdate: () => { if (state.section === "diot") render(); },
-  onAssistantSend: (message) => { void sendDiotAssistantMessage(message); },
-  onAssistantCancel: cancelDiotAssistant,
-});
+void initializeAuthClient().catch(() => {});
 initializeTutorConfig();
 initializeStudyDatabase();
-void initializeCfdiWorkspace();
 function syncMobileKeyboardOffset() {
   if (!window.visualViewport) return;
   const keyboardHeight = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
@@ -2018,7 +2438,12 @@ document.addEventListener("contaia:tools-updated", () => {
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   const nextStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  sourceCapabilityBroker.advanceSessionEpoch("auth-updated");
+  pendingJournalHandoff = null;
+  pendingJournalBankHandoff = null;
+  pendingDiotHandoff = null;
   if (!userId || nextStorageScope !== activeStorageScope) {
+    resetCfdiWorkspace();
     resetReconciliationWorkspace();
     resetJournalWorkspace();
     resetDiotWorkspace();

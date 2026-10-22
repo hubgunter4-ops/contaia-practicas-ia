@@ -69,6 +69,8 @@
 .recon-results-heading p:last-child { margin: 4px 0 0; color: #667572; font-size: 11px; }
 .recon-filter { display: grid; gap: 4px; min-width: 160px; color: #647572; font-size: 10px; }
 .recon-filter select { min-height: 36px; padding: 6px 9px; border: 1px solid #cbd5cd; border-radius: 6px; background: #fff; color: var(--fiscal-petroleum); font: inherit; }
+.recon-results-actions { display: flex; align-items: flex-end; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.recon-handoff { min-height: 36px; white-space: nowrap; }
 .recon-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid #dce3da; border-radius: 9px; background: #fffefa; }
 .recon-table { width: 100%; min-width: 920px; border-collapse: collapse; }
 .recon-table th { padding: 10px 9px; background: #edf2eb; color: #47615f; font: 700 9px var(--mono); text-align: left; text-transform: uppercase; letter-spacing: .04em; }
@@ -124,7 +126,9 @@
   .recon-run-actions { align-items: stretch; flex-direction: column; }
   .recon-run-actions .button { width: 100%; justify-content: center; }
   .recon-results-heading { flex-direction: column; }
+  .recon-results-actions { width: 100%; align-items: stretch; justify-content: stretch; flex-direction: column; }
   .recon-filter { width: 100%; }
+  .recon-handoff { width: 100%; white-space: normal; }
   .recon-table-wrap { overflow: visible; border: 0; background: transparent; }
   .recon-table { display: block; min-width: 0; }
   .recon-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }

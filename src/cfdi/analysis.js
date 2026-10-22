@@ -3,6 +3,15 @@ import { enriquecerPagosConFacturas } from "./relations.js";
 const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const normalizedUuid = (value) => String(value || "").trim().toLowerCase();
 const normalizedRfc = (value) => String(value || "").trim().toUpperCase();
+function readAmount(item, field, rawField) {
+  const value = item.rawAmounts && Object.hasOwn(item.rawAmounts, rawField) ? item.rawAmounts[rawField] : item[field];
+  if (!["string", "number"].includes(typeof value) || String(value).trim() === "" || !Number.isFinite(Number(value))) return null;
+  return Number(value);
+}
+function availableSum(items, field, rawField) {
+  const values = items.map((item) => readAmount(item, field, rawField));
+  return values.some((value) => value === null) ? null : round2(values.reduce((sum, value) => sum + value, 0));
+}
 
 function emptyTaxCurrency(currency) {
   return {
@@ -82,26 +91,37 @@ export function buildCfdiAnalysis(parsed) {
   const invoiceIds = new Set(facturas.map((invoice) => normalizedUuid(invoice.uuid)).filter(Boolean));
   const matchedPayments = pagos.filter((payment) => payment.relationStatus === "matched").length;
   const unmatchedPayments = pagos.length - matchedPayments;
-  const paymentBalanceDifferences = pagos.map((payment) => round2(payment.saldoAnterior - payment.impPagado - payment.saldoInsoluto));
+  const paymentBalanceDifferences = pagos.map((payment) => {
+    const amounts = [readAmount(payment, "saldoAnterior", "prior"), readAmount(payment, "impPagado", "paid"), readAmount(payment, "saldoInsoluto", "remaining")];
+    return amounts.some((amount) => amount === null) ? null : round2(amounts[0] - amounts[1] - amounts[2]);
+  });
   const balanceAlerts = paymentBalanceDifferences.filter((difference) => Math.abs(difference) > 0.01).length;
   const missingInvoiceReferences = pagos.filter((payment) => payment.docRelacionado && !invoiceIds.has(normalizedUuid(payment.docRelacionado))).length;
-  const overpaidLinks = pagos.filter((payment) => payment.relationStatus === "matched" && Number(payment.impPagado) > Number(payment.linkedInvoiceTotal || 0) + 0.01).length;
+  const originalTotals = new Map(facturas.map((invoice) => [normalizedUuid(invoice.uuid), readAmount(invoice, "total", "total")]));
+  const overpaidLinks = pagos.filter((payment) => {
+    const paid = readAmount(payment, "impPagado", "paid");
+    const total = originalTotals.get(normalizedUuid(payment.docRelacionado));
+    return payment.relationStatus === "matched" && paid !== null && total !== null && total !== undefined && paid > total + 0.01;
+  }).length;
   const currencies = [...new Set([
     ...facturas.map((item) => item.moneda || "Sin moneda indicada"),
     ...pagos.map((item) => item.moneda || "Sin moneda indicada"),
   ])];
   const totalsByCurrency = currencies.map((currency) => ({
     currency,
-    invoiced: round2(facturas.filter((item) => (item.moneda || "Sin moneda indicada") === currency).reduce((sum, item) => sum + Number(item.total || 0), 0)),
-    paid: round2(pagos.filter((item) => (item.moneda || "Sin moneda indicada") === currency).reduce((sum, item) => sum + Number(item.impPagado || 0), 0)),
-    remaining: round2(pagos.filter((item) => (item.moneda || "Sin moneda indicada") === currency).reduce((sum, item) => sum + Number(item.saldoInsoluto || 0), 0)),
+    invoiced: availableSum(facturas.filter((item) => (item.moneda || "Sin moneda indicada") === currency), "total", "total"),
+    paid: availableSum(pagos.filter((item) => (item.moneda || "Sin moneda indicada") === currency), "impPagado", "paid"),
+    remaining: availableSum(pagos.filter((item) => (item.moneda || "Sin moneda indicada") === currency), "saldoInsoluto", "remaining"),
   }));
   const alerts = [];
+  const missingAmounts = facturas.filter((item) => readAmount(item, "total", "total") === null).length + paymentBalanceDifferences.filter((value) => value === null).length;
+  if (missingAmounts) alerts.push({ code: "amount_missing", count: missingAmounts, severity: "review" });
   if (duplicateUuids) alerts.push({ code: "duplicate_uuid", count: duplicateUuids, severity: "review" });
   if (missingInvoiceReferences) alerts.push({ code: "payment_without_invoice", count: missingInvoiceReferences, severity: "review" });
   if (balanceAlerts) alerts.push({ code: "payment_balance_difference", count: balanceAlerts, severity: "review" });
   if (overpaidLinks) alerts.push({ code: "payment_exceeds_invoice", count: overpaidLinks, severity: "review" });
   if (pagos.some((payment) => payment.estimatedTax)) alerts.push({ code: "estimated_tax_unmatched", count: pagos.filter((payment) => payment.estimatedTax).length, severity: "caution" });
+  if (pagos.some((payment) => payment.taxEvidenceStatus === "missing")) alerts.push({ code: "payment_tax_missing", count: pagos.filter((payment) => payment.taxEvidenceStatus === "missing").length, severity: "review" });
   return {
     version: "pdfc-compatible-1",
     facturas, pagos, conceptos,

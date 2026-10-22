@@ -31,6 +31,13 @@
   - El XML y los nombres de archivo permanecen locales; no subirlos ni enviarlos a Nora automáticamente. El guardado opcional continúa almacenando solo el resultado autorizado por el contrato existente. El resumen CFDI se comparte con Nora únicamente por la acción explícita ya disponible y sigue acotado por el backend.
   - Mostrar resultados/hallazgos, relaciones, historial y cifras que ya produzca el análisis; no calcular ni inventar datos nuevos por necesidades visuales. Los enlaces de estudio conducen a módulos o prácticas existentes.
 
+- [x] **Hoja de cálculo fiscal avanzada local**
+  - Ofrecer una sección visible después del análisis CFDI para descargar un libro XLSX generado en el navegador, sin enviar XML, RFC, nombres ni resultados a un endpoint nuevo.
+  - Incluir siete hojas separadas: Resumen, Comprobantes, Ventas, Compras, Impuestos, Pagos y Conceptos; conservar importes, moneda, tasas IVA 0%/16%, IEPS por tasa/cuota, estados de relación y calidad de lectura.
+  - Clasificar Ventas por RFC emisor y Compras por RFC receptor solo cuando la persona haya indicado explícitamente el RFC del comercio/empresa; sin RFC, las hojas quedan sin atribución.
+  - Mantener el libro como hoja de trabajo para revisión. El nombre, metadatos y aviso visible no deben presentarlo como declaración, envío, acuse o formato oficial compatible con el SAT.
+  - Usar el bundle local de SheetJS, conservar filtros/anchuras de columnas y mantener el flujo responsive; un error de generación debe quedar visible sin borrar el análisis CFDI.
+
 - [x] **Continuidad educativa y Nora contextual**
   - Usar el progreso existente de módulos y ejercicios para mostrar progreso educativo, una ruta visual de módulos y «Continúa donde lo dejaste» cuando el estado real permita identificar el punto de continuación. No mezclar progreso del curso con métricas fiscales.
   - Dar a Nora un rol contextual coherente: explicar hallazgos CFDI; guiar procedimientos cuando exista el flujo; ayudar con inconsistencias/alertas solo cuando esos datos existan; orientar en búsqueda de documentos solo con la funcionalidad documental disponible.
@@ -339,3 +346,148 @@ Validación de la versión efectivamente publicada: una copia limpia sin el cód
 - [ ] Verificar y versionar una plantilla oficial vigente del SAT con fixtures antes de habilitar cualquier exportación compatible.
 - [ ] Ampliar la extracción XML con campos fiscales que el parser actual no conserva como texto original, si la especificación verificada lo requiere.
 - [ ] Solicitar autorización independiente antes de commit, push o despliegue; no habilitar autenticación SAT, presentación, backend o persistencia nueva.
+
+
+## Motor CFDI PUE/PPD/REP — corte autorizado 22 octubre 2026
+
+- [x] Conservar códigos de forma/método, decimales originales y ocurrencias de Pago/DoctoRelacionado sin sustituirlos por estimaciones.
+- [x] Proponer venta/compra PUE contra cuenta de pago configurada y PPD contra Clientes/Proveedores; separar base neta e impuestos explícitos, sin rellenar faltantes con cero.
+- [x] Complemento emitido: cobro de Clientes; recibido: pago de Proveedores. Relacionar UUID y parcialidad, comprobar saldos, moneda, papel y pago acumulado. No reconocer ventas/gastos otra vez.
+- [x] IVA PPD pendiente y reclasificación al cobro/pago únicamente con desglose DR explícito y cuentas configuradas. Acreditamiento/deducibilidad no se determinan automáticamente.
+- [x] Cuentas por empresa/forma de pago configuradas expresamente; MXN inicial, moneda extranjera, impuestos no soportados, duplicados, precisión perdida y relaciones ambiguas bloquean la propuesta correspondiente. CFDI E exige relación, aplicación humana y cuentas de ajuste explícitas.
+- [x] Generación repetida idempotente; conservar revisión aprobada, invalidar borradores ante cambios de fuente/configuración y mantener aprobación humana local sin registro ERP/SAT.
+- [x] Integrar el motor en Pólizas existentes con errores visibles y Nora sin fuentes automáticas; incluir auditoría global/parcial local, exportación XLSX de revisión y notas de crédito con decisión humana, sin backend, persistencia ni despliegue.
+
+La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC limpia borradores, selección y cuentas del contexto anterior; cambiar evidencia genera una revisión pendiente y conserva el snapshot anterior, sin heredar aprobación. ObjetoImp ausente no equivale a IVA cero. Los impuestos DR faltantes aparecen como no disponibles, sin prorrateo automático. UUID, bases y pago aplicado deben ser coherentes antes de aprobar.
+
+
+**Validación final de este corte:** `npm test`: 189/189; `npm run build:vercel`: correcto; `npm run test:e2e -- --workers=1 --timeout=30000`: 60/60 en escritorio y móvil; `git diff --check`: correcto. Los fallos detectados durante revisión se corrigieron antes de esta ejecución final. Sin commit, push ni despliegue.
+
+## Auditoría CFDI y notas de crédito — corte local implementado, pendiente de publicación
+
+- [x] Motor determinista de auditoría global y parcial; mismos códigos/reglas, con alcance, severidad, evidencia, documentos relacionados y estado visibles.
+- [x] Diferenciar una relación ausente de una relación existente fuera de la selección o de un filtro parcial; no usar el filtro para declarar que falta un complemento o documento.
+- [x] Hallazgos locales para papel RFC ambiguo, UUID/conflicto duplicado, PPD/PUE, complemento sin relación, aritmética de saldo, moneda/equivalencia faltante, impuestos no disponibles, cancelación no verificable, póliza sin evidencia y CFDI E.
+- [x] UI para filtrar por periodo, papel, tipo, método, moneda, RFC de tercero, relación, severidad y estado sin mutar el resultado global ni fuentes; detalle con evidencia y motivo de decisión humana.
+- [x] CFDI E tratado como ajuste: exige `TipoRelacion 01`, documento relacionado único, papel compatible, importes/IVA originales, cuentas activas y una aplicación humana (reducir saldo, devolución o compensación). No convierte FormaPago/MetodoPago en efectivo, banco o condonación.
+- [x] Póliza sugerida emitida/recibida para ajuste con cuentas configurables de descuentos, ajuste IVA y devolución/compensación; permanece en revisión/aprobación local y no registra saldos.
+- [x] XLSX local de revisión con Resumen, Hallazgos, Documentos y Evidencia; se etiqueta como reporte de trabajo, no auditoría certificada, declaración, validación SAT ni acuse.
+- [x] Pruebas unitarias de auditoría, filtros, aplicación E, relaciones fuera de alcance y exportación XLSX; E2E de escritorio/móvil para auditoría, decisión E, póliza sugerida y descarga local.
+- [x] Validación final: `npm test` 195/195, `npm run build:vercel` correcto, `npm run test:e2e -- --workers=1 --timeout=30000` 62/62 y `git diff --check` correcto.
+- [ ] Definir política autorizada para divisas/EquivalenciaDR, retenciones, IEPS, múltiples documentos relacionados y reglas fiscales no soportadas.
+- [ ] Consultar/validar estado de cancelación ante SAT solo mediante una integración aprobada por separado; mientras tanto mostrar «no verificable».
+- [ ] Solicitar autorización independiente antes de commit, push o despliegue. No habilitar SAT, bancos, ERP, backend, persistencia ni presentación automática.
+
+
+---
+
+## Fase 4 — Capacidades explícitas entre islas
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Broker efímero con token opaco de un solo uso, TTL corto, copia profunda y validación de `sessionEpoch`.
+- [x] Toda solicitud exige `explicitUserAction: true`, destino permitido y `sourceIds` pertenecientes a la isla CFDI.
+- [x] Snapshot CFDI limitado por destino: DIOT recibe facturas; Pólizas puede recibir facturas y complementos de pago; XML, `File`, `Blob`, buffers y rutas locales quedan fuera.
+- [x] El snapshot no cruza por `CustomEvent.detail` ni por almacenamiento persistente. El proveedor se registra bajo `CleanupScope` y se libera al desmontar CFDI.
+- [x] CFDI muestra acciones separadas para «Usar en Pólizas sugeridas» y «Preparar DIOT asistida»; los destinos exigen selección posterior dentro de su workspace.
+- [x] Cambio de usuario o cierre de sesión invalida leases y snapshots mediante el avance de época, además de ejecutar los resets heredados.
+- [x] Validación reproducible del corte: 210 pruebas unitarias, build estático y 70 pruebas E2E aprobadas en serie.
+- [ ] Migrar Pólizas/Auditoría y DIOT a `mountIsland()`/`destroy()` independientes; esta capa de capacidades no autoriza todavía esa migración.
+- [ ] No añadir backend, persistencia, integración bancaria, presentación SAT, pagos, commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase sugerida:** Fase 5 — Pólizas + Auditoría como isla real, previa confirmación del usuario.
+
+
+---
+
+## Fase 5 — Pólizas + Auditoría como isla real
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Crear `src/journal/island.js` con `mountIsland()`/`destroy()`, `CleanupScope`, señal de transición y destrucción idempotente.
+- [x] Retirar de `main.js` el bind global y el suministro implícito de `cfdiState.analysis` y movimientos bancarios a Pólizas.
+- [x] Consumir al montar una capacidad CFDI explícita y una capacidad bancaria explícita; ambas usan leases opacas de un solo uso, `sourceIds` pertenecientes y snapshots limitados.
+- [x] Añadir la acción «Usar movimientos revisados en Pólizas» en Conciliación; el handoff conserva únicamente movimientos normalizados, no el archivo bancario.
+- [x] Limpiar al desmontar fuentes, drafts, snapshots aprobados, decisiones de auditoría, aplicaciones de notas E y conversación/solicitudes de Nora.
+- [x] Añadir `IslandManager.update()` y usarlo para que el streaming de Nora no reconstruya el shell ni remonte Pólizas.
+- [x] Validación reproducible: 211 pruebas unitarias, build estático y 72 pruebas E2E aprobadas en serie en escritorio y móvil.
+- [x] Mantener DIOT fuera del montaje de Pólizas en esta fase; su migración independiente queda documentada en la Fase 6.
+- [ ] No añadir backend, persistencia, pagos, integración bancaria remota, presentación SAT, commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase de ese corte:** Fase 6 — DIOT como isla real; ya completada y documentada abajo.
+
+
+---
+
+## Fase 6 — DIOT como isla real
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Crear `src/diot/island.js` con `mountIsland()`/`destroy()`, `CleanupScope`, señal de transición y limpieza idempotente.
+- [x] Retirar de `main.js` el render y bind globales de DIOT; la ruta usa un host estable administrado por `IslandManager`.
+- [x] Consumir el handoff CFDI exclusivamente al montar DIOT y solo después de una acción explícita desde CFDI; una entrada directa no lee análisis abiertos ni historial.
+- [x] Registrar bajo `CleanupScope` los listeners de contexto, fuentes, clasificación, revisión, descarga y Nora, conservando compatibilidad con el binding directo de pruebas.
+- [x] Limpiar al desmontar preparación, fuentes, selección, overrides, descarga, lease CFDI y conversación de Nora.
+- [x] Usar `IslandManager.update()` durante el streaming de Nora para evitar remounts y reconstrucción del shell.
+- [x] Validación reproducible: 211 pruebas unitarias, build estático y 74 pruebas E2E aprobadas en serie en escritorio y móvil.
+- [x] Mantener Aprende/Estudio fuera del montaje fiscal de esta fase; su migración independiente queda documentada en la Fase 7.
+- [ ] No añadir backend, persistencia fiscal, pagos, autenticación SAT, presentación SAT, commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase de ese corte:** Fase 7 — Aprende/Estudio como isla real; ya completada y documentada abajo.
+
+
+---
+
+## Fase 7 — Aprende/Estudio como isla real
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Crear `src/learn/island.js` con `mountIsland()`/`destroy()`, `CleanupScope`, abortado de transición y destrucción idempotente.
+- [x] Montar Aula, Laboratorio y Estudio mediante un host estable gestionado por `IslandManager`, sin mezclar sus estados con CFDI, Conciliación, Pólizas, Auditoría o DIOT.
+- [x] Mover la delegación de clics, formularios, `toggle`, entradas y cambios al scope de la isla; las ramas históricas de `main.js` quedan protegidas y no reciben eventos dentro de `[data-learning-island]`.
+- [x] Actualizar dentro de la isla las fases del Aula, respuestas, pistas, soluciones, búsqueda/filtros de Estudio y notas sin reconstruir el shell ni remonte de la isla.
+- [x] Navegar explícitamente Aula→Estudio→Herramientas→Aula con desmontaje antes de montar el destino; limpiar filtros, selección, borrador de nota, glosario, demostración y módulo abierto al desmontar.
+- [x] Conservar el progreso educativo y la base local de estudio autorizados; no añadir persistencia fiscal, backend, API, pago ni transporte de datos hacia Nora o Herramientas.
+- [x] Validación reproducible: 211 pruebas unitarias, build estático y 78 pruebas E2E aprobadas en serie en escritorio y móvil.
+- [x] Retirar las ramas históricas bloqueadas de handlers educativos después de una regresión específica; la medición de rendimiento queda documentada en la Fase 9.
+- [ ] No añadir backend, pagos, integración remota, commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase de ese corte:** limpieza de compatibilidad bloqueada y medición de rendimiento de islas; ya completada y documentada en la Fase 9.
+
+
+---
+
+## Fase 8 — Recuperación de contraseña con destino
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Inicializar el cliente Auth global en rutas públicas, incluida `/recuperar-contrasena` y `/confirmar-correo`, sin depender de montar CFDI para habilitar la sesión.
+- [x] Conservar de forma allowlisted `?destino=curso`, `?destino=cfdi` y `?destino=asistente`; `anam` se normaliza a `asistente` y cualquier otro destino se descarta.
+- [x] Solicitar enlaces con `redirectTo` en `/recuperar-contrasena?destino=...` y añadir el rewrite equivalente de Vercel y el fallback del servidor local.
+- [x] Detectar el evento Supabase `PASSWORD_RECOVERY`, mostrar «Enlace verificado» y permitir cambiar la contraseña con confirmación, mínimo de 8 caracteres y validación local de coincidencia.
+- [x] Actualizar la contraseña únicamente mediante `client.auth.updateUser({ password })`; no registrar ni transportar la contraseña fuera del formulario y limpiar sus campos después de éxito.
+- [x] Mostrar estado de éxito y un enlace de retorno a `/?destino=...`, conservando la llegada posterior a Aula, CFDI o Nora.
+- [x] El enlace «¿Olvidaste tu contraseña?» del diálogo de inicio de sesión conserva también el destino de producto.
+- [x] Validación final: **211 pruebas unitarias**, build estático aprobado y **16 E2E de autenticación** aprobadas en escritorio y móvil; la regresión previa completa dejó **88/90** aprobadas y sus dos fallos históricos de mock CFDI quedaron corregidos y pasaron 6/6 en reejecución.
+- [ ] No añadir recuperación por SMS, proveedor alternativo, backend nuevo, tablas, pagos, commit, push ni despliegue sin autorización específica.
+
+**Siguiente revisión de ese corte:** conservar la frontera de Auth y no ampliar el flujo sin una autorización específica.
+
+
+---
+
+## Fase 9 — Limpieza de compatibilidad y rendimiento de islas
+
+**Estado:** implementada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Retirar del click global los handlers duplicados de módulos, fases, glosario, demostraciones, navegación de Laboratorio, fichas de Estudio y acciones educativas.
+- [x] Retirar del shell global el guardado de notas, `toggle` de módulos, búsqueda/filtro de Estudio, respuestas de ejercicios, onboarding y selección de opciones; esos eventos quedan bajo `CleanupScope` de `src/learn/island.js`.
+- [x] Conservar únicamente en `main.js` la navegación exterior del shell, Auth, Herramientas, Nora global y los resets/sincronizadores que no pertenecen al contenido educativo.
+- [x] Mantener intacto el contrato local de progreso educativo y `study-db`; desmontar una isla sigue limpiando solo estado efímero y no borra progreso autorizado.
+- [x] Añadir `tests/e2e/learning-performance.spec.js` con presupuestos de montaje `< 2500 ms`, actualización local `< 500 ms` y navegación `< 2500 ms`, además de comprobar que el host educativo permanece estable durante `update()`.
+- [x] Mediciones observadas en Chromium: montaje 391.9 ms, actualización 259.5 ms, navegación 225.6 ms; en Pixel 5: montaje 267.1 ms, actualización 238.4 ms, navegación 248.7 ms.
+- [x] Validación final reproducible: **211 pruebas unitarias**, build estático aprobado y **92 pruebas E2E** aprobadas en serie en escritorio y móvil.
+- [ ] No realizar optimizaciones de infraestructura, eliminar compatibilidad de Auth ni modificar el esquema educativo sin una nueva autorización.
+- [ ] No añadir backend, pagos, integración remota, commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase sugerida:** revisión de rendimiento fiscal y auditoría de listeners en islas, previa confirmación del usuario.

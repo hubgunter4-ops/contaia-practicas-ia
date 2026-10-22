@@ -1,4 +1,5 @@
-import { readBankFile, parseCsvText, MAX_BANK_ROWS, MAX_HEADER_SCAN_ROWS } from "./parser.js";
+import { createWorkerBridge, SessionExpiredError } from "../app/worker-bridge.js";
+import { MAX_BANK_ROWS, MAX_HEADER_SCAN_ROWS } from "./parser.js";
 import { buildReconciliationRows, normalizeBankRows, summarizeReconciliationRows } from "./matching.js";
 import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js";
 
@@ -22,12 +23,18 @@ const emptyState = () => ({
   dropActive: false, loadToken: 0,
 });
 export const reconciliationState = emptyState();
+const reconciliationParserBridge = createWorkerBridge({ epochProvider: () => reconciliationState.loadToken });
+let activeReconciliationParseController = null;
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
 const formatBytes = (bytes) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 
 export function resetReconciliationWorkspace() {
-  Object.assign(reconciliationState, emptyState());
+  const nextToken = (Number(reconciliationState.loadToken) || 0) + 1;
+  activeReconciliationParseController?.abort("workspace-reset");
+  activeReconciliationParseController = null;
+  reconciliationParserBridge.cancelAll("workspace-reset");
+  Object.assign(reconciliationState, emptyState(), { loadToken: nextToken });
 }
 
 function selectedRows() {
@@ -138,7 +145,7 @@ function renderResults() {
   const summary = summarizeReconciliationRows(results);
   const filtered = filter === "all" ? results : results.filter((row) => row.result === filter);
   const shown = filtered.slice(0, visibleRows);
-  return `<section class="recon-results" aria-labelledby="recon-results-title">${renderSummary(summary)}<div class="recon-results-heading"><div><p class="eyebrow">03 · REVISIÓN HUMANA</p><h2 id="recon-results-title">Candidatos a coincidencia</h2><p>Una sugerencia no confirma una conciliación ni modifica un CFDI.</p></div><label class="recon-filter" for="recon-filter"><span>Mostrar</span><select id="recon-filter" data-recon-filter>${FILTER_OPTIONS.map(([value, label]) => `<option value="${value}" ${filter === value ? "selected" : ""}>${label}</option>`).join("")}</select></label></div>
+  return `<section class="recon-results" aria-labelledby="recon-results-title">${renderSummary(summary)}<div class="recon-results-heading"><div><p class="eyebrow">03 · REVISIÓN HUMANA</p><h2 id="recon-results-title">Candidatos a coincidencia</h2><p>Una sugerencia no confirma una conciliación ni modifica un CFDI.</p></div><div class="recon-results-actions"><label class="recon-filter" for="recon-filter"><span>Mostrar</span><select id="recon-filter" data-recon-filter>${FILTER_OPTIONS.map(([value, label]) => `<option value="${value}" ${filter === value ? "selected" : ""}>${label}</option>`).join("")}</select></label><button type="button" class="button button-quiet recon-handoff" data-recon-handoff="journal" ${results.length ? "" : "disabled"}>Usar movimientos revisados en Pólizas</button></div></div>
     <div class="recon-table-wrap"><table class="recon-table"><thead><tr><th scope="col">Movimiento</th><th scope="col">Importe y referencia</th><th scope="col">Candidato CFDI</th><th scope="col">Evidencia</th><th scope="col">Estado y confianza</th><th scope="col">Detalle</th></tr></thead><tbody>${shown.length ? shown.map(renderResultRow).join("") : `<tr><td colspan="6" class="recon-no-results">No hay filas para este filtro.</td></tr>`}</tbody></table></div>${filtered.length > shown.length ? `<button type="button" class="button button-quiet recon-more" data-recon-more>Mostrar ${Math.min(PAGE_SIZE, filtered.length - shown.length)} filas más (${filtered.length - shown.length} restantes)</button>` : ""}
     <p class="recon-review-note"><b>Revisión pendiente:</b> el prototipo no contrasta el signo con el rol del emisor/receptor ni confirma enlaces. Verifica manualmente dirección, parcialidades, comisiones y reversas antes de concluir.</p>
   </section>`;
@@ -226,12 +233,28 @@ function useRawRows(rows) {
   updateHeaderRows();
 }
 
+async function fileBuffer(file, signal) {
+  if (signal?.aborted) throw signal.reason || new Error("Lectura cancelada.");
+  if (typeof file?.arrayBuffer === "function") return file.arrayBuffer();
+  if (typeof file?.text === "function") return new TextEncoder().encode(await file.text()).buffer;
+  throw new Error("El archivo no puede leerse localmente.");
+}
+
 async function loadFile(file, onUpdate) {
   const token = reconciliationState.loadToken + 1;
+  activeReconciliationParseController?.abort("new-file");
+  reconciliationParserBridge.cancelAll("new-file");
+  const controller = new AbortController();
+  activeReconciliationParseController = controller;
   Object.assign(reconciliationState, emptyState(), { loading: true, loadToken: token });
   onUpdate();
   try {
-    const parsed = await readBankFile(file, { delimiter: "auto" });
+    const buffer = await fileBuffer(file, controller.signal);
+    const parsed = await reconciliationParserBridge.run("reconciliation", {
+      operation: "file",
+      delimiter: "auto",
+      file: { name: String(file.name || "Extracto"), size: Number(file.size) || buffer.byteLength, buffer },
+    }, { signal: controller.signal, sessionEpoch: token, transfer: [buffer] });
     if (token !== reconciliationState.loadToken) return;
     reconciliationState.fileName = String(file.name || "Extracto");
     reconciliationState.fileSize = Number(file.size) || 0;
@@ -245,6 +268,7 @@ async function loadFile(file, onUpdate) {
     reconciliationState.notice = "Archivo leído en memoria. Revisa la hoja, fila de encabezados y columnas antes de generar sugerencias.";
   } catch (error) {
     if (token !== reconciliationState.loadToken) return;
+    if (controller.signal.aborted || error instanceof SessionExpiredError || error?.name === "AbortError") return;
     reconciliationState.error = error instanceof Error ? error.message : "No se pudo leer este archivo.";
     reconciliationState.fileName = "";
     reconciliationState.fileSize = 0;
@@ -259,22 +283,39 @@ async function loadFile(file, onUpdate) {
   } finally {
     if (token === reconciliationState.loadToken) {
       reconciliationState.loading = false;
+      if (activeReconciliationParseController === controller) activeReconciliationParseController = null;
       onUpdate();
     }
   }
 }
 
-function parseSelectedCsv(delimiter, onUpdate) {
+async function parseSelectedCsv(delimiter, onUpdate) {
+  const token = reconciliationState.loadToken + 1;
+  reconciliationState.loadToken = token;
+  activeReconciliationParseController?.abort("delimiter-change");
+  reconciliationParserBridge.cancelAll("delimiter-change");
+  const controller = new AbortController();
+  activeReconciliationParseController = controller;
+  reconciliationState.loading = true;
+  onUpdate();
   try {
-    const rows = parseCsvText(reconciliationState.csvText, delimiter);
+    const buffer = new TextEncoder().encode(reconciliationState.csvText).buffer;
+    const parsed = await reconciliationParserBridge.run("reconciliation", { operation: "csv-delimiter", delimiter, buffer }, { signal: controller.signal, sessionEpoch: token, transfer: [buffer] });
+    if (token !== reconciliationState.loadToken) return;
     reconciliationState.delimiter = delimiter;
-    useRawRows(rows);
+    useRawRows(parsed.rawRows);
     reconciliationState.error = "";
     reconciliationState.notice = "Delimitador aplicado. Confirma de nuevo la fila de encabezados y el mapeo.";
   } catch (error) {
+    if (token !== reconciliationState.loadToken || controller.signal.aborted || error instanceof SessionExpiredError || error?.name === "AbortError") return;
     reconciliationState.error = error instanceof Error ? error.message : "No se pudo volver a leer el CSV.";
+  } finally {
+    if (token === reconciliationState.loadToken) {
+      reconciliationState.loading = false;
+      if (activeReconciliationParseController === controller) activeReconciliationParseController = null;
+      onUpdate();
+    }
   }
-  onUpdate();
 }
 
 function runComparison(analysis, onUpdate) {
@@ -308,7 +349,9 @@ function runComparison(analysis, onUpdate) {
   onUpdate();
 }
 
-export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onUpdate = () => {} } = {}) {
+export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onUpdate = () => {}, onHandoffSources = () => {}, cleanupScope = null } = {}) {
+  const listenerController = cleanupScope?.addAbortController();
+  const listenerOptions = listenerController ? { signal: listenerController.signal } : undefined;
   app.addEventListener("change", (event) => {
     const fileInput = event.target.closest?.("[data-recon-file]");
     if (fileInput) {
@@ -317,7 +360,7 @@ export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onU
       if (file) void loadFile(file, onUpdate);
       return;
     }
-    if (event.target.matches("[data-recon-delimiter]")) { parseSelectedCsv(event.target.value, onUpdate); return; }
+    if (event.target.matches("[data-recon-delimiter]")) { void parseSelectedCsv(event.target.value, onUpdate); return; }
     if (event.target.matches("[data-recon-sheet]")) {
       const sheetName = event.target.value;
       if (!Object.hasOwn(reconciliationState.sheets, sheetName)) return;
@@ -357,37 +400,36 @@ export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onU
       reconciliationState.visibleRows = PAGE_SIZE;
       onUpdate();
     }
-  });
+  }, listenerOptions);
 
   app.addEventListener("click", (event) => {
     if (event.target.closest("[data-recon-clear-file]")) {
-      const nextToken = reconciliationState.loadToken + 1;
       resetReconciliationWorkspace();
-      reconciliationState.loadToken = nextToken;
       onUpdate();
       app.querySelector("[data-recon-file]")?.focus({ preventScroll: true });
       return;
     }
     if (event.target.closest("[data-recon-run]")) { runComparison(getAnalysis(), onUpdate); return; }
+    if (event.target.closest("[data-recon-handoff]")) { onHandoffSources(); return; }
     if (event.target.closest("[data-recon-more]")) {
       reconciliationState.visibleRows += PAGE_SIZE;
       onUpdate();
     }
-  });
+  }, listenerOptions);
 
   app.addEventListener("dragover", (event) => {
     if (!event.target.closest?.("[data-recon-drop]")) return;
     event.preventDefault();
     reconciliationState.dropActive = true;
     event.target.closest("[data-recon-drop]").classList.add("is-dragging");
-  });
+  }, listenerOptions);
   app.addEventListener("dragleave", (event) => {
     const zone = event.target.closest?.("[data-recon-drop]");
     if (zone && !zone.contains(event.relatedTarget)) {
       reconciliationState.dropActive = false;
       zone.classList.remove("is-dragging");
     }
-  });
+  }, listenerOptions);
   app.addEventListener("drop", (event) => {
     const zone = event.target.closest?.("[data-recon-drop]");
     if (!zone) return;
@@ -396,5 +438,5 @@ export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onU
     zone.classList.remove("is-dragging");
     const file = event.dataTransfer?.files?.[0];
     if (file) void loadFile(file, onUpdate);
-  });
+  }, listenerOptions);
 }

@@ -24,7 +24,7 @@ function emptyState() {
   return {
     diotRunId: createRunId(), schema: DIOT_REVIEW_SCHEMA, activeStep: "context",
     context: { period: "", taxpayerType: "", companyRole: "unknown", currency: "MXN" },
-    sources: [], sourcesFingerprint: "", selectedSourceIds: [], overrides: {}, filter: "all",
+    sources: [], sourcesFingerprint: "", selectedSourceIds: [], overrides: {}, filter: "all", handoffAnalysis: null, handoffSourceIds: [], handoffNotice: "",
     warningsAcknowledged: false, downloadedAt: "", notice: "", error: "",
     assistant: { open: false, pending: false, error: "", draft: "", requestId: 0, abortController: null, messages: [{ role: "assistant", text: INITIAL_ASSISTANT_MESSAGE }] },
   };
@@ -35,6 +35,18 @@ export const diotState = emptyState();
 export function resetDiotWorkspace() {
   const next = emptyState();
   Object.assign(diotState, next);
+}
+
+export function acceptCfdiHandoff(snapshot) {
+  if (!snapshot?.analysis || snapshot.target !== "diot" || !Array.isArray(snapshot.sourceIds)) return false;
+  diotState.handoffAnalysis = snapshot.analysis;
+  diotState.handoffSourceIds = [...snapshot.sourceIds];
+  diotState.handoffNotice = `${snapshot.sourceIds.length} fuente(s) CFDI entregada(s) por acción explícita. Selecciona las que formarán esta preparación.`;
+  diotState.sourcesFingerprint = "";
+  diotState.selectedSourceIds = [];
+  diotState.overrides = {};
+  diotState.activeStep = "sources";
+  return true;
 }
 
 function syncSources(analysis) {
@@ -117,7 +129,7 @@ function renderSourceCard(source) {
 }
 
 function renderSourcesStep() {
-  return `<section class="diot-stage" aria-labelledby="diot-sources-title"><div class="diot-section-heading"><div><p class="eyebrow">02 · FUENTES SELECCIONADAS</p><h2 id="diot-sources-title">Elige comprobantes para esta preparación</h2><p>Solo se usan los CFDI seleccionados en memoria. No se lee el historial, no se sube XML y abrir Nora no comparte estas fuentes.</p></div><span class="diot-count-pill">${diotState.selectedSourceIds.length} seleccionada(s)</span></div>${diotState.sources.length ? `<div class="diot-source-grid">${diotState.sources.map(renderSourceCard).join("")}</div><p class="diot-source-note">Los importes actuales provienen de números ya analizados; se señalan como derivados y se cotejan antes de descargar.</p><div class="diot-download-actions"><button type="button" class="button button-quiet" data-diot-step="context">← Contexto</button><button type="button" class="button button-primary" data-diot-next="classify" ${diotState.selectedSourceIds.length ? "" : "disabled"}>Clasificar seleccionadas <span aria-hidden="true">→</span></button></div>` : `<div class="diot-empty"><b>No hay CFDI I/E seleccionables en esta sesión.</b><p>Analiza XML o ZIP localmente en el Analizador CFDI y vuelve a esta herramienta para elegirlos de forma explícita.</p><button type="button" class="button button-quiet" data-section="cfdi">Abrir Analizador CFDI</button></div>`}</section>`;
+  return `<section class="diot-stage" aria-labelledby="diot-sources-title"><div class="diot-section-heading"><div><p class="eyebrow">02 · FUENTES SELECCIONADAS</p><h2 id="diot-sources-title">Elige comprobantes para esta preparación</h2><p>Solo se usan los CFDI seleccionados en memoria. No se lee el historial, no se sube XML y abrir Nora no comparte estas fuentes.</p></div><span class="diot-count-pill">${diotState.selectedSourceIds.length} seleccionada(s)</span></div>${diotState.handoffNotice ? `<p class="diot-source-note" role="status">${escapeHtml(diotState.handoffNotice)}</p>` : ""}${diotState.sources.length ? `<div class="diot-source-grid">${diotState.sources.map(renderSourceCard).join("")}</div><p class="diot-source-note">Los importes actuales provienen de números ya analizados; se señalan como derivados y se cotejan antes de descargar.</p><div class="diot-download-actions"><button type="button" class="button button-quiet" data-diot-step="context">← Contexto</button><button type="button" class="button button-primary" data-diot-next="classify" ${diotState.selectedSourceIds.length ? "" : "disabled"}>Clasificar seleccionadas <span aria-hidden="true">→</span></button></div>` : `<div class="diot-empty"><b>No hay CFDI I/E seleccionables en esta sesión.</b><p>Analiza XML o ZIP localmente en el Analizador CFDI y vuelve a esta herramienta para elegirlos de forma explícita.</p><button type="button" class="button button-quiet" data-section="cfdi">Abrir Analizador CFDI</button></div>`}</section>`;
 }
 
 function renderOptions(items, selected, placeholder = "Selecciona") {
@@ -201,7 +213,7 @@ function renderAssistantPanel() {
 }
 
 export function renderDiotWorkspace({ analysis = null } = {}) {
-  syncSources(analysis);
+  syncSources(diotState.handoffAnalysis || analysis);
   const result = validation();
   const label = diotStatusLabel(result, diotState.downloadedAt);
   const header = renderToolHeader({ id: "diot", eyebrow: "CONTAIA HERRAMIENTAS · IVA Y TERCEROS", title: "DIOT asistida", description: "Prepara, revisa y descarga; no presenta declaraciones. Revisa operaciones con terceros e IVA sin validar ante el SAT.", statusLabel: label, statusKind: label.includes("Lista") || label.includes("Descargada") ? "ready" : label === "Requiere revisión" ? "attention" : "info", className: "diot-header", actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }] });
@@ -239,8 +251,9 @@ function download(type, onUpdate) {
   onUpdate();
 }
 
-export function bindDiotWorkspace(app, { onUpdate = () => {}, onAssistantSend = () => {}, onAssistantCancel = () => {} } = {}) {
-  app.addEventListener("change", (event) => {
+export function bindDiotWorkspace(app, { onUpdate = () => {}, onAssistantSend = () => {}, onAssistantCancel = () => {}, cleanupScope = null } = {}) {
+  const listen = (type, handler) => cleanupScope?.addEventListener(app, type, handler) || app.addEventListener(type, handler);
+  listen("change", (event) => {
     const context = event.target.closest?.("[data-diot-context]");
     if (context) { diotState.context[context.dataset.diotContext] = context.value; diotState.warningsAcknowledged = false; diotState.downloadedAt = ""; onUpdate(); return; }
     const source = event.target.closest?.("[data-diot-source]");
@@ -249,7 +262,7 @@ export function bindDiotWorkspace(app, { onUpdate = () => {}, onAssistantSend = 
     if (event.target.matches("[data-diot-exclude]")) { setOverride(event.target.dataset.diotExclude, "excluded", event.target.checked); onUpdate(); return; }
     if (event.target.matches("[data-diot-ack]")) { diotState.warningsAcknowledged = event.target.checked; onUpdate(); }
   });
-  app.addEventListener("input", (event) => {
+  listen("input", (event) => {
     if (event.target.matches("[data-diot-context]")) {
       diotState.context[event.target.dataset.diotContext] = event.target.value;
       diotState.warningsAcknowledged = false;
@@ -258,7 +271,7 @@ export function bindDiotWorkspace(app, { onUpdate = () => {}, onAssistantSend = 
     }
     if (event.target.matches("[data-diot-field]")) updateField(event, { render: false, onUpdate });
   });
-  app.addEventListener("click", (event) => {
+  listen("click", (event) => {
     const step = event.target.closest("[data-diot-step]");
     if (step) { diotState.activeStep = step.dataset.diotStep; onUpdate(); return; }
     const next = event.target.closest("[data-diot-next]");
@@ -272,7 +285,7 @@ export function bindDiotWorkspace(app, { onUpdate = () => {}, onAssistantSend = 
     if (event.target.closest("[data-diot-assistant-toggle]")) { diotState.assistant.open = !diotState.assistant.open; onUpdate(); return; }
     if (event.target.closest("[data-diot-assistant-cancel]")) { onAssistantCancel(); }
   });
-  app.addEventListener("submit", (event) => {
+  listen("submit", (event) => {
     const form = event.target.closest("[data-diot-assistant-form]");
     if (!form) return;
     event.preventDefault();

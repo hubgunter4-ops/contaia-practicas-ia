@@ -2208,6 +2208,12 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
 .public-recovery-message { margin: 10px 0 0; padding: 10px 12px; border-radius: 9px; font-size: 12px; }
 .public-recovery-message.is-success { color: #15392e; background: #b2efe0; }
 .public-recovery-message.is-error { color: #fff; background: #a04f60; }
+.public-recovery-kicker { margin: 0 0 8px; color: #b2efe0; font: 10px var(--mono); letter-spacing: .08em; }
+.public-recovery-form > label:not(:first-child) { margin-top: 14px; }
+.public-recovery-form > small { display: block; margin-top: 8px; color: #c3c4d3; font-size: 11px; line-height: 1.4; }
+.public-recovery-complete { display: grid; justify-items: start; gap: 13px; max-width: 680px; margin-top: 28px; }
+.public-recovery-complete .public-recovery-message { margin: 0; }
+.public-recovery-complete .public-primary-cta { display: inline-flex; width: auto; min-height: 49px; align-items: center; padding: 0 16px; border-radius: 11px; text-decoration: none; }
 @media (max-width: 760px) { .public-info-hero { padding: 28px 22px; border-radius: 20px; } .public-info-grid { grid-template-columns: 1fr; margin-bottom: 35px; } .public-recovery-form > div { align-items: stretch; flex-direction: column; } .public-recovery-form .public-primary-cta { justify-content: center; } .public-info-actions { align-items: stretch; flex-direction: column; } .public-info-actions > a { justify-content: center; } }
 @media (prefers-reduced-motion: reduce) { .public-info-card, .public-secondary-cta { transition: none; } }
 

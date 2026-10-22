@@ -3,6 +3,10 @@ export const authState = {
   busy: false,
   identifier: "",
   password: "",
+  recoveryMode: false,
+  recoveryComplete: false,
+  recoveryPassword: "",
+  recoveryPasswordConfirmation: "",
   message: "",
   error: false,
   ready: false,
@@ -10,23 +14,39 @@ export const authState = {
 };
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
+const AUTH_DESTINATIONS = new Set(["cfdi", "asistente", "curso"]);
+
+export function getAuthDestination() {
+  if (typeof location === "undefined") return "";
+  const requestedDestination = new URLSearchParams(location.search).get("destino");
+  const destination = requestedDestination === "anam" ? "asistente" : requestedDestination;
+  return AUTH_DESTINATIONS.has(destination) ? destination : "";
+}
+
+export function getAuthDestinationTarget() {
+  const destination = getAuthDestination();
+  return destination ? `/?destino=${destination}` : "/";
+}
+
+function getAuthDestinationQuery() {
+  const destination = getAuthDestination();
+  return destination ? `?destino=${destination}` : "";
+}
 
 export function currentUser() {
   return window.__contaiaAuth?.client ? window.__contaiaAuth.user : null;
 }
 
 function authRedirectUrl() {
-  const requestedDestination = new URLSearchParams(location.search).get("destino");
-  const destination = requestedDestination === "anam" ? "asistente" : requestedDestination;
-  const query = ["cfdi", "asistente", "curso"].includes(destination) ? `?destino=${destination}` : "";
-  return `${location.origin}/${query}`;
+  return `${location.origin}/${getAuthDestinationQuery()}`;
 }
 
 function emailConfirmationRedirectUrl() {
-  const requestedDestination = new URLSearchParams(location.search).get("destino");
-  const destination = requestedDestination === "anam" ? "asistente" : requestedDestination;
-  const query = ["cfdi", "asistente", "curso"].includes(destination) ? `?destino=${destination}` : "";
-  return `${location.origin}/confirmar-correo${query}`;
+  return `${location.origin}/confirmar-correo${getAuthDestinationQuery()}`;
+}
+
+function passwordRecoveryRedirectUrl() {
+  return `${location.origin}/recuperar-contrasena${getAuthDestinationQuery()}`;
 }
 
 function confirmationErrorMessage() {
@@ -43,6 +63,47 @@ function confirmationErrorMessage() {
   return "No pudimos confirmar el correo con este enlace. Vuelve al registro para intentarlo de nuevo.";
 }
 
+let authInitializationPromise = null;
+
+export function initializeAuthClient({ signal } = {}) {
+  if (authInitializationPromise) return authInitializationPromise;
+  authInitializationPromise = (async () => {
+    const response = await fetch("/api/cfdi/config", { headers: { Accept: "application/json" }, cache: "no-store", signal });
+    if (!response.ok) throw new Error("No se pudo leer la configuración de acceso.");
+    const config = await response.json();
+    if (!config.enabled) {
+      setAuthClient(null, null);
+      return null;
+    }
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(config.url || "") || typeof config.publishableKey !== "string" || !config.publishableKey.startsWith("sb_publishable_")) {
+      throw new Error("La configuración pública de Supabase no tiene el formato esperado.");
+    }
+    const { createClient } = await import("/vendor/supabase.js");
+    const client = createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    setAuthClient(client, data.session?.user ?? null);
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        authState.recoveryMode = true;
+        authState.recoveryComplete = false;
+        authState.recoveryPassword = "";
+        authState.recoveryPasswordConfirmation = "";
+        authState.message = "";
+        authState.error = false;
+        authState.status = "recovery";
+      }
+      updateAuthUser(session?.user ?? null);
+      document.dispatchEvent(new CustomEvent("contaia:auth-event", { detail: { event } }));
+    });
+    return client;
+  })().catch((error) => {
+    if (error?.name !== "AbortError") setAuthClient(null, null);
+    throw error;
+  });
+  return authInitializationPromise;
+}
+
 export function renderAuthControls() {
   const user = currentUser();
   if (user) return `<span class="auth-user" title="${escapeHtml(user.email || "Sesión activa")}">${escapeHtml(user.email || "Sesión activa")}</span><button type="button" class="auth-button" data-action="auth-signout">Cerrar sesión</button>`;
@@ -52,6 +113,9 @@ export function renderAuthControls() {
 export function renderAuthGate() {
   const connecting = !authState.ready || !window.__contaiaAuth?.client;
   const disabled = authState.busy || connecting;
+  const destination = getAuthDestination();
+  const registrationHref = destination ? `/registro?destino=${encodeURIComponent(destination)}` : "/registro";
+  const recoveryHref = destination ? `/recuperar-contrasena?destino=${encodeURIComponent(destination)}` : "/recuperar-contrasena";
   const connectionNote = connecting
     ? `<p class="auth-connection-status" role="status"><i aria-hidden="true"></i>Conectando acceso seguro…</p>`
     : "";
@@ -79,13 +143,13 @@ export function renderAuthGate() {
           <input id="auth-identifier" name="identifier" autocomplete="username" required maxlength="254" value="${escapeHtml(authState.identifier)}" placeholder="tu@correo.com o usuario" ${disabled ? "disabled" : ""}/>
           <label for="auth-password">Contraseña</label>
           <div class="auth-password-wrap"><input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" ${disabled ? "disabled" : ""}/><button type="button" class="auth-password-toggle" data-action="auth-password-toggle" aria-label="Mostrar contraseña" aria-pressed="false">◉</button></div>
-          <div class="auth-gate-options"><label class="auth-remember"><input type="checkbox" name="remember"/> <span>Recordar este dispositivo</span></label><a href="/recuperar-contrasena">¿Olvidaste tu contraseña?</a></div>
+          <div class="auth-gate-options"><label class="auth-remember"><input type="checkbox" name="remember"/> <span>Recordar este dispositivo</span></label><a href="${recoveryHref}">¿Olvidaste tu contraseña?</a></div>
           <button type="submit" class="auth-gate-submit" ${disabled ? "disabled" : ""}>${connecting ? "Conectando…" : authState.busy ? "Validando…" : authState.status === "success" ? "Sesión iniciada" : "Iniciar sesión"}<span aria-hidden="true">→</span></button>
           ${connectionNote}${message}
         </form>
         <div class="auth-divider"><span>o continúa con</span></div>
         <button class="auth-sso-button" type="button" data-action="auth-google" ${disabled ? "disabled" : ""}><span aria-hidden="true">G</span> Continuar con Google</button>
-        <p class="auth-signup">¿No tienes una cuenta? <a href="/registro">Crear una cuenta</a></p>
+        <p class="auth-signup">¿No tienes una cuenta? <a href="${registrationHref}">Crear una cuenta</a></p>
         <p class="auth-note">Nunca compartas tu contraseña. La sesión se conserva en este navegador mediante Supabase Auth.</p>
       </section>
     </div>
@@ -96,7 +160,10 @@ export function renderAuthGate() {
 export function renderAuthPanel() {
   if (!authState.open) return "";
   const disabled = authState.busy || !window.__contaiaAuth?.client;
-  return `<div class="auth-backdrop" data-action="auth-close"><section class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title" data-auth-panel><button type="button" class="auth-close" data-action="auth-close" aria-label="Cerrar">×</button><p class="eyebrow">ACCESO PRIVADO · CONTAIA</p><h2 id="auth-title">Continúa donde lo dejaste.</h2><p class="auth-lede">Usa tu correo o alias y contraseña para acceder a tu historial privado y herramientas fiscales.</p><form data-auth-form><label for="auth-identifier">Correo o alias</label><input id="auth-identifier" name="identifier" autocomplete="username" required maxlength="254" value="${escapeHtml(authState.identifier)}" placeholder="tu@correo.com o usuario" ${disabled ? "disabled" : ""}/><label for="auth-password">Contraseña</label><input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" ${disabled ? "disabled" : ""}/><button type="submit" class="button button-primary" ${disabled ? "disabled" : ""}>${authState.busy ? "Entrando…" : "Entrar"}<span aria-hidden="true">→</span></button>${!window.__contaiaAuth?.client ? `<p class="auth-message is-error" role="status">El acceso privado todavía está conectando con Supabase.</p>` : ""}${authState.message ? `<p class="auth-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : ""}</form><p class="auth-note">Nunca compartas tu contraseña. La sesión se conserva en este navegador mediante Supabase Auth.</p></section></div>`;
+  const destination = getAuthDestination();
+  const registrationHref = destination ? `/registro?destino=${encodeURIComponent(destination)}` : "/registro";
+  const recoveryHref = destination ? `/recuperar-contrasena?destino=${encodeURIComponent(destination)}` : "/recuperar-contrasena";
+  return `<div class="auth-backdrop" data-action="auth-close"><section class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="auth-title" data-auth-panel><button type="button" class="auth-close" data-action="auth-close" aria-label="Cerrar">×</button><p class="eyebrow">ACCESO PRIVADO · CONTAIA</p><h2 id="auth-title">Continúa donde lo dejaste.</h2><p class="auth-lede">Usa tu correo o alias y contraseña para acceder a tu historial privado y herramientas fiscales.</p><form data-auth-form><label for="auth-identifier">Correo o alias</label><input id="auth-identifier" name="identifier" autocomplete="username" required maxlength="254" value="${escapeHtml(authState.identifier)}" placeholder="tu@correo.com o usuario" ${disabled ? "disabled" : ""}/><label for="auth-password">Contraseña</label><input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" ${disabled ? "disabled" : ""}/><button type="submit" class="button button-primary" ${disabled ? "disabled" : ""}>${authState.busy ? "Entrando…" : "Entrar"}<span aria-hidden="true">→</span></button>${!window.__contaiaAuth?.client ? `<p class="auth-message is-error" role="status">El acceso privado todavía está conectando con Supabase.</p>` : ""}${authState.message ? `<p class="auth-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : ""}</form><p class="auth-recovery-link"><a href="${recoveryHref}">¿Olvidaste tu contraseña?</a></p><p class="auth-signup">¿No tienes una cuenta? <a href="${registrationHref}">Crear una cuenta</a></p><p class="auth-note">Nunca compartas tu contraseña. La sesión se conserva en este navegador mediante Supabase Auth.</p></section></div>`;
 }
 
 function notify() { document.dispatchEvent(new CustomEvent("contaia:auth-updated", { detail: { user: currentUser() } })); }
@@ -178,15 +245,50 @@ export async function resetPassword() {
   const client = window.__contaiaAuth?.client;
   if (!client || authState.busy) return;
   authState.busy = true; authState.message = ""; authState.error = false;
+  authState.recoveryMode = false;
+  authState.recoveryComplete = false;
   notify();
   try {
-    const { error } = await client.auth.resetPasswordForEmail(authState.identifier, { redirectTo: `${location.origin}/recuperar-contrasena` });
+    const { error } = await client.auth.resetPasswordForEmail(authState.identifier, { redirectTo: passwordRecoveryRedirectUrl() });
     if (error) throw error;
     authState.message = "Si existe una cuenta con ese correo, recibirás un enlace para continuar.";
     authState.status = "success";
   } catch (error) {
     authState.error = true; authState.status = "error";
     authState.message = error instanceof Error ? error.message : "No se pudo enviar el enlace. Revisa el correo e inténtalo de nuevo.";
+  } finally { authState.busy = false; notify(); }
+}
+
+export async function updatePassword() {
+  const client = window.__contaiaAuth?.client;
+  if (!client || authState.busy) return;
+  const password = authState.recoveryPassword;
+  if (password.length < 8) {
+    authState.error = true;
+    authState.message = "La nueva contraseña debe tener al menos 8 caracteres.";
+    notify();
+    return;
+  }
+  if (password !== authState.recoveryPasswordConfirmation) {
+    authState.error = true;
+    authState.message = "Las contraseñas no coinciden.";
+    notify();
+    return;
+  }
+  authState.busy = true; authState.message = ""; authState.error = false;
+  notify();
+  try {
+    const { error } = await client.auth.updateUser({ password });
+    if (error) throw error;
+    authState.recoveryPassword = "";
+    authState.recoveryPasswordConfirmation = "";
+    authState.recoveryComplete = true;
+    authState.recoveryMode = false;
+    authState.status = "success";
+    authState.message = "Contraseña actualizada. Ya puedes continuar con tu recorrido.";
+  } catch (error) {
+    authState.error = true; authState.status = "error";
+    authState.message = error instanceof Error ? error.message : "No se pudo actualizar la contraseña. Solicita un nuevo enlace e inténtalo de nuevo.";
   } finally { authState.busy = false; notify(); }
 }
 

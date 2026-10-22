@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/registro", "destination": "/" },
     { "source": "/confirmar-correo", "destination": "/" },
+    { "source": "/recuperar-contrasena", "destination": "/" },
     { "source": "/descripcion/cfdi", "destination": "/" },
     { "source": "/descripcion/asistente", "destination": "/" },
     { "source": "/descripcion/anam", "destination": "/" },
