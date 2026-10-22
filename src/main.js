@@ -9,6 +9,8 @@ import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { bindCfdiWorkspace, cfdiState, initializeCfdiWorkspace, renderCfdiWorkspace } from "./cfdi/workspace.js";
+import { bindReconciliationWorkspace, reconciliationState, renderReconciliationWorkspace, resetReconciliationWorkspace } from "./reconciliation/workspace.js";
+import { bindJournalWorkspace, journalState, renderJournalWorkspace, resetJournalWorkspace } from "./journal/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
@@ -616,6 +618,67 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
     if (pendingTranscript && state.anam.status === "live") queueMicrotask(() => handleAnamTranscript(pendingTranscript));
   }
 }
+
+async function sendJournalAssistantMessage(text) {
+  const question = String(text || "").trim();
+  const assistant = journalState.assistant;
+  if (!question || assistant.pending) return;
+  if (!state.tutor.providers.length) {
+    assistant.error = "Nora no está configurada en este momento. Puedes revisar el catálogo y las validaciones localmente.";
+    render();
+    return;
+  }
+  const requestId = (assistant.requestId || 0) + 1;
+  const controller = new AbortController();
+  assistant.requestId = requestId;
+  assistant.abortController = controller;
+  assistant.error = "";
+  assistant.open = true;
+  assistant.messages.push({ role: "user", text: question }, { role: "assistant", text: "", streaming: true });
+  assistant.messages = assistant.messages.slice(-20);
+  assistant.pending = true;
+  render();
+  const responseMessage = assistant.messages.at(-1);
+  const history = assistant.messages.slice(-10, -1).map(({ role, text: content }) => ({ role, content }));
+  try {
+    await requestTutorReply({
+      message: question,
+      context: { section: "advisor" },
+      history,
+      provider: state.tutor.provider || state.tutor.defaultProvider,
+      signal: controller.signal,
+      onToken: (token) => {
+        if (journalState.assistant.requestId !== requestId) return;
+        responseMessage.text += token;
+        const streamed = app.querySelector("[data-journal-assistant-stream]");
+        if (streamed) streamed.textContent = responseMessage.text;
+      },
+    });
+    if (journalState.assistant.requestId === requestId) responseMessage.streaming = false;
+  } catch (error) {
+    if (journalState.assistant.requestId !== requestId) return;
+    responseMessage.streaming = false;
+    responseMessage.text = error?.name === "AbortError" ? "Respuesta detenida. Puedes continuar cuando quieras." : "No pude obtener respuesta de Nora. Revisa la conexión o vuelve a intentarlo.";
+    assistant.error = error?.name === "AbortError" ? "" : (error?.message || "No se pudo consultar a Nora.");
+  } finally {
+    if (journalState.assistant.requestId === requestId) {
+      assistant.pending = false;
+      assistant.abortController = null;
+      render();
+      app.querySelector("[data-journal-assistant-form] textarea")?.focus({ preventScroll: true });
+    }
+  }
+}
+
+function cancelJournalAssistant() {
+  journalState.assistant.requestId += 1;
+  journalState.assistant.abortController?.abort();
+  journalState.assistant.abortController = null;
+  journalState.assistant.pending = false;
+  journalState.assistant.error = "";
+  render();
+}
+
 async function stopAnamSession({ silent = false } = {}) {
   const controller = state.anam.abortController;
   state.anam.abortController = null;
@@ -769,14 +832,14 @@ function mobileNavigation() {
     <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home" aria-current="${state.section === "lab" ? "page" : "false"}">${uiIcon("home")}<small>Inicio</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}">${uiIcon("book")}<small>Aprende</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "study" ? "is-active" : ""}" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">${uiIcon("book")}<small>Estudio</small></button>
-    <button type="button" class="mobile-nav-item ${["tools", "cfdi"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
+    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "reconciliation", "journal"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi", "reconciliation", "journal"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}">${uiIcon("nora")}<small>Nora</small></button>
   </nav>`;
 }
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "ContaIA Aprende · Aula" : state.section === "advisor" ? "Nora · Asistente abierto" : state.section === "cfdi" ? "ContaIA Herramientas · CFDI" : state.section === "tools" ? "ContaIA Herramientas" : state.section === "study" ? "Aprende · Base de estudio" : state.current === "home" ? "Aprende · Inicio" : "Aprende · Ejercicio";
+  const pageLabel = state.section === "course" ? "ContaIA Aprende · Aula" : state.section === "advisor" ? "Nora · Asistente abierto" : state.section === "cfdi" ? "ContaIA Herramientas · CFDI" : state.section === "reconciliation" ? "ContaIA Herramientas · Conciliación" : state.section === "journal" ? "ContaIA Herramientas · Pólizas sugeridas" : state.section === "tools" ? "ContaIA Herramientas" : state.section === "study" ? "Aprende · Base de estudio" : state.current === "home" ? "Aprende · Inicio" : "Aprende · Ejercicio";
   const activeClassIndex = Math.max(0, courseModules.findIndex(({ id }) => id === state.activeModuleId));
   const activeClassComplete = state.completedModules.has(courseModules[activeClassIndex]?.id);
   const nextClassIndex = activeClassComplete
@@ -789,12 +852,14 @@ function topbar() {
     const actionLabel = isActive ? isComplete ? "Revisar clase" : "Continuar clase" : "Abrir";
     return `<button type="button" class="class-menu-item ${isActive ? "is-active" : ""} ${isComplete ? "is-complete" : ""} ${index === nextClassIndex ? "is-next" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${isActive ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><small class="class-menu-status">${status}</small><small class="class-menu-action">${actionLabel}</small><i aria-hidden="true">${isComplete ? "✓" : index === nextClassIndex ? "→" : ""}</i></button>`;
   }).join("");
-  const toolsActive = ["tools", "advisor", "cfdi", "lab", "study"].includes(state.section);
-  const isToolsProduct = ["tools", "cfdi"].includes(state.section);
+  const toolsActive = ["tools", "advisor", "cfdi", "reconciliation", "journal", "lab", "study"].includes(state.section);
+  const isToolsProduct = ["tools", "cfdi", "reconciliation", "journal"].includes(state.section);
   const tools = [
     ["tools", "ContaIA Herramientas", "grid"],
     ["advisor", "Asistente abierto", "nora"],
     ["cfdi", "Analizador CFDI", "file"],
+    ["reconciliation", "Conciliación bancaria", "grid"],
+    ["journal", "Pólizas sugeridas", "check"],
     ["lab", "Laboratorio práctico", "check"],
     ["study", "Base de estudio", "book"],
   ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`);
@@ -803,7 +868,7 @@ function topbar() {
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>ContaIA Aprende</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b>${uiIcon("menu")}<span>Clases</span>${uiIcon("chevron")}</summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
-      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 3).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(3).join("")}${advisorToggle}</section></div></details>
+      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 5).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(5).join("")}${advisorToggle}</section></div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>${isToolsProduct ? "ContaIA Herramientas" : state.section === "advisor" ? "Nora · apoyo transversal" : "ContaIA Aprende"}</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;
@@ -1250,12 +1315,14 @@ function renderView() {
   const content = state.section === "course" ? renderCourse()
     : state.section === "advisor" ? renderOpenAssistant()
       : state.section === "cfdi" ? renderCfdiWorkspace()
+    : state.section === "reconciliation" ? renderReconciliationWorkspace({ analysis: cfdiState.analysis })
+      : state.section === "journal" ? renderJournalWorkspace({ analysis: cfdiState.analysis, bankRows: reconciliationState.movements, bankFileName: reconciliationState.fileName })
       : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice, workspace: toolsWorkspace })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
-  const tutorPanel = ["advisor", "cfdi", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
-  const fiscalTheme = ["tools", "cfdi"].includes(state.section) ? "app-shell--fiscal" : "";
+  const tutorPanel = ["advisor", "cfdi", "reconciliation", "journal", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
+  const fiscalTheme = ["tools", "cfdi", "reconciliation", "journal"].includes(state.section) ? "app-shell--fiscal" : "";
   app.innerHTML = `<div class="app-shell ${fiscalTheme}">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
@@ -1305,7 +1372,7 @@ app.addEventListener("click", (event) => {
   }
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = ["course", "lab", "study", "advisor", "cfdi", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
+    state.section = ["course", "lab", "study", "advisor", "cfdi", "reconciliation", "journal", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     if (state.section !== "tools") state.toolsNotice = "";
@@ -1333,6 +1400,12 @@ app.addEventListener("click", (event) => {
     const tool = toolAction.dataset.toolAction;
     if (tool === "cfdi") {
       state.section = "cfdi";
+      state.toolsNotice = "";
+    } else if (tool === "reconciliation") {
+      state.section = "reconciliation";
+      state.toolsNotice = "";
+    } else if (tool === "accounting") {
+      state.section = "journal";
       state.toolsNotice = "";
     } else if (tool === "fiscal-profile") {
       state.section = "tools";
@@ -1844,6 +1917,16 @@ bindCfdiWorkspace(app, {
     app.querySelector("[data-open-input]")?.focus({ preventScroll: true });
   },
 });
+bindReconciliationWorkspace(app, {
+  getAnalysis: () => cfdiState.analysis,
+  onUpdate: () => { if (state.section === "reconciliation") render(); },
+});
+bindJournalWorkspace(app, {
+  getSources: () => ({ analysis: cfdiState.analysis, bankRows: reconciliationState.movements, bankFileName: reconciliationState.fileName }),
+  onUpdate: () => { if (state.section === "journal") render(); },
+  onAssistantSend: (message) => { void sendJournalAssistantMessage(message); },
+  onAssistantCancel: cancelJournalAssistant,
+});
 initializeTutorConfig();
 initializeStudyDatabase();
 void initializeCfdiWorkspace();
@@ -1863,7 +1946,12 @@ document.addEventListener("contaia:tools-updated", () => {
 });
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
-  activeStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  const nextStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  if (!userId || nextStorageScope !== activeStorageScope) {
+    resetReconciliationWorkspace();
+    resetJournalWorkspace();
+  }
+  activeStorageScope = nextStorageScope;
   if (!userId) resetToolsWorkspace();
   else if (state.section === "tools") void loadToolsWorkspace();
   const restored = loadProgress(scopedStorage);

@@ -1,0 +1,153 @@
+.recon-page { width: min(100%, 1360px); margin-inline: auto; padding: 22px clamp(14px, 2.6vw, 34px) 54px; }
+.recon-header { margin-bottom: 16px; }
+.recon-header .tool-shell-actions { max-width: 440px; }
+.recon-header .tool-shell-status { white-space: normal; }
+.recon-privacy-banner, .recon-source-warning, .recon-source-ok, .recon-review-note { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #d9dfd5; border-left: 4px solid var(--fiscal-jade); border-radius: 8px; background: #fffefa; color: #33494a; font-size: 12px; line-height: 1.5; }
+.recon-privacy-banner > span { color: var(--fiscal-jade); font-size: 17px; }
+.recon-privacy-banner p, .recon-source-warning, .recon-source-ok, .recon-review-note { margin-top: 0; }
+.recon-privacy-banner b, .recon-review-note b { color: var(--fiscal-petroleum); }
+.recon-step-card { margin: 0 0 14px; padding: clamp(14px, 2vw, 22px); border: 1px solid var(--fiscal-line); border-radius: 10px; background: var(--fiscal-surface, #fffefa); box-shadow: 0 5px 18px rgba(18,59,67,.045); }
+.recon-section-title, .recon-results-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.recon-section-title .eyebrow, .recon-results-heading .eyebrow { margin: 0 0 4px; color: var(--fiscal-jade); font: 700 9px var(--mono); letter-spacing: .09em; }
+.recon-section-title h2, .recon-results-heading h2 { margin: 0; color: var(--fiscal-petroleum); font-size: clamp(18px, 2.2vw, 24px); letter-spacing: -.025em; }
+.recon-section-title .recon-formats, .recon-row-pill, .recon-required-hint { flex: none; padding: 5px 8px; border: 1px solid #d5ddd5; border-radius: 999px; color: #566b69; background: #f5f7f1; font: 9px var(--mono); }
+.recon-dropzone { display: flex; align-items: center; gap: 15px; min-height: 94px; padding: 14px; border: 1px dashed #8dada2; border-radius: 9px; background: #f8faf5; transition: border-color .18s ease, background-color .18s ease; }
+.recon-dropzone.is-dragging { border-color: var(--fiscal-jade); background: #edf7f1; }
+.recon-dropzone input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.recon-dropzone input:focus-visible + label { outline: 3px solid rgba(22,134,111,.32); outline-offset: 4px; border-radius: 5px; }
+.recon-dropzone label { display: grid; min-width: 0; flex: 1; grid-template-columns: 38px minmax(0,1fr); align-items: center; column-gap: 11px; cursor: pointer; }
+.recon-upload-icon { display: grid; width: 38px; height: 38px; grid-row: span 2; place-items: center; border: 1px solid #b7d2c9; border-radius: 10px; background: #eef6f1; color: var(--fiscal-jade); font-size: 22px; }
+.recon-dropzone label b { color: var(--fiscal-petroleum); font-size: 13px; }
+.recon-dropzone label small { min-width: 0; overflow-wrap: anywhere; color: #657474; font-size: 10px; line-height: 1.4; }
+.recon-remove-file { flex: none; padding: 7px 10px; border: 1px solid #dcb8ad; border-radius: 6px; background: #fff6f2; color: #8b4938; font-size: 11px; font-weight: 700; cursor: pointer; }
+.recon-remove-file:hover { background: #fceae4; }
+.recon-remove-file:focus-visible, .recon-run-actions .button:focus-visible, .recon-more:focus-visible { outline: 3px solid rgba(22,134,111,.35); outline-offset: 2px; }
+.recon-file-options { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-top: 12px; }
+.recon-field { display: grid; min-width: 0; gap: 5px; color: #395253; font-size: 11px; font-weight: 700; }
+.recon-field > span { line-height: 1.3; }
+.recon-field select, .recon-field input { width: 100%; min-width: 0; min-height: 38px; padding: 8px 10px; border: 1px solid #cbd5cd; border-radius: 6px; background: #fff; color: #263f42; font: inherit; font-size: 12px; }
+.recon-field select:focus-visible, .recon-field input:focus-visible, .recon-filter select:focus-visible { outline: 3px solid rgba(22,134,111,.3); outline-offset: 2px; border-color: var(--fiscal-jade); }
+.recon-field small { color: #6c7b78; font-size: 10px; font-weight: 400; line-height: 1.4; }
+.recon-mapping { margin: 2px 0 14px; }
+.recon-mapping .recon-section-title { align-items: center; margin-bottom: 11px; }
+.recon-header-row { max-width: 380px; margin-bottom: 12px; }
+.recon-column-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.recon-preview { margin-top: 12px; border-top: 1px solid #e4e9e1; }
+.recon-preview summary, .recon-original summary, .recon-alternatives summary { padding: 9px 0 6px; color: #3e6860; font-size: 11px; font-weight: 700; cursor: pointer; }
+.recon-preview-scroll { max-width: 100%; overflow: auto; border: 1px solid #e1e6de; border-radius: 6px; }
+.recon-preview table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.recon-preview th, .recon-preview td { max-width: 240px; padding: 6px 8px; border-bottom: 1px solid #edf0ea; text-align: left; overflow-wrap: anywhere; }
+.recon-preview th { background: #f1f4ee; color: #526968; }
+.recon-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 11px 13px; }
+.recon-form-grid .recon-field { align-content: start; }
+.recon-input-suffix { display: flex; align-items: center; gap: 8px; }
+.recon-input-suffix input { max-width: 115px; }
+.recon-input-suffix > span { color: #637471; font-size: 11px; }
+.recon-source-warning { border-left-color: #d19d42; background: #fff9eb; }
+.recon-source-ok { border-left-color: var(--fiscal-jade); background: #f2f8f3; }
+.recon-source-warning, .recon-source-ok { margin: 13px 0; }
+.recon-inline-note, .recon-inline-error, .recon-error, .recon-notice { margin: 9px 0; padding: 9px 11px; border-radius: 6px; color: #526665; background: #f4f6f1; font-size: 11px; line-height: 1.45; }
+.recon-inline-error, .recon-error { border-left: 3px solid #c45e50; background: #fff1ed; color: #7b322b; }
+.recon-notice { border-left: 3px solid var(--fiscal-jade); background: #eff7f2; color: #28594d; }
+.recon-run-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.recon-run-actions > span { max-width: 650px; color: #657573; font-size: 10px; line-height: 1.45; }
+.recon-run-actions .button:disabled { cursor: not-allowed; opacity: .52; }
+.recon-results-empty { display: grid; justify-items: start; margin: 14px 0; padding: 24px; border: 1px solid var(--fiscal-line); border-radius: 10px; background: #fffefa; }
+.recon-empty-mark { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #c9ded5; border-radius: 50%; color: var(--fiscal-jade); font-size: 22px; }
+.recon-results-empty h2 { margin: 11px 0 5px; color: var(--fiscal-petroleum); font-size: 18px; }
+.recon-results-empty p { max-width: 670px; margin: 0 0 12px; color: #607270; font-size: 12px; line-height: 1.5; }
+.recon-results { margin-top: 18px; }
+.recon-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-bottom: 17px; }
+.recon-summary-card { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid #dce3da; border-radius: 8px; background: #fffefa; }
+.recon-summary-card > span { color: #637370; font-size: 10px; line-height: 1.3; }
+.recon-summary-card > b { color: var(--fiscal-petroleum); font: 700 18px var(--mono); }
+.recon-summary-card--suggested { border-top: 3px solid var(--fiscal-jade); }
+.recon-summary-card--difference { border-top: 3px solid #d57860; }
+.recon-summary-card--review { border-top: 3px solid #d2b24b; }
+.recon-results-heading { align-items: center; }
+.recon-results-heading h2 { font-size: clamp(20px,2.4vw,27px); }
+.recon-results-heading p:last-child { margin: 4px 0 0; color: #667572; font-size: 11px; }
+.recon-filter { display: grid; gap: 4px; min-width: 160px; color: #647572; font-size: 10px; }
+.recon-filter select { min-height: 36px; padding: 6px 9px; border: 1px solid #cbd5cd; border-radius: 6px; background: #fff; color: var(--fiscal-petroleum); font: inherit; }
+.recon-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid #dce3da; border-radius: 9px; background: #fffefa; }
+.recon-table { width: 100%; min-width: 920px; border-collapse: collapse; }
+.recon-table th { padding: 10px 9px; background: #edf2eb; color: #47615f; font: 700 9px var(--mono); text-align: left; text-transform: uppercase; letter-spacing: .04em; }
+.recon-table td { max-width: 250px; padding: 10px 9px; border-top: 1px solid #e8ece5; color: #33494a; vertical-align: top; font-size: 10px; }
+.recon-table tbody tr:hover { background: #fbfcf7; }
+.recon-table td > b, .recon-table td > small { display: block; }
+.recon-table td > b { color: var(--fiscal-petroleum); }
+.recon-table td > small { margin-top: 3px; color: #6e7c79; line-height: 1.35; }
+.recon-row-number { display: block; margin-bottom: 4px; color: #788681; font: 9px var(--mono); }
+.recon-amount { white-space: nowrap; }
+.recon-candidate { display: grid; gap: 3px; min-width: 130px; }
+.recon-candidate > b { color: #285d52; overflow-wrap: anywhere; }
+.recon-candidate > span, .recon-candidate > small { color: #60716d; font-size: 9px; }
+.recon-evidence { display: grid; gap: 3px; margin: 0; padding-left: 14px; color: #5a706a; font-size: 9px; line-height: 1.35; }
+.recon-evidence li::marker { color: var(--fiscal-jade); }
+.recon-state { display: inline-flex; padding: 4px 6px; border: 1px solid #ccd7cf; border-radius: 999px; color: #526764; background: #f3f5ef; font-size: 9px; font-weight: 700; }
+.recon-state.is-suggested { border-color: #a9d0bf; color: #21634f; background: #edf7f1; }
+.recon-state.is-difference { border-color: #e5b2a4; color: #8e4b3d; background: #fff1ec; }
+.recon-state.is-ambiguous { border-color: #e4d48f; color: #80661b; background: #fff9df; }
+.recon-state.is-unmatched, .recon-state.is-invalid { border-color: #cdd5d1; color: #586a68; background: #f2f4f1; }
+.recon-confidence { display: block; max-width: 130px; margin-top: 5px; color: #798782; font-size: 8px; line-height: 1.35; }
+.recon-confidence-note { display: block; max-width: 160px; margin-top: 3px; color: #61736e; font-size: 8px; line-height: 1.35; }
+.recon-no-candidate, .recon-no-results { color: #687672; font-size: 10px; }
+.recon-original details, .recon-alternatives { min-width: 100px; }
+.recon-original summary, .recon-alternatives summary { padding: 0; font-size: 9px; }
+.recon-original dl { display: grid; grid-template-columns: 1fr; margin: 6px 0; gap: 2px; }
+.recon-original dt { color: #78847f; font-size: 8px; }
+.recon-original dd { margin: 0 0 4px; color: #3c5653; overflow-wrap: anywhere; font-size: 9px; }
+.recon-alternatives .recon-candidate { margin: 5px 0; padding: 6px; border: 1px solid #e4e9e1; border-radius: 5px; }
+.recon-more { display: block; margin: 11px auto; }
+.recon-review-note { display: block; margin: 12px 0; border-left-color: #d2b24b; background: #fff9e8; }
+.recon-nora-card { margin: 14px 0; }
+.recon-disclaimer { margin-top: 14px; padding: 12px 14px; border: 1px solid #e0dfd2; border-radius: 8px; background: #eff0e7; color: #596d6b; font-size: 11px; line-height: 1.5; }
+.recon-disclaimer b { color: var(--fiscal-petroleum); }
+.recon-disclaimer p { margin: 3px 0 0; }
+
+@media (max-width: 920px) {
+  .recon-form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .recon-table { min-width: 820px; }
+}
+@media (max-width: 680px) {
+  .recon-page { padding: 14px 12px 52px; }
+  .recon-header .tool-shell-actions { display: flex; flex-wrap: wrap; }
+  .recon-header .tool-shell-action { min-width: auto; flex: 1; padding-inline: 8px; font-size: 10px; }
+  .recon-section-title, .recon-results-heading { align-items: flex-start; flex-direction: column; }
+  .recon-section-title .recon-formats, .recon-row-pill, .recon-required-hint { align-self: flex-start; }
+  .recon-dropzone { align-items: flex-start; flex-wrap: wrap; }
+  .recon-dropzone label { flex-basis: 100%; }
+  .recon-remove-file { margin-left: 49px; }
+  .recon-file-options, .recon-form-grid, .recon-column-grid { grid-template-columns: minmax(0,1fr); }
+  .recon-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .recon-summary-card { padding: 9px; }
+  .recon-run-actions { align-items: stretch; flex-direction: column; }
+  .recon-run-actions .button { width: 100%; justify-content: center; }
+  .recon-results-heading { flex-direction: column; }
+  .recon-filter { width: 100%; }
+  .recon-table-wrap { overflow: visible; border: 0; background: transparent; }
+  .recon-table { display: block; min-width: 0; }
+  .recon-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+  .recon-table tbody { display: grid; gap: 9px; }
+  .recon-table tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 10px; padding: 9px 10px; border: 1px solid #dce3da; border-radius: 9px; background: #fffefa; }
+  .recon-table td { display: grid; grid-template-columns: minmax(74px, .55fr) minmax(0,1fr); gap: 5px; max-width: none; padding: 7px 0; border-top: 1px solid #eef0eb; font-size: 10px; }
+  .recon-table td:first-child, .recon-table td:nth-child(2) { border-top: 0; }
+  .recon-table td::before { content: attr(data-label); color: #74817d; font-size: 9px; font-weight: 700; }
+  .recon-table td:nth-child(3), .recon-table td:nth-child(4), .recon-table td:nth-child(5), .recon-table td:nth-child(6) { grid-column: 1 / -1; }
+  .recon-table td:nth-child(5) { align-items: center; }
+  .recon-table td[colspan] { display: block; grid-column: 1 / -1; }
+  .recon-table td[colspan]::before { content: none; }
+  .recon-candidate { min-width: 0; }
+  .recon-results-empty { padding: 18px 14px; }
+  .recon-source-warning, .recon-source-ok { font-size: 10px; }
+}
+@media (max-width: 390px) {
+  .recon-table tr { grid-template-columns: minmax(0,1fr); }
+  .recon-table td, .recon-table td:first-child, .recon-table td:nth-child(2) { border-top: 1px solid #eef0eb; }
+  .recon-table td:first-child { border-top: 0; }
+  .recon-summary-card > span { font-size: 9px; }
+  .recon-header .tool-shell-action { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recon-page *, .recon-page *::before, .recon-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

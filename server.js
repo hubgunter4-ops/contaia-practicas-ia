@@ -54,6 +54,7 @@ function resolvePublicPath(pathname) {
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
   else if (decoded === "/vendor/document-reader.js") relative = "dist/vendor/document-reader.js";
   else if (decoded === "/vendor/cfdi-parser.js") relative = "dist/vendor/cfdi-parser.js";
+  else if (decoded === "/vendor/reconciliation-xlsx.js") relative = "dist/vendor/reconciliation-xlsx.js";
   else if (decoded === "/vendor/supabase.js") relative = "dist/vendor/supabase.js";
   else if (decoded === "/vendor/pdf.worker.mjs") relative = "dist/vendor/pdf.worker.mjs";
   else if (decoded === "/tutor-config.js") relative = "public/tutor-config.js";

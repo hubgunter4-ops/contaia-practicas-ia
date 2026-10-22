@@ -69,5 +69,19 @@ await build({
   outfile: path.join(vendor, "supabase.js"),
   logLevel: "warning",
 });
+await build({
+  stdin: {
+    contents: 'export { read, utils } from "xlsx";\n',
+    resolveDir: root,
+    sourcefile: "reconciliation-xlsx-entry.js",
+    loader: "js",
+  },
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  outfile: path.join(vendor, "reconciliation-xlsx.js"),
+  logLevel: "warning",
+});
 cpSync(fileURLToPath(import.meta.resolve("pdfjs-dist/build/pdf.worker.mjs")), path.join(vendor, "pdf.worker.mjs"));
 console.log(`Sitio estático preparado en ${path.relative(root, output)}.`);

@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { renderToolsPanel, TOOL_DEFINITIONS } from "../src/tools/panel.js";
 
 test("el panel ofrece las herramientas fiscales con estados explícitos", () => {
-  assert.equal(TOOL_DEFINITIONS.length, 5);
+  assert.equal(TOOL_DEFINITIONS.length, 6);
   assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "cfdi")?.availability, "ready");
-  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.availability !== "ready").length, 4);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "reconciliation")?.availability, "preparation");
+  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.availability !== "ready").length, 5);
   assert.ok(TOOL_DEFINITIONS.every((tool) => tool.description && tool.actionLabel && tool.detail));
 });
 
@@ -84,9 +85,9 @@ test("cada herramienta muestra un SVG propio con nombre accesible", () => {
   const html = renderToolsPanel();
   const cards = [...html.matchAll(/<article class="tools-card[\s\S]*?<\/article>/g)].map(([card]) => card);
   const iconIds = cards.map((card) => card.match(/class="tools-ui-icon tools-ui-icon--([a-z]+)"/)?.[1]);
-  assert.deepEqual(iconIds, ["cfdi", "accounting", "payroll", "diot", "monitor"]);
-  assert.equal(new Set(iconIds).size, 5);
-  assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 5);
+  assert.deepEqual(iconIds, ["cfdi", "accounting", "reconciliation", "payroll", "diot", "monitor"]);
+  assert.equal(new Set(iconIds).size, 6);
+  assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 6);
   assert.match(html, /tools-ui-icon--folder/);
 });
 
@@ -117,6 +118,12 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
   const cards = html.match(/<article class="tools-card[\s\S]*?<\/article>/g) || [];
   assert.equal(cards.length, TOOL_DEFINITIONS.length);
   for (const card of cards) {
+    if (card.includes('data-tool-card="reconciliation"')) {
+      assert.match(card, /CONEXIÓN BANCARIA/);
+      assert.match(card, /Sin conexión · archivos locales/);
+      assert.doesNotMatch(card, /data-environment="production"|data-connection-status="connected"/);
+      continue;
+    }
     assert.match(card, /ESTADO DE INTEGRACIÓN/);
     assert.equal((card.match(/class="tools-connection-status /g) || []).length, 2);
     assert.match(card, /data-environment="sandbox"/);

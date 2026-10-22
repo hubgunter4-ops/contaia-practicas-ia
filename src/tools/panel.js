@@ -13,6 +13,7 @@ const TOOL_ICON_PATHS = Object.freeze({
   cfdi: '<path d="M6.5 2.5h7l4 4v15h-11z"/><path d="M13.5 2.5v4h4M9 11h6M9 14.5h6"/><path d="m9 18 1.5 1.5 3.5-3.5"/>',
   folder: '<path d="M3 6.5h7l2 2h9v10.8a1.7 1.7 0 0 1-1.7 1.7H4.7A1.7 1.7 0 0 1 3 19.3z"/><path d="M3 9h18"/><path d="m9 14 2 2 4-4"/>',
   accounting: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7.5 7h9M7.5 10h9M8 17v-2M12 17v-4M16 17v-6"/>',
+  reconciliation: '<path d="M4 7h13l-3-3M20 17H7l3 3"/><path d="M17 4l3 3-3 3M7 14l-3 3 3 3"/>',
   payroll: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5a5 5 0 0 1 4.5 5.2"/>',
   diot: '<path d="M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21z"/><path d="M9 8h6M9 12h3"/><circle cx="9" cy="16.5" r=".9"/><circle cx="15" cy="14.5" r=".9"/><path d="m9.7 15.8 4.6-3.1"/>',
   monitor: '<path d="M12 3 20 6v5c0 5-3.4 8-8 10-4.6-2-8-5-8-10V6z"/><path d="m8.5 12.3 2.2 2.2 4.8-5"/>',
@@ -37,7 +38,7 @@ const CONNECTION_ENVIRONMENTS = Object.freeze([
   { key: "production", label: "Producción" },
 ]);
 const CONNECTION_LEGEND_STATES = Object.freeze(["not_configured", "pending", "connected", "requires_review", "error"]);
-const TOOL_LABELS = Object.freeze(Object.fromEntries(TOOL_DEFINITIONS.map(({ id, title }) => [id, title])));
+const TOOL_LABELS = Object.freeze({ ...Object.fromEntries(TOOL_DEFINITIONS.map(({ id, title }) => [id, title])), accounting: "Contabilidad" });
 
 function normalizeConnectionStatus(status) {
   if (["degraded", "review_required", "requires_review"].includes(status)) return "requires_review";
@@ -54,6 +55,9 @@ function renderConnectionStatusBadge(status, environment = "") {
 }
 
 function renderToolConnectionSummary(tool, workspace = {}) {
+  if (tool.id === "reconciliation") {
+    return `<div class="tools-card-connection tools-card-connection--local"><span class="tools-card-connection-label">CONEXIÓN BANCARIA</span><span class="tools-connection-status is-not-configured" data-connection-status="not_configured" aria-label="Sin conexión bancaria"><span class="tools-connection-status-icon" aria-hidden="true">○</span><span class="tools-connection-status-label">Sin conexión · archivos locales</span></span><small>Este módulo no solicita credenciales ni accede a cuentas bancarias.</small></div>`;
+  }
   if (workspace.loading || workspace.connectionsLoading) {
     return `<div class="tools-card-connection"><span class="tools-card-connection-label">ESTADO DE INTEGRACIÓN</span><span class="tools-connection-loading" role="status">Consultando estados…</span></div>`;
   }
@@ -163,7 +167,7 @@ function renderConnections(workspace) {
   if (!workspace.selectedProfileId) return `<p class="tools-empty-state">Crea o selecciona un perfil fiscal para consultar sus conexiones.</p>`;
   if (workspace.connectionsLoading) return `<p class="tools-empty-state" role="status">Cargando conexiones de este perfil…</p>`;
   const connections = Array.isArray(workspace.connections) ? workspace.connections : [];
-  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
+  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.filter((tool) => tool.id !== "reconciliation").map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
     const connection = connections.find((item) => item.tool_key === tool.id && item.environment === key);
     return `<article class="tools-connection-row" data-tool-key="${escapeHtml(tool.id)}" data-environment="${key}"><div><b>${escapeHtml(tool.title)}</b><span class="tools-connection-row-environment">${label}</span></div>${renderConnectionStatusBadge(connection?.status ?? "not_configured")}<button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="${key}">${connection ? "Actualizar registro" : "Registrar pendiente"}</button></article>`;
   }).join("")).join("")}</div>`;

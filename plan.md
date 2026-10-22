@@ -249,3 +249,447 @@ Para comenzar implementación comercial, la decisión posterior debe aprobar exp
 El 21 de octubre de 2026 el usuario indicó: «ContaIA Aprende y ContaIA Herramientas. Procede con la separación y el diseño de la página». Queda autorizado el trabajo de interfaz descrito en la nueva sección de TODO.md: presentar ambos productos como las dos ofertas principales, actualizar copy y navegación de la aplicación autenticada y conectar con las rutas y funciones existentes. El Asistente/Nora se conserva como capacidad transversal, no como tercer producto principal.
 
 Esta instrucción **no** aprueba los precios propuestos ni autoriza mostrar planes/compra, crear suscripciones, cuotas, nuevos endpoints/tablas, activar servicios de pago/correo/voz, ampliar capacidades fiscales, migrar a una PWA/app nativa, hacer commit, push o despliegue. Las funciones, privacidad, persistencia y contratos existentes se conservan.
+
+
+## Plan técnico propuesto — Conciliación bancaria
+
+**Estado:** diseño y criterios solicitados; no se implementa código, no se crea migración, no se habilita conexión bancaria y no se despliega en esta tarea. La implementación queda sujeta a una autorización posterior. El usuario pidió importar CSV/Excel, normalizar fechas y referencias, sugerir coincidencias con confianza, mostrar diferencias/no conciliados y permitir que el Asistente abierto ayude a resolver dudas.
+
+### 1. Alcance del primer incremento
+
+- Añadir «Conciliación bancaria» como herramienta propia en ContaIA Herramientas, inicialmente con disponibilidad **En preparación** y sin estado de conexión bancaria. No presentarla como sincronización automática ni como contabilidad/conciliación integral.
+- En el MVP, leer un extracto `.csv` o `.xlsx` en el navegador y compararlo contra CFDI que la persona haya seleccionado expresamente: el análisis CFDI vigente en memoria o análisis guardados propios. En el lado CFDI, los candidatos disponibles son facturas y pagos extraídos del XML; hoy no hay un libro mayor, ERP ni movimientos bancarios conectados.
+- Las sugerencias priorizan comparaciones uno a uno. Pagos parciales, comisiones, reversiones, transferencias agrupadas y relaciones uno-a-varios/muchos-a-uno pueden aparecer como casos para revisión, pero no se asignan automáticamente en el MVP.
+- Todas las sugerencias, incluso las de confianza alta, requieren revisión/confirmación humana. Confirmar un vínculo en este módulo no crea pólizas, no modifica el CFDI, no cambia registros de pago y no equivale a un dictamen.
+- La importación bancaria, normalización, comparación, tabla de resultados y decisiones de sesión permanecen en memoria del navegador. No se guardan extractos ni decisiones en Supabase en esta primera versión. La persona puede exportar explícitamente un resumen de su revisión a CSV.
+- No hay conexión a bancos/ERP, no se solicitan credenciales bancarias y no se añade sincronización.
+
+### 2. Hechos de arquitectura que condicionan el diseño
+
+- ContaIA usa una SPA Vanilla JS. `src/main.js` ensambla las vistas, `src/tools/catalog.js` controla catálogo/disponibilidad, `src/tools/panel.js` dibuja el hub y el patrón visual reutilizable es `src/tools/tool-shell.js`.
+- `xlsx` (SheetJS 0.20.3) ya es dependencia, pero el lector genérico de `src/documents/server.js` procesa XLSX/CSV en servidor. No debe reutilizarse ese endpoint para un extracto bancario que el diseño promete mantener local. `src/tutor/document-reader.js` sí lee CSV local, pero es extracción de texto para Nora; no ofrece mapeo de columnas, lectura XLSX ni modelo bancario.
+- Para ejecutar SheetJS en navegador, añadir un bundle vendor de carga diferida mediante `scripts/build-site.js`/esbuild; el código servido desde `src/` no puede resolver directamente un import bare de npm. CSV tendrá un parser dedicado y probado para delimitadores, comillas, BOM y filas variables; no se reutilizará como contrato la lectura CSV manual de `src/documents/server.js`, que solo separa por coma.
+- `src/cfdi/analysis.js` produce `facturas`, `pagos` y totales por moneda localmente. `src/cfdi/workspace.js` conserva el análisis vigente y guarda, cuando el usuario lo solicita, `analysis_data` en `cfdi_analysis_runs`. La tabla tiene RLS por `auth.uid()` pero no tiene `profile_id`; por ello el selector debe dejar claro qué análisis eligió la persona, no atribuirlo automáticamente a un perfil fiscal. Para no descargar todo el JSONB, listar primero metadatos mínimos y leer `analysis_data` solo para las corridas elegidas mediante el cliente autenticado existente.
+- El Asistente abierto es Nora. `src/tutor/api.js` manda mensajes a `/api/tutor/stream`; el servidor actual permite `documentText` y un contrato estricto `cfdiContext` solo para `section: advisor`, que vuelve a validar y limitar. No reutilizar `documentText` ni `/api/documents` para enviar movimientos bancarios completos. Para que Nora ayude con este módulo, extender el contrato de la ruta existente con un esquema `reconciliationContext` versionado, permitido solo en el Asistente abierto y saneado en `src/tutor/server.js`; no hace falta crear otro endpoint ni una tabla.
+- ANAM es el canal/avatar opcional de voz/video; no es el motor que calcula matches. El MVP llama a Nora desde el Asistente abierto. Cualquier envío hablado/audiovisual de contexto bancario se deja fuera hasta diseñarlo y autorizarlo por separado.
+
+### 3. Flujo de datos local
+
+```mermaid
+flowchart LR
+  A[Seleccionar CSV/XLSX] --> B[Leer localmente y elegir hoja]
+  B --> C[Mapear columnas y revisar filas]
+  C --> D[Normalizar conservando valores originales]
+  E[Seleccionar análisis CFDI propios] --> F[Leer análisis elegidos bajo RLS]
+  D --> G[Generar candidatos deterministas]
+  F --> G
+  G --> H[Revisar confianza, evidencia y diferencias]
+  H --> I{Decisión de la persona}
+  I -->|Confirmar o rechazar| J[Estado temporal de la sesión]
+  I -->|Consultar a Nora| K[Vista previa de campos a compartir]
+  K -->|Enviar explícitamente| L[Asistente abierto / API tutor existente]
+  L --> M[Recomendación informativa]
+  M --> H
+  J --> N[Exportar CSV bajo acción explícita]
+```
+
+### 4. Normalización y reglas de coincidencia
+
+- Guardar juntos, en memoria, el valor original, el valor normalizado, la regla aplicada y las advertencias. No sobrescribir una referencia, fecha, signo, descripción ni importe de origen.
+- CSV: admitir UTF-8/UTF-8 con BOM; detectar o permitir elegir coma, punto y coma o tabulador; manejar campos entre comillas, saltos de línea en comillas y comillas escapadas. Si la codificación o el delimitador no se pueden inferir, pedir elección y mostrar vista previa antes de continuar.
+- XLSX: permitir elegir la hoja; leer valores de celda sin ejecutar fórmulas ni macros; preservar número de fila y formato/valor de origen. Las fechas seriales, celdas con fórmula sin valor calculado y formatos desconocidos quedan señalados para revisión, no se adivinan.
+- Mapeo obligatorio revisable: fecha de operación, importe o columnas separadas de cargo/abono, signo/dirección y moneda. Referencia y descripción son opcionales; saldo y fecha valor son informativos y nunca reemplazan silenciosamente la fecha de operación. La detección automática propone campos, pero la persona confirma el mapeo.
+- Fecha bancaria normalizada a fecha ISO sin zona horaria inventada, conservando el texto/celda original. Fechas ambiguas (por ejemplo `01/02/2026`) requieren elegir formato día/mes o mes/día antes de analizar.
+- Importes parseados a unidades menores enteras (centavos MXN) o representación decimal exacta según moneda. No usar aritmética binaria `Number` para comparar dinero, no inferir moneda cuando falte y no sumar monedas diferentes. Cuando existan cargos/abonos por separado, la persona confirma qué columna significa salida/entrada; no asumir que cada banco usa la misma convención de signo.
+- Referencias: conservar original y crear una copia canónica separada (Unicode NFC, espacios repetidos y separadores definidos, mayúsculas); no eliminar ceros iniciales ni convertir una similitud aproximada en igualdad. Mostrar cuándo la normalización crea colisiones.
+- Las compuertas para sugerir candidatos exigen moneda igual y conocida, dirección compatible, importe dentro de la tolerancia elegida y fecha dentro de una ventana elegida. Propuesta inicial para aprobación antes de desarrollo: tolerancia por defecto de cero centavos para nivel alto y ventana de ±3 días calendario; cualquier tolerancia distinta debe mostrarse al usuario y explicar su efecto.
+- La confianza será **Alta / Media / Baja / Sin sugerencia**, basada en reglas explicables, no una probabilidad estadística. Alta requiere candidato único, moneda/dirección compatibles, importe exacto, fecha dentro de ventana y referencia exacta o evidencia fuerte sin duplicidad. Media requiere importe exacto y fecha compatible pero referencia no disponible/no exacta y un solo candidato. Baja marca evidencia parcial, ambigüedad, importe distinto o referencia aproximada; se ofrece para inspección, no para aceptación automática. Moneda contradictoria, fecha inválida o signo incompatible bloquean una sugerencia ordinaria.
+- Cada propuesta muestra motivos positivos y negativos, diferencia de importe por moneda y diferencia de fecha. Si hay dos candidatos similares, indicar «Varios candidatos» y no elegir el primero. Un movimiento o candidato ya confirmado no puede volver a asignarse a una relación incompatible.
+- Un candidato basado en factura y uno basado en complemento de pago se etiquetan con su tipo para que no parezcan la misma evidencia. Los pagos parciales o una transferencia que cubre varias facturas conservan sus componentes y residual y quedan como revisión manual; no se crean grupos automáticamente en el MVP.
+
+### 5. Diseño de interfaz
+
+**Dirección visual:** utilizar el shell financiero ya acordado —petróleo `#123B43`, jade `#16866F`, marfil `#F5F4EC`, arena `#E4E6D8`; coral `#E98268` solo para incidencias y amarillo `#D9B84C` para revisión/recomendaciones— con tablas legibles, etiquetas de estado con texto e icono, controles grandes en móvil y sin iconografía decorativa que compita con importes.
+
+**Pantalla escritorio, de arriba hacia abajo:**
+
+1. ToolShell: «Conciliación bancaria», descripción «Compara movimientos con CFDI que selecciones. El extracto se analiza localmente; no conectamos tu banco», disponibilidad «En preparación» hasta que la capacidad realmente exista, acción principal «Importar extracto».
+2. Indicadores del periodo —solo una vez que haya datos reales en memoria—: movimientos importados, sugerencias altas, requieren revisión, sin candidato y diferencias por moneda. Nunca mostrar ceros como si el archivo ya hubiese sido analizado.
+3. Progreso de cuatro pasos: **1. Importar → 2. Revisar columnas → 3. Comparar → 4. Revisar y exportar**. El paso actual y los pasos no disponibles tienen texto/estado accesible.
+4. Panel de importación con zona de arrastre y botón «Elegir CSV o Excel», formatos/tamaño visibles, nombre/tamaño del archivo, opción para quitarlo y advertencia «No sale de esta pestaña». Debajo: selector de periodo, hoja XLSX si aplica, resumen de filas válidas/por revisar y vista previa de las primeras filas.
+5. Mapeo de columnas mediante selectores por campo (Fecha, Referencia, Descripción, Cargo, Abono/Importe, Saldo, Moneda); vista paralela **Valor del archivo / Interpretación ContaIA / Estado** con errores por fila y controles para corregir formato de fecha, separador decimal, moneda y signo.
+6. Selector de fuente CFDI: «Análisis actual» o historial privado de la cuenta con título, fecha, conteos de facturas/pagos; la persona selecciona cada análisis y periodo. Mostrar el número de corridas elegidas y alertar si combina análisis que parecen corresponder a contextos fiscales distintos, sin publicar RFC/nombres completos en la tabla.
+7. Tabla de revisión con filtros por estado, confianza, tipo de movimiento, moneda y diferencia. Columnas: **Fecha/importe bancario · Referencia/descr. (enmascarable) · Candidato CFDI (tipo, folio/UUID abreviado) · Diferencia · Evidencia/Confianza · Estado/acción**. Cada fila expandible presenta original vs normalizado, hasta tres candidatos ordenados de forma estable, fecha/importe del CFDI, razones y diferencias exactas.
+8. Acciones separadas por fila: **Confirmar vínculo**, **Elegir otro**, **Rechazar sugerencia**, **Dejar pendiente** y **Consultar a Nora**. «Confirmar vínculo» actualiza solo la vista temporal de esta conciliación; no modifica el historial CFDI ni crea un asiento. La exportación CSV incluye únicamente resultados seleccionados por la persona y se inicia con un clic explícito.
+9. Panel contextual de Nora explica qué significa el nivel de confianza y qué revisar. En una fila elegida, «Consultar a Nora» prepara —no envía— una pregunta y un resumen mínimo; la persona debe inspeccionar campos y pulsar «Enviar» en el Asistente abierto.
+
+**Wireframe conceptual, escritorio:**
+
+```text
+┌ Herramientas / Conciliación bancaria             [En preparación]
+│ Compara movimientos con CFDI seleccionados; archivo local        [Importar extracto]
+├ 01 Importar ── 02 Revisar columnas ── 03 Comparar ── 04 Revisar
+├ Periodo [desde ____] [hasta ____]     CFDI [Elegir análisis guardados ▾]
+├ ┌ Arrastra CSV/XLSX aquí ─────────┐  ┌ Columnas detectadas ─────────┐
+│ │ extracto-octubre.csv · 84 filas │  │ Fecha → fecha_operación     │
+│ │ [Quitar] · solo en esta pestaña │  │ Importe → abono/cargo       │
+│ └─────────────────────────────────┘  │ Moneda → MXN (confirmar)    │
+│                                      └───────────────────────────────┘
+├ 84 movimientos · 21 sugerencias · 12 por revisar · 51 sin candidato
+├ Filtros [Todos ▾] [Confianza ▾] [Moneda ▾] [Buscar referencia ____]
+├ Fecha / movimiento | Candidato CFDI | Diferencia | Evidencia | Estado
+│ 14 oct · +$12,480   | Pago · folio •481 | $0.00    | Alta · ref. exacta | Revisar
+│ 15 oct · -$4,200    | Egreso · folio •213| $0.00   | Media · +1 día     | Revisar
+│ 18 oct · +$6,000    | Sin match         | —        | 2 candidatos       | Ambiguo
+├ [Ver detalle y elegir] [Consultar a Nora · no enviado] [Pendientes →]
+└ Totales separados por moneda · [Descargar revisión CSV]
+```
+
+**Diseño móvil:** conservar la navegación inferior de cinco destinos ya existente. Apilar resumen, periodo, carga y selector CFDI; transformar cada fila de la tabla en una tarjeta con importe/fecha prominentes, confianza con etiqueta textual, diferencia y acciones visibles. Los candidatos y la evidencia se expanden en una hoja/detalle; no usar gestos de deslizar para confirmar. Reservar espacio sobre la barra inferior, mantener foco visible y permitir uso completo con teclado/lector de pantalla.
+
+**Componentes sugeridos:** `ReconciliationHeader` (ToolShell), `StatementDropzone`, `ImportBatchReview`, `PeriodSelector`, `ColumnMapper`, `NormalizedRowPreview`, `CfdiSourcePicker`, `ReconciliationSummary`, `MatchFilters`, `MatchTable`/`MatchCard`, `CandidateEvidence`, `NoraSharePreview`, `NoraContextCard` y `LocalExportActions`. Estados visuales: `imported`, `mapping_required`, `ready_to_match`, `suggested_high`, `suggested_medium`, `suggested_low`, `ambiguous`, `difference`, `unmatched`, `invalid_row`, `manual_confirmed` y `rejected`; disponibilidad de la herramienta y conexión bancaria se mantienen como dimensiones distintas.
+
+### 6. Ayuda de Nora/Asistente abierto
+
+- Puede explicar un mapeo dudoso usando primero solo encabezados; explicar por qué una regla produjo una coincidencia; comparar candidatos seleccionados; resumir una diferencia o proponer qué evidencia revisar. No es el motor de matching y no inventa facturas, pagos, referencias ni conclusiones.
+- El usuario elige la fila o candidato y pulsa «Consultar a Nora». El flujo prellena una tarjeta «RESUMEN PREPARADO · AÚN NO ENVIADO», coherente con el patrón existente de `cfdiContext`; nada se transmite hasta que la persona revise y pulse «Enviar» en el Asistente abierto.
+- Vista previa inicial de envío: periodo, tipo de movimiento, fecha normalizada, importe, moneda, diferencia, códigos de evidencia y máximo tres candidatos elegidos. Omitir por defecto archivo completo, nombre de cuenta, institución, saldo, descripción completa, referencia cruda, RFC, nombres, UUID/folios completos y credenciales. El usuario puede cancelar o seleccionar conscientemente campos adicionales con aviso de sensibilidad.
+- Añadir `reconciliationContext` versionado a la solicitud del tutor solo para `section: advisor`; validar en servidor una lista cerrada de campos, tamaño máximo propuesto de 4 KB, monedas/fechas/importes y número de candidatos; descartar campos desconocidos; no aceptar texto arbitrario como instrucciones del sistema. Respuestas se etiquetan «Sugerencia de Nora · verifica con el movimiento y el CFDI».
+- Nora no confirma, rechaza, agrupa ni cierra vínculos; toda aplicación requiere volver a la tabla y una acción humana separada. Antes de desarrollar esta transferencia hay que definir el aviso de que el resumen seleccionado viaja al proveedor IA configurado y verificar tratamiento de logs/retención; la interfaz debe exponer destino y permitir cancelar.
+- Anam no recibe el extracto ni decide matches en el MVP. Una interacción audiovisual con datos bancarios requeriría revisión y autorización separadas.
+
+### 7. Estructura de archivos propuesta
+
+```text
+src/reconciliation/
+  csv.js                 # parser local de dialectos CSV
+  workbook.js            # lectura de XLSX y elección de hoja
+  normalize.js           # fechas, referencias, dirección y decimal exacto
+  model.js               # esquema canónico, límites y estados
+  matching.js            # candidatos y evidencia reproducibles
+  analysis.js            # resumen/diferencias por moneda
+  workspace.js           # ciclo de sesión local y fuente CFDI
+  panel.js               # render del shell y componentes de revisión
+  export.js              # exportación local bajo acción explícita
+  reconciliation.css     # tabla/cards y estados responsive
+src/tools/catalog.js     # agregar id y disponibilidad inicial En preparación
+src/tools/panel.js       # abrir el nuevo workspace existente
+src/main.js              # evento de abrir herramienta y prellenado explícito para Nora
+scripts/build-site.js    # bundle browser lazy de SheetJS
+src/tutor/server.js      # whitelist y saneamiento de reconciliationContext
+src/tutor/api.js         # transportar el campo tipado solo en contexto advisor
+api/tutor/stream.js      # delegar a validador existente, si el flujo lo requiere
+```
+
+No se propone añadir tabla o endpoint bancario en el MVP. Los movimientos, filas y decisiones duran solo en memoria hasta que el usuario cierre/recargue la pestaña; el CSV de exportación es voluntario. Si después se pide historial sincronizado, antes se diseñará un esquema separado con RLS, perfil/cuenta, retención, exportación y borrado, y se solicitará autorización específica.
+
+### 8. Fases recomendadas y puertas de decisión
+
+1. **Definir el comportamiento de conciliación:** confirmar dialectos, formatos de fecha, convención de cargo/abono, monedas, tolerancia, ventana de fecha, tamaño máximo de archivo/filas, casos parciales, significado de aceptar vínculo y política de datos compartidos con Nora.
+2. **Importación local y normalización:** CSV/XLSX, selección de hoja, revisión de filas, mapeo editable, límites y modelo canónico reversible; sin llamadas de red para los datos del extracto.
+3. **Fuente CFDI y matching:** selector de análisis privados propios, lectura bajo RLS, filtro de periodo, normalización determinista, conflictos/duplicados/partiales visibles y explicación versionada.
+4. **Interfaz y revisión humana:** hub/ToolShell, resumen, filtros, tabla desktop, tarjetas móvil, aceptación/rechazo/pending temporales y exportación CSV explícita.
+5. **Integración opcional con Nora:** contrato tipado/minimizado, consentimiento antes de enviar, límites de contenido y respuesta solo como orientación; gate de seguridad sobre proveedor, logs y retención.
+6. **Preparar lanzamiento interno:** solo tras cumplir criterios de aceptación se cambiará disponibilidad de `preparation` a `ready`; el producto seguirá diciendo «sin conexión bancaria» hasta que exista una integración real.
+
+### 9. Decisiones pendientes antes de desarrollo
+
+- Límite inicial propuesto: 8 MiB por archivo y 5,000 filas por extracto; confirmar o ajustar según tamaño real de los usuarios.
+- CSV: delimitador, encoding y formato de fecha permitidos; zona horaria o uso de fecha sin zona; manejo de fecha valor y encabezados duplicados.
+- Importes: columnas separadas o monto con signo; código de moneda requerido; tolerancia y precisión por moneda; perfil de signo por banco.
+- Matching: confirmar ventana ±3 días, reglas de referencia y si el nombre/contraparte puede usarse localmente como evidencia secundaria.
+- Alcance de datos contables: MVP solo CFDI seleccionados; decidir después si hará falta un segundo archivo CSV/XLSX de libro/ERP para una conciliación bilateral más general.
+- Parciales/agregados: el MVP los deja para revisión manual. Si se requiere sugerir grupos, fijar máximo de miembros, residual aceptable, criterio de colisión y auditoría.
+- Nora: confirmar si la ayuda se limita a encabezados/candidatos enmascarados (recomendado) o si se podrán compartir descripción/referencia seleccionadas; fijar proveedor, aviso de uso, retención y política de logs.
+- Persistencia: el MVP no guarda extracto ni decisiones. Cualquier historial futuro necesita una política y permiso separados.
+
+
+---
+
+# ContaIA — Plan técnico y diseño de pólizas sugeridas y asistente por herramienta
+
+**Estado:** propuesta para revisión. El usuario autorizó exclusivamente plan técnico, criterios de aceptación y diseño de interfaz. No está autorizada la implementación, la modificación de APIs/tablas, la persistencia en servidor, el commit ni el despliegue de estas mejoras.
+
+**Base verificada:** Vanilla JS SPA, Supabase Auth/RLS y Vercel. El Aula con Confianza fiscal está publicado mediante `2603999`; la conciliación bancaria existe solo como frontend local no publicado. Este plan no concede autorización para publicar ese módulo.
+
+## 1. Decisión de producto y primer incremento recomendado
+
+Convertir el espacio de **Contabilidad** en un workspace de **Pólizas sugeridas**, sin crear un producto adicional ni duplicar la tarjeta contable. Reutilizar `src/tools/catalog.js` como fuente única y conservar disponibilidad «En preparación» mientras no exista una entrega implementada, revisada y autorizada para publicación.
+
+El primer incremento propuesto consta de dos capacidades independientes: un motor determinista local que produce borradores explicables, y un panel reutilizable del **Asistente abierto** dentro de las herramientas. El asistente explica; no genera asientos oficiales, ejecuta reglas, modifica cuentas ni aprueba pólizas. El motor debe funcionar sin proveedor de IA y el catálogo de cuentas no depende de una respuesta del modelo.
+
+El alcance inicial será conservador: empresa/contexto elegido, periodo confirmado y moneda única MXN por póliza. Una fuente de otra moneda queda visible como no soportada por la plantilla inicial, no se convierte ni se interpreta como MXN. Incorporar otra moneda exige definir su escala exacta y cuentas compatibles; conversión, tipo de cambio y diferencias cambiarias quedan fuera del primer incremento.
+
+No se incluyen libro mayor, balanza, cierre contable, contabilidad electrónica, catálogo oficial del SAT, timbrado, presentación fiscal, conexión bancaria, pagos, sincronización entre dispositivos ni aprobación por roles de despacho. Los códigos de cuenta del ejemplo son internos y ficticios, no claves oficiales.
+
+## 2. Recorrido del usuario
+
+1. **Elegir empresa y periodo.** Mostrar el contexto antes de seleccionar fuentes; no atribuir resultados CFDI a una empresa por estar abierta su ficha.
+2. **Configurar cuentas.** Cargar o editar un catálogo local; comprobar cuentas activas, imputables y compatibles antes de usarlas.
+3. **Revisar reglas.** Ver qué datos consumen, qué plantilla proponen y qué cuentas usarán; simular la regla sobre fuentes seleccionadas sin cambiar documentos.
+4. **Seleccionar evidencia.** Elegir CFDI y, cuando esté disponible y autorizado el módulo bancario, movimientos concretos. Distinguir documento de origen de evento contable.
+5. **Generar borradores.** Una acción principal crea propuestas versionadas y explica la regla aplicada. Una colisión, falta de dato o fuente incompatible produce una incidencia, no una póliza inventada.
+6. **Revisar y editar.** Ver partidas, documentos, importes y advertencias. Corregir cuentas o cantidades mediante acciones humanas registradas en la revisión local.
+7. **Aprobar expresamente.** Solo una propuesta válida puede pasar a «Aprobada localmente». Esta acción no contabiliza ni crea registros en un ERP o en Supabase.
+
+Cambiar empresa, periodo o fuentes pide resolver los borradores sin conservar: cancelar el cambio o descartar expresamente el trabajo afectado. Cambiar empresa cierra el panel del asistente, cancela solicitudes y elimina su contexto/historial activo para evitar mezcla de compañías.
+
+## 3. Diseño de interfaz — Confianza fiscal
+
+### 3.1 Estructura y jerarquía
+
+Mantener marfil `#F5F4EC`, superficies blancas, títulos petróleo `#123B43`, jade `#16866F` para progreso y variante accesible `#147D68` para botones con texto blanco. Arena `#E4E6D8` agrupa configuraciones; amarillo `#D9B84C` señala revisión y coral `#E98268` errores, siempre con texto/icono. Reutilizar Alegreya Sans, DM Mono, el logo y los avatares locales de Nora; no se necesitan ilustraciones nuevas.
+
+El encabezado presenta **Pólizas sugeridas**, «Borradores locales; no contabiliza», empresa, periodo, disponibilidad y acción principal. Los subapartados son **Borradores**, **Catálogo de cuentas** y **Reglas**. La franja de resumen usa conteos reales, sin sumar importes de monedas distintas ni representar falta de fuentes como cero errores. En configuración la acción principal será «Guardar configuración en esta sesión»; en fuentes, «Generar borradores»; en detalle válido, «Aprobar esta revisión».
+
+Escritorio: bandeja de borradores a la izquierda y detalle editable en el área principal. El asistente despliega un carril lateral que reduce el espacio de trabajo sin ocultar acciones. Móvil: la bandeja se convierte en tarjetas, el detalle en una vista apilada y el asistente en un acordeón dentro del workspace; no sustituye la ruta de la herramienta ni tapa la navegación inferior.
+
+### 3.2 Wireframe de pantalla principal
+
+```text
+CONTAIA HERRAMIENTAS / CONTABILIDAD
+Pólizas sugeridas                  [En preparación]
+Borradores locales; no contabiliza
+[Empresa ▼] [Periodo ▼] [Moneda: MXN]
+
+[Borradores] [Catálogo de cuentas] [Reglas]
+Fuentes seleccionadas · Por revisar · Listas · Aprobadas localmente
+
+Bandeja                           Detalle de la revisión seleccionada
+• Borrador · requiere revisión     Evento / fecha / moneda / origen
+• Listo para aprobar              Regla y versión · Evidencia
+• Error: cuenta no disponible     Cuenta | Concepto | Cargo | Abono
+                                  Totales · Diferencia · Incidencias
+                                  [Aprobar esta revisión]
+
+[Nora · Asistente abierto · Pólizas sugeridas   ▼]
+```
+
+La tabla incluye código/nombre de cuenta, concepto editable, cargo, abono y evidencia. El pie mantiene **Total cargos**, **Total abonos** y **Diferencia**; los importes usan alineación derecha y formato monetario local, sin que el formato visual sustituya el valor exacto interno. Una diferencia distinta de cero bloquea la aprobación y muestra la causa. Ningún sello verde implica tratamiento fiscal correcto por sí solo.
+
+### 3.3 Ejemplo ficticio de detalle
+
+Plantilla elegida expresamente: cobro que liquida una cuenta por cobrar. La dirección del movimiento y la cuenta de contrapartida se confirman; no se registra otra vez el ingreso de la factura. Ejemplo sin impuestos ni conversión monetaria:
+
+| Cuenta interna ficticia | Concepto | Cargo MXN | Abono MXN |
+|---|---|---:|---:|
+| 101-BANCO | Cobro confirmado para revisión | 1,000.00 | 0.00 |
+| 105-CLIENTES | Liquidación de cuenta por cobrar | 0.00 | 1,000.00 |
+| **Total** | | **1,000.00** | **1,000.00** |
+
+**Diferencia: 0.00 MXN.** El ejemplo está calculado; no constituye una plantilla fiscal universal. Si falta evidencia de la cuenta por cobrar o de la relación con el cobro, queda pendiente de revisión aunque cuadren los importes.
+
+### 3.4 Catálogo y reglas
+
+El catálogo muestra código, nombre, naturaleza normal, cuenta superior, si acepta partidas y estado activo. La naturaleza normal orienta y puede generar advertencias; no prohíbe movimientos de signo contrario que la contabilidad pueda requerir. No se permite eliminar una cuenta referenciada: se desactiva para nuevas propuestas y se conserva su identificación histórica local.
+
+El editor de reglas utiliza campos y selectores, no JavaScript: origen, evento, condiciones permitidas, prioridad explícita, cuentas de cargo/abono, fórmula permitida, requisitos de revisión y estado. «Probar regla» explica coincidencias, cuentas, importes y conflictos; «Activar en esta sesión» requiere guardar una versión válida. Una regla ambigua no elige silenciosamente la primera.
+
+### 3.5 Asistente desplegable — diseño transversal
+
+Etiqueta constante: **Nora · Asistente abierto**, acompañada del nombre de la herramienta. Cerrado por defecto. Al abrir se muestran ayuda genérica, preguntas sugeridas, estado del proveedor y aviso **«Abrir no comparte tus datos»**. El usuario puede escribir sin adjuntar datos, o preparar un contexto limitado desde una partida seleccionada.
+
+```text
+[Nora · Asistente abierto · Pólizas sugeridas  ▲]
+Abrir no comparte tus datos.
+[¿Por qué no cuadra?] [¿Qué cuenta falta?] [Explicar esta regla]
+
+Datos que compartirías: [ver vista previa] [quitar contexto]
+Proveedor: el realmente configurado
+[Escribe tu duda, sin datos personales…]
+[Enviar consulta] [Detener respuesta]
+La respuesta orienta; las decisiones siguen siendo tuyas.
+```
+
+Abrir, seleccionar una sugerencia o preparar el contexto no realiza una llamada de IA. **Enviar consulta** es la acción explícita. El aviso separa «sin datos de la herramienta» de «sin datos personales»: la pregunta libre y los mensajes anteriores seleccionados para la conversación sí se transmiten al proveedor, y el usuario puede escribir información sensible por su cuenta. No se promete anonimización absoluta.
+
+CFDI ofrece ayuda sobre revisión y hallazgos; conciliación sobre mapeo/candidatos sin confirmar vínculos; pólizas sobre cuentas/reglas/descuadres; Nómina, DIOT y Monitor sobre alcance y dudas, sin simular cálculos o datos inexistentes. Perfil fiscal, Conexiones y Documentos también incorporarán el panel en sus vistas o subespacios reales. Una ficha de herramienta en preparación abre un espacio informativo con ayuda, no un flujo operativo ficticio. Futuras herramientas registradas deberán declarar su adaptador de ayuda o utilizar ayuda genérica sin datos.
+
+El panel se maneja con teclado, botón de expansión con `aria-expanded`/`aria-controls`, foco visible y regiones de estado accesibles. En móvil los controles principales tienen al menos 44 px; las tablas no fuerzan desbordamiento global. Animaciones de expansión de 150–200 ms respetan movimiento reducido. La transmisión actualiza solo el texto del mensaje; no se reconstruye todo el workspace ni se desmonta un avatar de vídeo activo.
+
+## 4. Arquitectura y contratos propuestos
+
+### 4.1 Lo existente y lo que falta
+
+| Componente actual | Reutilización | Límite relevante |
+|---|---|---|
+| `src/main.js` | Composición de vistas, sesión y enrutamiento interno | No existe aún una vista operativa de pólizas; el asistente abierto usa `state.openAssistant` y `section: advisor`. |
+| `src/tools/catalog.js`, `tool-shell.js` | Metadatos, encabezado y tarjeta de Nora | La tarjeta actual navega al asistente; no es un chat desplegable dentro de la herramienta. |
+| `src/tools/workspace.js` | Contexto de perfil existente, si el usuario lo selecciona | Un perfil fiscal no demuestra pertenencia de un análisis CFDI. |
+| `src/cfdi/parser.js`, `analysis.js`, `relations.js` | Documentos I/E, pagos P, conceptos y alertas | Importes convertidos a `Number`; pérdida de lexemas y parte del desglose fiscal; algunas relaciones calculan valores estimados. |
+| `src/reconciliation/*` | Movimientos locales y evidencia de candidatos | No publicado; matching usa importes absolutos y deja cargo/abono pendiente. No existe vínculo aprobado ni identidad de evento estable suficiente. |
+| `src/tutor/api.js`, `server.js` | Consulta y streaming del asistente configurado | El contrato actual admite conversación abierta y resumen CFDI, no un contexto estructurado de póliza o banco. |
+
+Los valores `iva16`, `ivaRetenido`, `ieps`, `exento` o `estimatedTax` son señales de análisis, no una determinación automática de impuestos, deducibilidad o acreditamiento. `relations.js` puede sobrescribir ocurrencias con UUID repetido al relacionarlas; el adaptador nuevo deberá detectar y conservar el conflicto antes de consumir esa relación. No se altera el analizador existente en esta etapa documental.
+
+### 4.2 Organización de archivos, solo propuesta
+
+- `src/journal/workspace.js`: estado, selección, generación, revisión y control de versiones locales.
+- `src/journal/sources.js`: adaptadores inmutables de CFDI y movimientos; identidad, procedencia, papel de la empresa y evento económico.
+- `src/journal/money.js`: parseo decimal exacto, escala/moneda y sumas de enteros; sin aritmética binaria para cargos/abonos.
+- `src/journal/catalog.js`: catálogo por empresa, jerarquía, unicidad, elegibilidad y compatibilidad monetaria.
+- `src/journal/rules.js`: reglas declarativas, validación, simulación e interpretación determinista.
+- `src/journal/validation.js`: igualdad, integridad, duplicados, causalidad y decisiones pendientes.
+- `src/journal/review.js`: snapshots, revisiones, aprobaciones y registro local de acciones.
+- `src/journal/journal.css`: estilos acotados al workspace, conservando Confianza fiscal.
+- `src/tools/assistant-panel.js`, `assistant-controller.js`, `assistant-context.js`: presentación, conversación aislada y preparación de contexto por herramienta; no mutan datos contables.
+- `src/main.js`, `src/tools/catalog.js`, `tool-shell.js`: futura composición, navegación y apertura del panel común; evitar concentrar el motor en `main.js`.
+- `tests/journal*.test.js`, `tests/e2e/journal*.spec.js` y pruebas del panel: ubicaciones futuras, no archivos creados ahora.
+
+El build seguirá siendo estático con Vercel; el motor no necesita endpoints ni tablas. El panel de ayuda genérica reutilizará el endpoint de chat existente. Una futura ampliación del sanitizador del asistente se plantea separadamente y necesita autorización explícita; no se suple introduciendo datos de pólizas dentro de un campo documental o CFDI incompatible.
+
+## 5. Empresas, catálogo y almacenamiento
+
+### 5.1 Identidades y aislamiento
+
+Crear un `companyLocalId` aleatorio para el contexto en esta sesión, nunca derivado del RFC. Un `fiscalProfileId` existente puede enlazarse opcionalmente después de selección expresa; no hace falta crear un perfil sintético para trabajar. Si el usuario utiliza perfiles existentes, se conservan autenticación y RLS actuales, sin nuevas lecturas masivas ni escrituras de configuración contable.
+
+Cada selección de fuentes genera un `sourceRunId` local y una asignación explícita a `companyLocalId`. Las corridas de `cfdi_analysis_runs` no tienen `profile_id`: no se considerarán pertenecientes a una empresa ni se leerán automáticamente. El primer incremento consume análisis presentes y seleccionados en memoria; el historial remoto queda fuera.
+
+Catálogo, reglas, borradores y conversación deben pertenecer al mismo contexto de empresa. Se rechazan referencias cruzadas aunque tengan código de cuenta idéntico. Cambiar de usuario o cerrar sesión cancela procesos y limpia todo el estado; cambiar empresa no reutiliza el historial de otra ni sus datos de consentimiento.
+
+### 5.2 Modelo del catálogo
+
+Cuenta: `accountId`, `companyLocalId`, código textual, nombre, naturaleza normal, `parentAccountId`, activa/inactiva, imputable/no imputable, moneda(s) permitida(s) y versión. El código conserva ceros iniciales, es único por empresa y no sustituye al ID. Si se incorpora en el futuro un código agrupador oficial, será un campo distinto y requerirá validación normativa independiente.
+
+Padres deben existir dentro de la empresa; no se aceptan ciclos. Una cuenta no imputable o inactiva no puede recibir partidas nuevas. Si la moneda no está configurada, debe confirmarse antes de usarla. Desactivar una cuenta no elimina evidencia de revisiones anteriores. Una actualización del catálogo obliga a revalidar propuestas pendientes que lo utilicen; no modifica el snapshot histórico de una póliza ya aprobada.
+
+### 5.3 Política local inicial
+
+Por defecto, todo permanece **en memoria**. Se informa antes de empezar que cerrar o recargar puede perder el trabajo. No hay guardado de borradores en `localStorage`, IndexedDB, `cfdi_analysis_runs` o tablas existentes; el límite de 900 KB del guardado CFDI no constituye permiso para almacenar pólizas allí.
+
+Como parte de una futura implementación local autorizada, proponer descarga/importación explícita de un JSON **solo de catálogo y reglas**, con versión de esquema, revisión previa y advertencia de que contiene configuración privada de la empresa. Propuesta de límites: 1 MiB, 2,000 cuentas y 200 reglas por importación. Rechazar exceso, referencias inválidas, claves inesperadas o código ejecutable; no sobrescribir otra empresa ni activar reglas importadas sin revisión.
+
+La persistencia automática local, exportación de pólizas con fuentes, historial durable, respaldos en nube y trabajo multiusuario son decisiones posteriores. Requieren política de retención y autorización específica; no se presentan como capacidades incluidas.
+
+## 6. Fuentes y generación determinista
+
+### 6.1 Modelo canónico de evidencia
+
+Una fuente conserva su identidad local, origen, documento/ocurrencia, fecha, moneda, importes exactos si están disponibles, valores originales disponibles, calidad de esos importes, advertencias y `companySide` confirmado. RFC, nombres, UUID y referencias completas se usan solo localmente cuando sean necesarios; no alimentan automáticamente al asistente.
+
+Los I/E/P no determinan por sí solos si la empresa compra, vende, cobra o paga. El perfil puede ofrecer una sugerencia del papel de la empresa, pero el usuario confirma emisor/receptor y tipo de evento. Una fila bancaria de cargo/abono describe la cuenta del banco, no la partida de contrapartida contable.
+
+El evento se identifica separadamente del documento: reconocimiento de factura, ajuste/nota de crédito o liquidación de cobro/pago. Un CFDI P puede contener varios documentos relacionados y pagos; su UUID por sí solo no distingue todas las ocurrencias. La nueva ingesta deberá conservar ordinales de pago y documento relacionado; los IDs actuales basados en índice de lista no bastan para deduplicar entre reordenamientos.
+
+El adaptador bancario conserva archivo de origen, hoja/fila original y una identidad de ocurrencia estable dentro de la selección, no un índice visible después de filtrar. La confianza Alta/Media/Baja de conciliación es evidencia heurística, no aprobación contable. Hasta que exista revisión explícita del vínculo y del sentido, una relación bancaria solo genera una propuesta pendiente.
+
+### 6.2 Precisión y calidad de importes
+
+Usar un valor canónico como `minor: "100000", scale: 2, currency: "MXN"`, con entero serializado y cálculos mediante enteros exactos. Nunca guardar `BigInt` directamente en JSON ni reconstruir exactitud original a partir de un `Number` redondeado. El formato monetario es una vista, no el origen del cálculo.
+
+El parser CFDI actual convierte importes a números y el matching vuelve a redondearlos. Antes de permitir aprobación de pólizas basadas en esos datos, la futura ingesta debe conservar cadenas decimales, moneda y procedencia necesarias. Un análisis legado se marca `derived_from_number`; si faltan datos exactos requeridos, se solicita recargar el original **localmente**, o introducir y confirmar manualmente cifras cotejadas con evidencia. La pérdida no se oculta y no se considera el número derivado como decimal original exacto.
+
+Más decimales que la escala monetaria, moneda ausente, campo obligatorio perdido o desbordamiento no se redondean ni se rellenan silenciosamente. Quedan pendientes. Si una fuente fiscal necesita desglose o tratamiento no disponible, no se utiliza un impuesto estimado para completar una póliza que parezca válida. El primer incremento no genera automáticamente impuestos ni tipos de cambio.
+
+### 6.3 Evitar doble conteo y falsa causalidad
+
+La factura y su pago son eventos distintos que pueden requerir propuestas distintas; **no se suman para obtener un mismo importe base**. Una fila bancaria que evidencia el pago tampoco se suma como tercer importe. La selección registra si la propuesta trata reconocimiento, ajuste o liquidación y qué fuentes son importes frente a evidencia.
+
+Detectar duplicados por empresa, evento y ocurrencia de origen; comparar firmas de contenido local para advertir fuentes recargadas. Igualdad de monto/fecha no demuestra duplicado ni identidad de evento. Dos facturas diferentes del mismo importe pueden coexistir. Un pago con varios documentos relacionados no es duplicado solo por compartir UUID. Repetir «Generar» con la misma selección y versiones no crea otra copia del mismo borrador.
+
+El primer incremento deja parciales, agrupaciones, devoluciones, comisiones sin comprobante, saldos iniciales y relaciones ambiguas para edición/revisión manual, sin búsqueda combinatoria ni generación de ajustes ficticios.
+
+## 7. Reglas editables y validaciones
+
+### 7.1 Intérprete de reglas
+
+Una regla contiene ID, empresa, versión, estado habilitado, prioridad, condiciones permitidas, evento, líneas propuestas y motivos de revisión. Operadores cerrados: igualdad, pertenencia, existencia y combinaciones lógicas sobre campos declarados. Las fórmulas iniciales usan importes fuente exactos, asignaciones y sumas/restas de enteros de la misma moneda; no ejecutan expresiones libres, `eval`, funciones, consultas, scripts ni llamadas externas.
+
+La aplicación rechaza operadores, rutas y campos desconocidos. Propuesta de límites adicionales: 10 líneas por plantilla y profundidad lógica máxima 4. Importar JSON no le concede autoridad: las reglas importadas están deshabilitadas hasta su revisión. Una regla sin cuentas válidas no puede activarse.
+
+Aplicar prioridad explícita y mostrar por qué ganó una regla. Si varias reglas de igual prioridad compiten por el mismo evento, mostrar el conflicto y pedir elección; nunca resolverlo por el orden accidental de un arreglo. Versionar cada modificación y conservar la versión usada por cada revisión.
+
+### 7.2 Requisitos para estar listo para aprobación
+
+Se requieren partidas suficientes para la doble entrada; cada partida tiene una cuenta activa/imputable de la empresa y un solo lado con importe positivo. No aceptar cargo y abono simultáneos, negativos, valores no finitos o líneas vacías. La naturaleza normal de la cuenta orienta advertencias, no reemplaza el lado de la partida.
+
+Sumar cargos y abonos exactos por moneda; **diferencia = cero**, sin tolerancia oculta ni compensación entre monedas. La igualdad aritmética no garantiza validez contable: también se requieren empresa/periodo/fecha, evidencia suficiente, papel y evento confirmados, ausencia de duplicado bloqueante, cuentas elegibles, versiones y reglas vigentes para la revisión.
+
+Una advertencia no bloqueante queda visible y puede exigir reconocimiento expreso antes de aprobar. Un error de importe, cuenta, causalidad, dato obligatorio, ambigüedad sin resolver o precisión requerida impide aprobar. El botón permanece deshabilitado y explica las causas. Nora puede explicar la diferencia, pero no alterar el resultado del validador ni levantar un bloqueo.
+
+## 8. Revisiones y aprobación humana local
+
+Estados de negocio: **Borrador**, **Requiere revisión**, **Listo para aprobar**, **Aprobada localmente**, **Rechazada** y **Sustituida**. Lectura/generación es un estado de proceso, no una aprobación.
+
+«Generar» produce borradores. Una validación completa y decisiones pendientes resueltas permiten «Listo para aprobar», sin aprobación automática. «Aprobar esta revisión» muestra empresa, periodo, partidas, fuentes y advertencias reconocidas; una confirmación humana aprueba exactamente esa revisión, no el lote restante. La aprobación individual no depende del nivel de confianza del matching ni de una recomendación de IA.
+
+Guardar en memoria: ID y número de revisión, snapshot de partidas/fuentes, catálogo/regla usados, sus versiones, actor de sesión, instante local, advertencias reconocidas y motivo de la decisión. Registrar acciones de generar, editar, validar, rechazar, aprobar y sustituir. Un hash canónico vincula el snapshot a sus referencias; **no es una firma legal ni una auditoría resistente a manipulación** y el reloj local no garantiza una fecha certificada.
+
+Editar una póliza aprobada crea una nueva revisión en borrador, conserva la evidencia anterior y exige otra aprobación; no hereda el permiso. Si se aplica una configuración nueva a una propuesta pendiente, se invalida su validación previa. No reescribir silenciosamente pólizas aprobadas cuando cambie el catálogo o una regla: conservan el snapshot histórico; si el usuario desea sustituirlas, debe realizar la acción expresa y aprobar la nueva revisión.
+
+Cerrar/recargar elimina estos registros si no se ha autorizado otra política de almacenamiento. «Aprobada localmente» no implica asiento registrado, saldo actualizado, póliza enviada, aprobación por un contador distinto ni evidencia durable. No existe una llamada de contabilización posterior en este incremento.
+## 9. Asistente dentro de cada herramienta: integración y privacidad
+
+### 9.1 Panel reutilizable, no el tutor curricular
+
+Extraer una superficie común de Asistente abierto, reutilizable como página completa o panel desplegable, pero con controladores separados por conversación. El panel no usa `getTutorContext()`, `state.tutor`, módulo, fase, ejercicio, notas ni progreso. Recibe explícitamente superficie, herramienta, contexto local y conversación; no decide su modo a partir de la ruta actual.
+
+En la modalidad genérica, conservar el request admitido `context: {section: "advisor"}`. El `toolId` y el `companyLocalId` sirven para aislar estado **local**, no se insertan como campos que el backend actual no valida ni se envían como supuesta autorización. La ayuda contextual genérica puede preparar una pregunta editada por el usuario con el nombre público de la herramienta, sin datos de sus archivos.
+
+Modificar en una futura implementación las acciones que hoy usan `data-section="advisor"` para abrir el panel de su herramienta, manteniendo la ruta activa. No reutilizar sin ajustes `sendTutorMessage()`: actualmente puede redirigir ciertas preguntas a CFDI, procesar documentos o hablar por una sesión Anam activa. El controlador del panel debe impedir esas derivaciones y conservar la consulta dentro del workspace.
+
+### 9.2 Conversación, streaming y limpieza
+
+La conversación se identifica localmente por usuario, empresa y herramienta. Nunca copiar automáticamente mensajes del asistente global o de otra herramienta. En el incremento conservador, al cambiar empresa/usuario se aborta y elimina la conversación; al cambiar de herramienta o cerrar el panel se cancela la respuesta activa. Reabrir en el mismo contexto puede mostrar los mensajes que siguen en memoria, sin reenviarlos automáticamente ni persistirlos.
+
+Cada solicitud tiene `conversationId`, `requestId` y una generación de contexto. Los tokens solo actualizan el mensaje de esa solicitud si coincide la generación actual; se ignoran respuestas tardías después de un cambio de empresa o sesión. Cancelación es un estado normal, no una aprobación ni un resultado final. El borrador parcial queda identificado como incompleto y no se reenvía como respuesta completa.
+
+Reutilizar SSE de `src/tutor/api.js` y `POST /api/tutor/stream`; actualizar el nodo del mensaje, no todo el DOM. Cambiar empresa, cerrar sesión o descartar el contexto limpia vista previa, mensajes y permisos de envío pendientes. Esta refactorización necesita atención específica a `tutorBusy()`, selección del AbortController y al filtro actual `state.section === requestSection`, que no identifica por sí solo una conversación embebida.
+
+### 9.3 Límite entre frontend genérico y contexto estructurado futuro
+
+**A. Panel genérico, sin backend nuevo:** enviar texto expresamente escrito y los turnos de esa conversación bajo el contrato actual; no adjuntar XML, CSV, catálogo, documento, contexto bancario ni póliza. Mantener acceso a ayuda aunque el módulo esté en preparación. Si no hay proveedor configurado, mostrarlo y mantener disponible ayuda estática; no simular una respuesta IA.
+
+**B. Resumen de herramienta, sujeto a autorización backend separada:** proponer `tool-assistance-v1`, un contexto tipado con herramienta, una sola póliza/candidato, moneda, totales en unidades menores, hasta 10 partidas seleccionadas y códigos cerrados de incidencias. Propuesta de límite: **4 KiB UTF-8**, calculado antes de enviar y de nuevo en servidor; exceso se rechaza o pide reducir selección, no se trunca de forma invisible. Las cantidades se muestran en la vista previa tal como se transmitirán.
+
+No enviar por defecto IDs de empresa/perfil, RFC, nombres comerciales, cuentas bancarias, saldos ajenos, UUID, folios, referencias, descripciones completas, catálogo entero, XML, archivos o credenciales. Si para explicar una cuenta se utiliza su papel, compartir una etiqueta general como «bancos» o «cuenta por cobrar», no automáticamente su nombre privado. La empresa permanece como ámbito local; el endpoint no necesita recibir su identidad para explicar un resumen minimizado.
+
+El backend futuro valida herramienta, versión, tipos, tamaños y una lista cerrada de campos; descarta desconocidos y trata texto como datos no confiables. Requiere diseñar autenticación cuando corresponda, límites, política de logs y retención del proveedor antes de enviar datos reales. No se reutiliza `cfdiContext` para introducir una póliza ni `documentText` como atajo. El endpoint actual solo sanea `cfdi-summary-v1`: no admite ya estos nuevos contratos.
+
+Preparar contexto muestra propósito, campos exactos, proveedor y datos omitidos. Cancelar o quitar contexto elimina el borrador sin llamar a la IA. El permiso es por consulta/snapshot; cambiar partida, revisión, empresa, selección o proveedor invalida la vista previa. Enviar significa compartir el texto, historial permitido y contexto visible; no garantiza ausencia de datos personales escritos por el usuario. No hay envío automático por abrir una herramienta o expandir el panel.
+
+### 9.4 Bloqueos de acciones y voz
+
+El panel no inicia cargas ni operaciones `POST /api/documents`, no llama escrituras `POST/PATCH /api/tools`, no guarda análisis en Supabase y no ejecuta comandos de una respuesta. No ofrece adjuntar archivos en su primer incremento. Las cargas propias de CFDI/conciliación continúan en sus flujos locales, separadas del chat. El espacio global de Documentos conserva su funcionalidad, pero el panel no hereda una carga o envío documental activo.
+
+No solicita `/api/tutor/anam-session`, activa micrófono o reproduce datos mediante Anam, aunque exista otra sesión de vídeo abierta. Voz/vídeo del panel queda fuera de este incremento; en una extensión posterior requiere inicio explícito y contexto autorizado separado. Mostrar un avatar estático de Nora no significa conexión de voz.
+
+La IA puede explicar una cuenta, proponer en texto una comprobación o señalar información faltante. No cambia reglas, cargos, abonos, aprobación, vínculos, estados fiscales ni conexiones. Una sugerencia textual se aplica únicamente mediante edición humana en el editor correspondiente.
+
+### 9.5 Límites existentes que deben seguir vigentes
+
+El servidor actual limita cuerpo de chat a 192 KiB, pregunta a 2,000 caracteres, historial a 8 turnos de hasta 1,200 caracteres por turno y uso a 30 solicitudes/10 minutos/IP. La UI conserva hasta 20 mensajes y el upstream tiene un límite de respuesta de 450 tokens. El texto documental genérico admite 14,000 caracteres, pero **esa superficie no se habilita en el panel de herramientas**.
+
+El resumen CFDI actual se limita a 12,000 caracteres antes de sanear y 8,000 después, con hasta ocho pagos de muestra; esas cifras no son un permiso para enviar un extracto o una póliza completa. Los límites propuestos de `tool-assistance-v1` son más estrictos y todavía no están implementados. Los límites por IP/en memoria no equivalen a cuotas comerciales por cuenta; no se diseñan pagos o suscripciones en este trabajo.
+
+## 10. Fases recomendadas y puertas de autorización
+
+| Fase | Resultado propuesto | Frontera |
+|---|---|---|
+| 0 — Este documento | Plan, wireframes y criterios completos | Autorizada y entregada como documentación; sin código ni publicación. |
+| 1 — Panel común genérico | Asistente desplegable en las vistas reales y espacios informativos, sin redirección, sin archivos/contexto fiscal automático | Requiere autorización frontend. Reutiliza chat existente; no nueva API, esquema ni voz. |
+| 2 — Núcleo de pólizas | Catálogo/reglas por empresa en memoria, decimal exacto, selección CFDI, generación determinista, revisión y aprobación local | Requiere autorización frontend distinta. Si falta precisión de ingesta, resolverla antes de habilitar aprobación. |
+| 3 — Evidencia bancaria | Adaptador de movimientos y relaciones revisadas para liquidación | Depende de la conciliación local y de autorización de sus decisiones; no publica ni conecta bancos automáticamente. |
+| 4 — Explicaciones con resumen | Vista previa, consentimiento y contrato servidor para contexto de póliza/banco | Requiere autorización backend y política de datos; no está incluida en fases frontend. |
+| 5 — Durabilidad y roles | Almacenamiento, exportación de pólizas, historial durable, aprobación por usuarios/roles | Fuera del MVP; autorización y diseño de seguridad/RLS por separado. |
+| Publicación de cualquier fase | Commit GPG verificado y despliegue del alcance exacto autorizado | Nueva autorización de publicación. Excluir siempre funciones bancarias/pagos no aprobadas. |
+
+Orden recomendado: **panel genérico → pólizas locales con CFDI → vínculo bancario revisado → contexto estructurado opcional**. La generación de borradores no debe depender de IA ni esperar a una integración bancaria comercial. No se asignan costos, fechas de entrega o tarifas de proveedores sin un análisis solicitado y actualizado.
+
+## 11. Decisiones propuestas para la próxima autorización
+
+1. Aprobar o ajustar la moneda inicial MXN, almacenamiento en memoria y descarga/importación manual de configuración —no de pólizas— como respaldo opcional.
+2. Confirmar si el primer incremento de pólizas será únicamente CFDI, dejando los movimientos para la fase bancaria dependiente.
+3. Confirmar el significado visible **«Aprobada localmente; no contabilizada»**, con revisiones inmutables y sin roles de despacho.
+4. Aprobar qué plantillas iniciales se habilitarán; no se impone una clasificación fiscal universal. El usuario o un profesional debe definir cuentas, tratamiento y requisitos de evidencia.
+5. Elegir si se implementará primero el panel genérico o todo el núcleo local. El resumen estructurado al modelo es una decisión backend posterior, no un efecto implícito de abrir Nora.
+
+Los criterios de aceptación siguientes definen el comportamiento futuro; no describen funciones ya implementadas.
+
+
+## Estado de implementación — corte frontend local de Pólizas sugeridas
+
+Con autorización de implementación, el corte actual incorpora una primera versión local de **Pólizas contables sugeridas**. Incluye el adaptador de fuentes CFDI y movimientos ya normalizados en la sesión, catálogo de cuentas ficticio por empresa local opaca, reglas declarativas editables, generación determinista, importes en unidades menores, validación exacta de cargos/abonos, estados de revisión y aprobación local, además del panel contextual de Nora sin adjuntos ni contexto fiscal automático.
+
+Este corte no crea tablas, endpoints, escrituras de Supabase, conexiones bancarias, exportación contable oficial, libro mayor, impuestos automáticos, roles, sincronización ni despliegue. «Aprobada localmente» sigue significando «no contabilizada». Las decisiones y criterios no cubiertos permanecen en el anexo de pólizas y en `TODO.md`.
