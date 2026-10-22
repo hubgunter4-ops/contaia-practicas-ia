@@ -1,23 +1,43 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Experiencia pública de ContaIA", () => {
-  test("la portada presenta las tres rutas públicas y no monta el aula antigua", async ({ page }) => {
+  test("la portada presenta Aprende y Herramientas como los dos productos y conserva Nora como apoyo", async ({ page }) => {
     await page.goto("/");
 
     await expect(page).toHaveTitle(/ContaIA/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/IA práctica para\s+tu trabajo contable\./);
+    const logoResponse = await page.request.get("/brand/contaia-logo.png");
+    expect(logoResponse.status()).toBe(200);
+    expect(logoResponse.headers()["content-type"]).toMatch(/image\/png/);
+    await expect(page.locator(".public-brand img")).toHaveJSProperty("naturalWidth", 512);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Dos maneras de avanzar con ContaIA\./);
     await expect(page.locator(".public-header .public-nav")).toHaveCount(1);
-    await expect(page.getByRole("link", { name: /Explorar herramientas CFDI/ })).toHaveAttribute("href", "/descripcion/cfdi");
-    await expect(page.getByRole("link", { name: /Explorar el Asistente abierto/ })).toHaveAttribute("href", "/descripcion/asistente");
-    await expect(page.getByRole("link", { name: /Explorar el curso/ })).toHaveAttribute("href", "/descripcion/curso");
-    await expect(page.locator(".public-card")).toHaveCount(3);
+    await expect(page.getByRole("link", { name: /Explorar ContaIA Herramientas/ })).toHaveAttribute("href", "/descripcion/cfdi");
+    await expect(page.getByRole("link", { name: /Explorar ContaIA Aprende/ })).toHaveAttribute("href", "/descripcion/curso");
+    await expect(page.getByRole("link", { name: /Conoce el Asistente abierto/ })).toHaveAttribute("href", "/descripcion/asistente");
+    await expect(page.locator(".public-card")).toHaveCount(2);
+    await expect(page.locator(".public-card").filter({ hasText: "PRODUCTO 01 · OPERACIÓN" })).toContainText("CFDI disponible");
+    await expect(page.locator(".public-card").filter({ hasText: "PRODUCTO 02 · FORMACIÓN" })).toContainText("diez módulos semanales");
     await expect(page.locator("[data-testid=classroom-stage], .classroom-content, .classroom-scene")).toHaveCount(0);
+  });
+
+  test("la portada acomoda los dos productos sin desbordamiento horizontal en móvil", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const products = page.locator(".public-product-card");
+    await expect(products).toHaveCount(2);
+    await expect(products.nth(0)).toBeVisible();
+    await expect(products.nth(1)).toBeVisible();
+    const first = await products.nth(0).boundingBox();
+    const second = await products.nth(1).boundingBox();
+    expect(second.y).toBeGreaterThan(first.y);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test("las preguntas frecuentes describen el alcance actual de CFDI, Anam y el curso", async ({ page }) => {
     await page.goto("/");
 
-    const cfdiFaq = page.locator(".public-faq-item").filter({ hasText: "¿Qué se puede realizar con CFDI?" });
+    const cfdiFaq = page.locator(".public-faq-item").filter({ hasText: "¿Qué incluye ContaIA Herramientas?" });
     await cfdiFaq.locator("summary").click();
     await expect(cfdiFaq).toContainText("El procesamiento del XML ocurre localmente en tu navegador");
     await expect(cfdiFaq).toContainText("No es una validación ante el SAT");
@@ -27,16 +47,16 @@ test.describe("Experiencia pública de ContaIA", () => {
     await expect(anamFaq).toContainText("acompañamiento opcional con voz y video");
     await expect(anamFaq).toContainText("solo cuando tú lo decides");
 
-    const courseFaq = page.locator(".public-faq-item").filter({ hasText: "¿Cómo puedo aprender?" });
+    const courseFaq = page.locator(".public-faq-item").filter({ hasText: "¿Qué incluye ContaIA Aprende?" });
     await courseFaq.locator("summary").click();
     await expect(courseFaq).toContainText("diez módulos semanales y 40 horas");
   });
 
   test("las fichas públicas muestran información y CTA correspondiente a cada ruta", async ({ page }) => {
     const features = [
-      { path: "/descripcion/cfdi", heading: "Analiza tus comprobantes. Con criterio y control.", cta: "Crear cuenta y explorar CFDI", destination: "cfdi" },
+      { path: "/descripcion/cfdi", heading: "Revisa tus comprobantes con más claridad y control.", cta: "Crear cuenta y explorar Herramientas", destination: "cfdi" },
       { path: "/descripcion/asistente", heading: "Conversa con Nora sobre tus dudas contables.", cta: "Crear cuenta y explorar el asistente", destination: "asistente" },
-      { path: "/descripcion/curso", heading: "Aprende IA aplicada a la práctica contable.", cta: "Crear cuenta y empezar el curso", destination: "curso" },
+      { path: "/descripcion/curso", heading: "Aprende IA aplicada a la práctica contable.", cta: "Crear cuenta y empezar Aprende", destination: "curso" },
     ];
 
     for (const feature of features) {
@@ -66,7 +86,7 @@ test.describe("Experiencia pública de ContaIA", () => {
 
   test("el CTA de una ficha envía al registro con su destino", async ({ page }) => {
     await page.goto("/descripcion/cfdi");
-    await page.getByRole("link", { name: /Crear cuenta y explorar CFDI/ }).click();
+    await page.getByRole("link", { name: /Crear cuenta y explorar Herramientas/ }).click();
 
     await expect(page).toHaveURL(/\/registro\?destino=cfdi$/);
     await expect(page.getByRole("heading", { name: "Crea tu cuenta" })).toBeVisible();

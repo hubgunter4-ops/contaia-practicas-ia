@@ -746,12 +746,12 @@ function sidebar() {
 
   return `<aside class="sidebar">
     <button class="brand-button" type="button" data-nav="home" aria-label="Ir al panel principal">
-      ${logoMark()}<span class="brand-copy"><strong>Laboratorio</strong><b>Conta<span>IA</span></b></span>
+      ${logoMark()}<span class="brand-copy"><strong>ContaIA</strong><b>Aprende</b></span>
     </button>
     <div class="sidebar-divider"></div>
-    <p class="nav-label sidebar-section-label">SECCIÓN 02 · LABORATORIO</p>
+    <p class="nav-label sidebar-section-label">SECCIÓN 02 · CONTAIA APRENDE</p>
     <button class="nav-item nav-home ${state.section === "lab" && state.current === "home" ? "is-active" : ""}" type="button" data-nav="home" aria-current="${state.section === "lab" && state.current === "home" ? "page" : "false"}">
-      <span class="home-glyph">${uiIcon("home")}</span><span>Panel de práctica</span>
+      <span class="home-glyph">${uiIcon("home")}</span><span>Inicio · Aprende</span>
     </button>
     <button class="nav-item ${state.section === "study" ? "is-active" : ""}" type="button" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">
       <span class="home-glyph">${uiIcon("book")}</span><span>Base de estudio</span>
@@ -767,7 +767,7 @@ function sidebar() {
 function mobileNavigation() {
   return `<nav class="mobile-bottom-nav" aria-label="Navegación móvil">
     <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home" aria-current="${state.section === "lab" ? "page" : "false"}">${uiIcon("home")}<small>Inicio</small></button>
-    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}">${uiIcon("book")}<small>Curso</small></button>
+    <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}">${uiIcon("book")}<small>Aprende</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "study" ? "is-active" : ""}" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">${uiIcon("book")}<small>Estudio</small></button>
     <button type="button" class="mobile-nav-item ${["tools", "cfdi"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}">${uiIcon("nora")}<small>Nora</small></button>
@@ -776,7 +776,7 @@ function mobileNavigation() {
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "Aula en vivo" : state.section === "advisor" ? "Asistente abierto" : state.section === "cfdi" ? "Analizador CFDI" : state.section === "tools" ? "Centro de herramientas" : state.section === "study" ? "Base de estudio" : state.current === "home" ? "Resumen" : "Ejercicio";
+  const pageLabel = state.section === "course" ? "ContaIA Aprende · Aula" : state.section === "advisor" ? "Nora · Asistente abierto" : state.section === "cfdi" ? "ContaIA Herramientas · CFDI" : state.section === "tools" ? "ContaIA Herramientas" : state.section === "study" ? "Aprende · Base de estudio" : state.current === "home" ? "Aprende · Inicio" : "Aprende · Ejercicio";
   const activeClassIndex = Math.max(0, courseModules.findIndex(({ id }) => id === state.activeModuleId));
   const activeClassComplete = state.completedModules.has(courseModules[activeClassIndex]?.id);
   const nextClassIndex = activeClassComplete
@@ -790,21 +790,22 @@ function topbar() {
     return `<button type="button" class="class-menu-item ${isActive ? "is-active" : ""} ${isComplete ? "is-complete" : ""} ${index === nextClassIndex ? "is-next" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${isActive ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><small class="class-menu-status">${status}</small><small class="class-menu-action">${actionLabel}</small><i aria-hidden="true">${isComplete ? "✓" : index === nextClassIndex ? "→" : ""}</i></button>`;
   }).join("");
   const toolsActive = ["tools", "advisor", "cfdi", "lab", "study"].includes(state.section);
+  const isToolsProduct = ["tools", "cfdi"].includes(state.section);
   const tools = [
-    ["tools", "Centro de herramientas", "grid"],
+    ["tools", "ContaIA Herramientas", "grid"],
     ["advisor", "Asistente abierto", "nora"],
     ["cfdi", "Analizador CFDI", "file"],
     ["lab", "Laboratorio práctico", "check"],
     ["study", "Base de estudio", "book"],
   ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`);
   const advisorToggle = state.section === "advisor" ? "" : `<button class="section-tab advisor-tab" type="button" data-action="tutor-toggle" aria-expanded="${!state.tutor.collapsed}" aria-controls="tutor-panel-body">${uiIcon("nora")}<span>Asesoría</span></button>`;
-  return `<header class="topbar"><div class="breadcrumb"><img class="topbar-brand-logo" src="/brand/contaia-logo-64.png" alt="" aria-hidden="true" /><span>LABORATORIO CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
+  return `<header class="topbar"><div class="breadcrumb"><img class="topbar-brand-logo" src="/brand/contaia-logo-64.png" alt="" aria-hidden="true" /><span>CONTAIA</span><i aria-hidden="true">/</i><strong>${pageLabel}</strong></div>
     <nav class="section-tabs" aria-label="Secciones principales">
-      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>Aula en vivo</span></button>
+      <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>ContaIA Aprende</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b>${uiIcon("menu")}<span>Clases</span>${uiIcon("chevron")}</summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
       <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 3).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(3).join("")}${advisorToggle}</section></div></details>
     </nav>
-    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>Edición educativa</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
+    <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>${isToolsProduct ? "ContaIA Herramientas" : state.section === "advisor" ? "Nora · apoyo transversal" : "ContaIA Aprende"}</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;
 }
 
@@ -861,39 +862,33 @@ function renderPublicLanding() {
   return `<div class="public-landing">
     <header class="public-header">
       <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
-      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="#cfdi">CFDI</a><a href="#asistente">Asistente abierto</a><a href="#curso">Curso</a></nav>
+      <nav class="public-nav" aria-label="Productos de ContaIA"><a href="#aprende">Aprende</a><a href="#herramientas">Herramientas</a><a href="#nora">Nora</a></nav>
       <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
     </header>
     <main id="contenido" class="public-main" tabindex="-1">
       <section class="public-hero" aria-labelledby="public-title">
-        <p class="public-kicker"><i aria-hidden="true"></i> LABORATORIO CONTAIA · IA PARA CONTABILIDAD</p>
-        <h1 id="public-title">IA práctica para<br/> tu trabajo contable.</h1>
-        <p class="public-lede">Analiza tus CFDI, conversa con Nora en el Asistente abierto y aprende paso a paso con Anam como integración opcional en la experiencia formativa.</p>
-        <a class="public-primary-cta" href="#rutas">Elige por dónde empezar <span aria-hidden="true">↓</span></a>
+        <p class="public-kicker"><i aria-hidden="true"></i> CONTAIA · APRENDIZAJE Y HERRAMIENTAS FISCALES</p>
+        <h1 id="public-title">Dos maneras de avanzar con ContaIA.</h1>
+        <p class="public-lede">Aprende con una ruta guiada o entra a herramientas para trabajar con CFDI. Cada producto tiene un propósito claro; Nora acompaña la experiencia donde necesites orientación.</p>
+        <a class="public-primary-cta" href="#productos">Conoce los productos <span aria-hidden="true">↓</span></a>
       </section>
-      <section id="rutas" class="public-card-grid" aria-label="Tres formas de usar ContaIA">
-        <article id="cfdi" class="public-card public-card-cfdi">
-          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("file")}</span><span class="public-card-label">HERRAMIENTAS</span></div>
-          <h2>CFDI con más claridad</h2>
-          <p class="public-card-copy">Analiza y organiza comprobantes con herramientas de apoyo para tu trabajo contable.</p>
-          <p class="public-card-note"><span aria-hidden="true">◈</span> Empieza con ejemplos; protege los datos reales.</p>
-          <a class="public-card-cta" href="/descripcion/cfdi">Explorar herramientas CFDI <span aria-hidden="true">→</span></a>
+      <section id="productos" class="public-card-grid public-product-grid" aria-label="Los dos productos de ContaIA">
+        <article id="herramientas" class="public-card public-card-cfdi public-product-card">
+          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("file")}</span><span class="public-card-label">PRODUCTO 01 · OPERACIÓN</span></div>
+          <p class="public-product-name">ContaIA</p><h2>Herramientas</h2>
+          <p class="public-card-copy">Analiza CFDI XML y ZIP en tu navegador, revisa relaciones de pagos y consulta hallazgos para decidir qué verificar.</p>
+          <p class="public-card-note"><span aria-hidden="true">◈</span> CFDI disponible; Contabilidad requiere conexión y Nómina, DIOT y Monitor fiscal siguen en preparación.</p>
+          <a class="public-card-cta" href="/descripcion/cfdi">Explorar ContaIA Herramientas <span aria-hidden="true">→</span></a>
         </article>
-        <article id="asistente" class="public-card public-card-assistant">
-          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("nora")}</span><span class="public-card-label">ASISTENTE</span></div>
-          <h2>Asistente abierto</h2>
-          <p class="public-card-copy">Conversa con Nora sobre dudas contables y fiscales en México, fuera del recorrido estructurado del curso.</p>
-          <p class="public-card-note"><span aria-hidden="true">✓</span> Pregunta a tu ritmo y conserva tu criterio.</p>
-          <a class="public-card-cta" href="/descripcion/asistente">Explorar el Asistente abierto <span aria-hidden="true">→</span></a>
-        </article>
-        <article id="curso" class="public-card public-card-course">
-          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("book")}</span><span class="public-card-label">APRENDIZAJE GUIADO</span></div>
-          <h2>Aprende a tu ritmo</h2>
-          <p class="public-card-copy">Clases prácticas, ejercicios guiados y casos ficticios; Anam puede acompañar el aprendizaje cuando tú lo actives.</p>
-          <p class="public-card-note"><span aria-hidden="true">✦</span> 10 clases guiadas · integración opcional de Anam.</p>
-          <a class="public-card-cta" href="/descripcion/curso">Explorar el curso <span aria-hidden="true">→</span></a>
+        <article id="aprende" class="public-card public-card-course public-product-card">
+          <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("book")}</span><span class="public-card-label">PRODUCTO 02 · FORMACIÓN</span></div>
+          <p class="public-product-name">ContaIA</p><h2>Aprende</h2>
+          <p class="public-card-copy">Desarrolla criterio con diez módulos semanales, práctica guiada con casos ficticios y una ruta de 40 horas acompañada por Nora.</p>
+          <p class="public-card-note"><span aria-hidden="true">✦</span> Retoma el recorrido y consulta el avance guardado localmente en este navegador.</p>
+          <a class="public-card-cta" href="/descripcion/curso">Explorar ContaIA Aprende <span aria-hidden="true">→</span></a>
         </article>
       </section>
+      <p class="public-product-support" id="nora">Nora acompaña el aprendizaje y también puede responder preguntas abiertas. <a href="/descripcion/asistente">Conoce el Asistente abierto <span aria-hidden="true">↗</span></a></p>
       <p class="public-privacy-note">Aprende y prueba con responsabilidad. Usa ejemplos ficticios y revisa los resultados antes de aplicarlos a tu trabajo.</p>
       <section class="public-lead-section" aria-labelledby="public-lead-title">
         <div class="public-lead-copy"><p class="public-lead-eyebrow">TU SIGUIENTE PASO</p><h2 id="public-lead-title">¿Qué ruta te interesa?</h2><p>Déjanos tu correo y elige por dónde empezar. Te llevamos al registro con esa ruta seleccionada.</p></div>
@@ -901,9 +896,9 @@ function renderPublicLanding() {
           <label class="public-lead-email-label" for="public-lead-email">Tu correo electrónico</label>
           <input id="public-lead-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required />
           <fieldset><legend>Me interesa:</legend>
-            <label class="public-interest-option"><input type="radio" name="destino" value="cfdi" required /><span>CFDI</span></label>
-            <label class="public-interest-option"><input type="radio" name="destino" value="asistente" /><span>Asistente abierto</span></label>
-            <label class="public-interest-option"><input type="radio" name="destino" value="curso" /><span>Curso</span></label>
+            <label class="public-interest-option"><input type="radio" name="destino" value="cfdi" required /><span>ContaIA Herramientas</span></label>
+            <label class="public-interest-option"><input type="radio" name="destino" value="asistente" /><span>Nora · Asistente abierto</span></label>
+            <label class="public-interest-option"><input type="radio" name="destino" value="curso" /><span>ContaIA Aprende</span></label>
           </fieldset>
           <button class="public-lead-submit" type="submit">Continuar con mi correo <span aria-hidden="true">→</span></button>
           <p class="public-lead-disclosure">El correo se usa para prellenar el registro; no se agrega a una lista de marketing.</p>
@@ -916,10 +911,11 @@ function renderPublicLanding() {
       <section class="public-faq" aria-labelledby="public-faq-title">
         <div class="public-faq-heading"><p class="public-lead-eyebrow">CONOCE CONTAIA</p><h2 id="public-faq-title">Preguntas frecuentes</h2><p>Qué puedes hacer y cómo empezar.</p></div>
         <div class="public-faq-list">
-          <details class="public-faq-item"><summary>¿Qué se puede realizar con CFDI?</summary><div class="public-faq-answer"><p>El analizador lee archivos XML o ZIP, organiza facturas, pagos y conceptos, relaciona complementos de pago con facturas y señala diferencias o alertas aritméticas para revisar. El procesamiento del XML ocurre localmente en tu navegador. No es una validación ante el SAT ni un dictamen profesional.</p></div></details>
+          <details class="public-faq-item"><summary>¿Qué incluye ContaIA Herramientas?</summary><div class="public-faq-answer"><p>El analizador CFDI lee archivos XML o ZIP, organiza facturas, pagos y conceptos, relaciona complementos de pago con facturas y señala diferencias o alertas aritméticas para revisar. El procesamiento del XML ocurre localmente en tu navegador. No es una validación ante el SAT ni un dictamen profesional.</p></div></details>
           <details class="public-faq-item"><summary>¿Cómo se integra Anam en el aprendizaje?</summary><div class="public-faq-answer"><p>Anam es un acompañamiento opcional con voz y video para apoyar la experiencia formativa junto a Nora. Se activa solo cuando tú lo decides y concedas los permisos necesarios; no sustituye las prácticas ni el criterio profesional.</p></div></details>
-          <details class="public-faq-item"><summary>¿Cómo puedo aprender?</summary><div class="public-faq-answer"><p>El curso tiene diez módulos semanales y 40 horas. Cada clase alterna activación, explicación, práctica guiada con casos ficticios, revisión y cierre. Nora acompaña el recorrido; Anam puede integrarse de forma opcional. Avanza paso a paso y revisa tu progreso en este navegador.</p></div></details>
-          <details class="public-faq-item"><summary>¿Qué otras herramientas y opciones hay?</summary><div class="public-faq-answer"><p>Además del analizador CFDI, puedes explorar el Asistente abierto de Nora, el Laboratorio práctico y la Base de estudio. El Centro de herramientas también presenta Contabilidad —requiere conexión—, Nómina, DIOT y Monitor fiscal, que están en preparación o requieren una conexión antes de operar.</p></div></details>
+          <details class="public-faq-item"><summary>¿Qué incluye ContaIA Aprende?</summary><div class="public-faq-answer"><p>El curso tiene diez módulos semanales y 40 horas. Cada clase alterna activación, explicación, práctica guiada con casos ficticios, revisión y cierre. Nora acompaña el recorrido; Anam puede integrarse de forma opcional. Avanza paso a paso y revisa tu progreso en este navegador.</p></div></details>
+          <details class="public-faq-item"><summary>¿Qué módulos están disponibles hoy?</summary><div class="public-faq-answer"><p>CFDI está disponible para análisis local. Contabilidad requiere una conexión; Nómina, DIOT y Monitor fiscal están en preparación. El Centro de herramientas indica la disponibilidad funcional y el estado de conexión por separado.</p></div></details>
+          <details class="public-faq-item"><summary>¿Dónde puedo consultar a Nora?</summary><div class="public-faq-answer"><p>Nora acompaña el aprendizaje y también está disponible en el Asistente abierto para preguntas fuera de una clase. Comparte solo casos ficticios o información anonimizada; no es asesoría profesional.</p></div></details>
         </div>
       </section>
     </main>
@@ -930,13 +926,13 @@ function renderPublicLanding() {
 
 const PUBLIC_FEATURES = Object.freeze({
   cfdi: {
-    eyebrow: "HERRAMIENTAS · CFDI",
-    title: "Analiza tus comprobantes. Con criterio y control.",
+    eyebrow: "CONTAIA HERRAMIENTAS · CFDI",
+    title: "Revisa tus comprobantes con más claridad y control.",
     summary: "Lee archivos XML o ZIP, relaciona complementos de pago con facturas y localiza diferencias para revisar. El análisis se realiza localmente en tu navegador.",
     icon: "file",
-    bullets: ["Analiza uno o varios XML, o un archivo ZIP.", "Consulta resúmenes de facturas, pagos y conceptos.", "Revisa alertas aritméticas y de relación entre documentos."],
+    bullets: ["Analiza uno o varios XML, o un archivo ZIP, localmente en el navegador.", "Consulta resúmenes de facturas, pagos y conceptos.", "Revisa alertas aritméticas y relaciones entre documentos; otros módulos se habilitarán cuando estén listos."],
     note: "No es una validación ante el SAT ni un dictamen profesional. El XML no se envía al servidor; si eliges guardar un resultado, algunos datos identificatorios pueden quedar en tu cuenta privada.",
-    cta: "Crear cuenta y explorar CFDI",
+    cta: "Crear cuenta y explorar Herramientas",
   },
   asistente: {
     eyebrow: "ASISTENTE ABIERTO · NORA",
@@ -948,13 +944,13 @@ const PUBLIC_FEATURES = Object.freeze({
     cta: "Crear cuenta y explorar el asistente",
   },
   curso: {
-    eyebrow: "CURSO · APRENDIZAJE GUIADO",
+    eyebrow: "CONTAIA APRENDE · RUTA GUIADA",
     title: "Aprende IA aplicada a la práctica contable.",
     summary: "Recorre diez módulos semanales —40 horas en total— con conceptos, prácticas guiadas, revisión y cierre. Anam puede integrarse como acompañamiento opcional durante el aprendizaje.",
     icon: "book",
     bullets: ["Diez módulos organizados en una ruta de diez semanas.", "Prácticas contables guiadas con apoyo de Nora.", "Integra Anam de forma opcional y consulta tu avance en este navegador."],
     note: "Es un curso educativo, no asesoría profesional, contable, fiscal, laboral ni legal. Anam es opcional y requiere que concedas los permisos de audio o video que decidas usar.",
-    cta: "Crear cuenta y empezar el curso",
+    cta: "Crear cuenta y empezar Aprende",
   },
 });
 
@@ -966,7 +962,7 @@ function renderPublicFeaturePage(featureId) {
   return `<div class="public-landing public-feature-page">
     <header class="public-header">
       <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
-      <nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/#cfdi">CFDI</a><a href="/#asistente">Asistente abierto</a><a href="/#curso">Curso</a></nav>
+      <nav class="public-nav" aria-label="Productos de ContaIA"><a href="/#aprende">Aprende</a><a href="/#herramientas">Herramientas</a><a href="/#nora">Nora</a></nav>
       <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
     </header>
     <main id="contenido" class="public-main public-description-main" tabindex="-1">
@@ -982,7 +978,7 @@ function renderPublicFeaturePage(featureId) {
         <div class="public-description-list"><p class="public-description-label">QUÉ ENCONTRARÁS</p><h2>Una ruta clara para empezar.</h2><ul>${bullets}</ul></div>
         <aside class="public-description-note"><span class="public-note-shield" aria-hidden="true">◈</span><b>Privacidad y alcance</b><p>${escapeHtml(feature.note)}</p></aside>
       </section>
-      <p class="public-description-bottom"><a href="/">Explora también las otras rutas de ContaIA</a></p>
+      <p class="public-description-bottom"><a href="/">Explora ambos productos de ContaIA</a></p>
     </main>
     <footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/registro?destino=${destination}">Crear una cuenta</a></footer>
     ${renderAuthPanel()}
@@ -1015,7 +1011,7 @@ function renderPublicInfoPage(pageId) {
   if (!page) return "";
   const cards = page.cards.map(([title, text], index) => `<article class="public-info-card"><span>${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></article>`).join("");
   const recovery = page.recovery ? `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label><div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}"/><button class="public-primary-cta" type="submit">${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${authState.message ? `<p class="public-recovery-message ${authState.error ? "is-error" : "is-success"}" role="status">${escapeHtml(authState.message)}</p>` : ""}</form>` : "";
-  return `<div class="public-landing public-info-page public-info-${escapeHtml(pageId)}"><header class="public-header"><a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a><nav class="public-nav" aria-label="Rutas de ContaIA"><a href="/descripcion/cfdi">CFDI</a><a href="/descripcion/asistente">Asistente</a><a href="/descripcion/curso">Curso</a></nav><button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button></header><main id="contenido" class="public-main public-info-main" tabindex="-1"><a class="public-back-link" href="/">← Volver a ContaIA</a><section class="public-info-hero"><div class="public-info-icon" aria-hidden="true">${uiIcon(page.icon)}</div><p class="public-kicker">${escapeHtml(page.eyebrow)}</p><h1>${escapeHtml(page.title)}</h1><p class="public-lede">${escapeHtml(page.summary)}</p>${recovery}<div class="public-info-actions"><a class="public-primary-cta" href="${page.primary[1]}">${escapeHtml(page.primary[0])}<span aria-hidden="true">→</span></a><a class="public-secondary-cta" href="${page.secondary[1]}">${escapeHtml(page.secondary[0])}</a></div></section><section class="public-info-grid" aria-label="Información de ContaIA">${cards}</section></main><footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/ayuda">Ayuda</a></footer>${renderAuthPanel()}</div>`;
+  return `<div class="public-landing public-info-page public-info-${escapeHtml(pageId)}"><header class="public-header"><a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a><nav class="public-nav" aria-label="Productos de ContaIA"><a href="/descripcion/curso">Aprende</a><a href="/descripcion/cfdi">Herramientas</a><a href="/descripcion/asistente">Nora</a></nav><button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button></header><main id="contenido" class="public-main public-info-main" tabindex="-1"><a class="public-back-link" href="/">← Volver a ContaIA</a><section class="public-info-hero"><div class="public-info-icon" aria-hidden="true">${uiIcon(page.icon)}</div><p class="public-kicker">${escapeHtml(page.eyebrow)}</p><h1>${escapeHtml(page.title)}</h1><p class="public-lede">${escapeHtml(page.summary)}</p>${recovery}<div class="public-info-actions"><a class="public-primary-cta" href="${page.primary[1]}">${escapeHtml(page.primary[0])}<span aria-hidden="true">→</span></a><a class="public-secondary-cta" href="${page.secondary[1]}">${escapeHtml(page.secondary[0])}</a></div></section><section class="public-info-grid" aria-label="Información de ContaIA">${cards}</section></main><footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/ayuda">Ayuda</a></footer>${renderAuthPanel()}</div>`;
 }
 
 function renderModuleSessionFlow(module) {
@@ -1680,7 +1676,7 @@ app.addEventListener("submit", (event) => {
     const destination = String(formData.get("destino") || "");
     if (!email || !["cfdi", "asistente", "curso"].includes(destination)) return;
     try { sessionStorage.setItem("contaia.signup.prefill-email", email); } catch { /* Si el almacenamiento falla, el registro permite escribirlo manualmente. */ }
-    const destinationLabels = { cfdi: "CFDI", asistente: "Asistente abierto", curso: "el curso" };
+    const destinationLabels = { cfdi: "ContaIA Herramientas", asistente: "Nora · Asistente abierto", curso: "ContaIA Aprende" };
     const toast = interestForm.querySelector("[data-lead-toast]");
     const toastMessage = interestForm.querySelector("[data-lead-toast-message]");
     const submitButton = interestForm.querySelector(".public-lead-submit");

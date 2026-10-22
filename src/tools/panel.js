@@ -228,7 +228,7 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
   const forms = workspace.profileForm ? renderProfileForm(workspace) : workspace.connectionForm ? renderConnectionForm(workspace) : "";
   const toolHeader = renderToolHeader({
     id: "tools",
-    eyebrow: "CONTAIA · CENTRO OPERATIVO",
+    eyebrow: "CONTAIA HERRAMIENTAS · CENTRO OPERATIVO",
     title: "Herramientas fiscales con claridad.",
     description: "Configura tu perfil, revisa el estado de cada herramienta y decide el siguiente paso. Las operaciones sensibles requieren aprobación.",
     statusLabel: `${readyCount} lista · ${preparationCount} en preparación`,

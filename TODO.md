@@ -1,6 +1,6 @@
 # TODO — evolución visual modular de ContaIA
 
-**Estado:** fases 0–4 implementadas localmente en `feat/visual-modular-tools`. No se hizo commit, push ni despliegue; tampoco se añadieron cambios de backend, operaciones fiscales o integraciones nuevas. Validación final: build estático correcto; 126 pruebas unitarias aprobadas; 20 E2E aprobadas en Chromium de escritorio y Pixel 5; el manifiesto de rutas servido por HTTP coincide exactamente con el archivo fuente.
+**Estado:** fases visuales 0–4 incluidas en `main` mediante el commit `217484c` y publicadas previamente. El anexo comercial sigue siendo propuesta; la nueva separación visual de ContaIA Aprende y ContaIA Herramientas quedó implementada localmente, sin commit ni despliegue. No se añadieron pagos, cuotas comerciales, backend ni operaciones fiscales. Validación de este trabajo: build estático correcto; 126 pruebas unitarias aprobadas; 22 E2E aprobadas en Chromium de escritorio y Pixel 5.
 
 - [x] **Base visual y semántica compartida**
   - Introducir la paleta «Confianza fiscal» con estos valores y usos: azul petróleo `#123B43` para estructura, encabezados, navegación y análisis; verde jade `#16866F` para acciones, progreso y estados positivos; marfil cálido `#F5F4EC` para lectura y fondo; arena `#E4E6D8` para superficies secundarias; coral tenue `#E98268` para alertas, riesgos y pendientes; amarillo validación `#D9B84C` para recomendaciones y logros.
@@ -41,3 +41,25 @@
   - Contabilidad se presenta como clasificación/conciliación solo en el grado respaldado por capacidades existentes; Nómina como flujo guiado solo si hay cálculos y datos reales; DIOT como revisión de consistencia solo con datos verificables; Monitor fiscal como centro de alertas solo con alertas/fechas reales; Perfil, Conexiones y Documentos muestran sus capacidades actuales, estados y acciones reales.
   - No añadir en este trabajo pólizas, conciliación bancaria, cálculo/confirmación de nómina, generación/presentación DIOT, alertas automáticas, sincronización real de proveedores, almacenamiento documental nuevo ni auditoría fiscal. Esos flujos necesitan contratos, datos, permisos y autorización específica.
   - El modo oscuro adicional para análisis/IA y extender la nueva paleta al Aula/login quedan como decisiones posteriores; el tema oscuro del Aula en vivo permanece aislado.
+
+
+## Nuevo alcance autorizado — páginas y navegación de ContaIA Aprende y ContaIA Herramientas
+
+- [x] **Portada pública con dos productos claramente separados**
+  - Presentar únicamente dos productos principales y con jerarquía equivalente: **ContaIA Aprende** y **ContaIA Herramientas**; no presentar Asistente abierto como tercer producto, sino como capacidad de Nora disponible dentro de los recorridos donde corresponde y conservar su acceso.
+  - Explicar con copy factual el propósito, qué se puede hacer hoy y el destino de cada producto. Aprende remite al curso real y a su progreso local. Herramientas muestra CFDI como herramienta disponible (XML/ZIP, revisión y análisis local) y aclara que Contabilidad, Nómina, DIOT y Monitor fiscal están en preparación, si se mencionan.
+  - Enlazar Aprende al destino existente `/descripcion/curso` y Herramientas al destino existente `/descripcion/cfdi`; conservar compatibilidad de estas URLs, el registro, el prellenado de destino, login, confirmación de correo, páginas informativas y accesibilidad de enlaces.
+  - No mostrar precios, botones de compra, pruebas de pago ni afirmar planes gratuitos/de pago como contrato vigente. La separación es informativa/visual; no se añade backend, autenticación nueva, segmentación comercial ni almacenamiento.
+  - Preservar notas reales de privacidad y alcance: progreso de Aprende guardado localmente; XML de CFDI procesado localmente; no afirmar que el análisis sea validación SAT ni dictamen profesional.
+
+- [x] **Identidad de producto dentro de la aplicación autenticada**
+  - Nombrar y agrupar las áreas de curso/aprendizaje como **ContaIA Aprende** y el hub/análisis CFDI como **ContaIA Herramientas**, con indicadores comprensibles en encabezado, menú superior y navegación móvil.
+  - Mantener el recorrido funcional existente: Curso/Aula, Estudio y prácticas siguen accesibles; Herramientas, CFDI y Nora siguen en las secciones y manejadores actuales. Nora conserva su función contextual, no se presenta como un tercer producto vendible.
+  - Conservar la barra móvil de cinco destinos y sus acciones existentes —Inicio, Aprende/Curso, Estudio, Herramientas y Nora— con estados activos correctos; adaptar nombres sin truncar ni ocultar controles.
+  - Mantener los temas visuales separados que ya existen para aprendizaje y fiscal; no introducir registro de suscripción, cuotas, claims de plan ni cambios de acceso.
+
+- [x] **Diseño responsive, accesible y compatible con rutas existentes**
+  - Usar el diseño editorial y la identidad ContaIA existentes con las superficies/cromática apropiadas a cada producto; preservar tipografías, jerarquía, foco visible, navegación por teclado, movimiento reducido y contraste suficiente.
+  - En móvil, apilar las dos tarjetas con CTA táctiles, textos legibles y enlaces no solapados con Nora flotante ni la navegación inferior; en escritorio, mostrar dos columnas equilibradas y una introducción breve.
+  - Si se modifica el conjunto de URLs públicas, actualizar `public/manus-routes.json` solo con las rutas reales y comprobar que el servidor sirve el JSON exacto, no fallback HTML. Preferir las rutas existentes y no añadir ruta si el producto puede explicarse usando los destinos actuales.
+  - Confirmar que una sesión autenticada conserva sus rutas/acciones y que un visitante no autenticado puede explorar ambas descripciones y continuar por el registro que ya existe.

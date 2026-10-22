@@ -100,3 +100,152 @@ La base de UI parte de los tokens actuales y los temas localizados descritos en 
 ## Autorización
 
 El usuario autorizó los cambios locales de interfaz de las fases 0–4, sujetos a los límites anteriores. No autorizó operaciones/backend fiscal nuevos, activación de integraciones, cambios en datos reales, commit, push ni despliegue; esos pasos requieren una solicitud/autorización aparte. `TODO.md` contiene los resultados y criterios aprobados.
+
+
+---
+
+# Anexo propuesto — evolución comercial de ContaIA
+
+**Estado de este anexo:** propuesta estratégica y de implementación elaborada el 21 de octubre de 2026 a partir de las cuatro preguntas recientes sobre monetización, completar capacidades y pasar de web a software, competencia, y precios/costos. **No constituye autorización para implementar backend de pagos, activar servicios, cobrar, alterar datos reales, hacer commit, desplegar ni cambiar funcionalidades.** Cada fase técnica necesita aprobación de alcance antes de empezar. El roadmap visual 0–4 documentado arriba conserva su estado y alcance originales.
+
+## 1. Decisión de producto y posicionamiento
+
+ContaIA debe competir por ayudar a una persona a pasar de entender un concepto a resolver un flujo contable concreto con orientación clara y privacidad, no por igualar la amplitud de una suite contable madura ni por cobrar por tutoriales básicos que ya se ofrecen gratis. El posicionamiento recomendado es **“aprende, practica y analiza comprobantes con guía contextual”**, dirigido primero a estudiantes de contabilidad y contadores independientes que procesan CFDI en México.
+
+La diferenciación consta de tres partes que se refuerzan: un curso aplicado separado de la operación; un analizador CFDI real cuyo procesamiento permanece local; y Nora que explica el contexto o los hallazgos sin afirmar validación oficial ante el SAT. La interfaz debe decir qué es educativo, qué es análisis auxiliar y qué no es una operación fiscal validada.
+
+La evidencia competitiva preliminar y sus límites están anotados en `contaia-monetization-research.md`: el SAT publica ayuda, ejemplos y simuladores gratuitos, mientras suites como CONTPAQi presentan una amplitud que ContaIA aún no tiene. Esas fuentes orientan el enfoque, no prueban disposición a pagar ni autorizan afirmaciones sobre competidores. No perseguir paridad con contabilidad electrónica, nómina, DIOT, conciliación bancaria, timbrado o alertas automáticas antes de tener los procesos, controles y fuentes que los sostengan.
+
+## 2. Separación de productos y escalera de precios
+
+La separación debe ser comercial y de navegación, pero compartir una cuenta y un núcleo de identidad; compra independiente no debe implicar duplicar login o perfiles. Páginas y menús nombran explícitamente **Aprende** y **Herramientas** y explican qué conserva cada una. El progreso educativo y los documentos fiscales siguen siendo dominios de datos distintos.
+
+| Plan de referencia a validar | Precio sugerido | Qué desbloquea cuando esté implementado | Enfoque gratuito |
+|---|---:|---|---|
+| **Aprende Gratis** | $0 | Inicio del recorrido, progreso local y prácticas/muestras disponibles. Cuota mensual pequeña y visible para Nora. | Deja que la persona compruebe el estilo didáctico sin tarjeta. |
+| **Aprende Plus** | $129 MXN/mes o $1,290/año | Cursos publicados completos, prácticas y retroalimentación de Nora con cuota mensual explícita y progreso sincronizado entre dispositivos. | No cobrar por la información introductoria que ya está ampliamente disponible en fuentes públicas. |
+| **Herramientas CFDI Gratis** | $0 | Importar y analizar localmente XML/ZIP conforme a las funciones existentes. Nora y el historial que impliquen servidor pueden llevar cuotas gratuitas, claramente mostradas. | Mantener gratis el análisis local base; no cuesta una llamada de modelo por archivo y es la puerta de entrada al producto. |
+| **Herramientas CFDI Pro** | $179 MXN/mes o $1,790/año | Tras implementación: lotes ampliados, historial privado en nube, varios perfiles cuando el flujo esté preparado y explicaciones contextuales de Nora con cuota explícita. | No cobrar por herramientas que aún son solo fichas “en preparación”. |
+| **ContaIA Completa** | $249 MXN/mes o $2,490/año | Aprende Plus + Herramientas CFDI Pro; descuento de $59 al mes frente a suscripciones separadas. | Facilita probar cada producto antes de adquirir el paquete. |
+
+Estos importes son hipótesis de lanzamiento para probar, no una decisión final ni benchmark validado por entrevistas. La suscripción anual equivale a diez mensualidades y debe mostrarse con su precio total, condiciones de renovación y cancelación. No vender acceso premium a beneficios que todavía no existan: si el curso completo, sincronización o historial avanzado no están listos, la página muestra lista de espera o acceso beta claramente descrito, no una falsa suscripción.
+
+Un plan para escuelas, facultades o despachos se difiere hasta que exista separación de organizaciones, roles, administración de licencias y control de uso compartido. No fijar precio por asiento todavía.
+
+## 3. Arquitectura: web actual a producto instalable
+
+### 3.1 Ruta recomendada: PWA primero, aplicación nativa solo con evidencia
+
+La forma viable de pasar de “página web” a “software” sin mantener dos productos es convertir primero la SPA actual en una **Progressive Web App (PWA) instalable**. El usuario la instala desde navegador compatible y abre una ventana propia, pero se mantiene una sola base de código JavaScript y CSS. Esta opción reduce el costo inicial frente a rehacer la app en React Native u otro framework y conserva la web indexable para adquisición y páginas públicas.
+
+La PWA debe tener manifiesto con nombre, colores e iconos de ContaIA; comportamiento de instalación explicado; cacheo controlado de shell y contenido público/educativo que se haya diseñado para uso offline; y una pantalla clara cuando no haya conexión. Mantener login, pagos, APIs, historial fiscal y estado privado fuera del cache offline salvo diseño específico de seguridad. No almacenar XML ni respuestas con datos fiscales en un service worker o cache compartido. El analizador CFDI mantiene el principio local-first; los recursos de curso descargables requieren una decisión de derechos, actualización y retención.
+
+Una aplicación nativa solo se evalúa después de observar demanda de notificaciones nativas, uso offline más amplio o necesidad de capacidades móviles que la PWA no cubre. La reutilización de la web no garantiza por sí sola publicación en tiendas; si se aprueba esa vía, preparar presupuesto y arquitectura móvil separados.
+
+### 3.2 Módulos propuestos, reutilizando la SPA y Supabase/Vercel
+
+- `src/course.js`, `classroom.js`, `exercises.js`, `progress.js`: conservar como dominio de Aprende; ampliar con cuotas de curso y sincronización solo después de definir el dato mínimo que requiere persistencia.
+- `src/cfdi/*`: conserva parser/análisis local; añadir únicamente mejoras premium alrededor de organización del flujo, historial privado y Nora, sin trasladar XML al backend por defecto.
+- `src/tools/catalog.js` y `src/main.js`: sostienen la navegación separada y los estados veraces del Hub; ampliar el catálogo solo con módulos funcionales comprobados.
+- `src/billing/*` propuesto: adaptador del proveedor de pagos, lectura de suscripción, catálogo de precios y resolución de derechos/entitlements. El navegador recibe capacidades derivadas del servidor; no puede autodeclarar un plan.
+- `api/billing/*` propuesto: inicio de checkout y portal/cancelación, más webhook del proveedor. La URL de retorno del checkout no concede acceso; el webhook autenticado y procesado de forma idempotente actualiza el estado de la suscripción.
+- `src/usage/*` y una API de servidor propuesta: validar cuenta y derecho antes de llamar a Nora; contar uso por periodo y función; impedir concurrencia/elusión; responder con saldo/cupo y fecha de reinicio. La cuota actual de Nora, basada en IP y memoria del proceso, no es control comercial durable.
+- Persistencia Supabase propuesta: tablas separadas para suscripciones, eventos de cobro idempotentes y consumo agregado por usuario/periodo/producto. RLS por `auth.uid()` para datos privados. El servidor valida firmas del procesador y transiciona estados; no aceptar estado, precio, periodo o límites enviados desde cliente. Guardar datos financieros mínimos para derechos, conciliación y soporte, no credenciales de pago ni documentos fiscales.
+- `public/manifest.webmanifest` y service worker propuestos: shell instalable y cache público/estático cuidadosamente definido. Las páginas privadas y API llevan política `no-store` donde corresponda; no cachear llamadas de auth, checkout, suscripción, uso o datos fiscales.
+- `tests/*`: ampliar con pruebas de derechos/cuotas y estados de webhook antes de pagos reales, además de mantener la suite actual de unidad/E2E.
+
+La arquitectura existente es Vanilla JS SPA, APIs Vercel y Supabase Auth/RLS; por tanto, no se propone reescribir a React ni añadir un microservicio separado para lanzar un primer plan individual.
+
+## 4. Costos de producción y unidad económica
+
+La hoja de precios investigada y sus condiciones están en `contaia-pricing-proposal.md`; sus cifras reflejan tarifas públicas consultadas el 21 de octubre de 2026, no facturas ni mediciones por usuario.
+
+### 4.1 Base de infraestructura
+
+Para estimar el lanzamiento comercial, reservar como escenario inicial **Vercel Pro $20 USD/mes + Supabase Pro desde $25 USD/mes por organización = $45 USD/mes de precio de lista**. Con un tipo de cambio de modelación, no de mercado, de $18.50 MXN/USD equivale a $832.50 MXN mensuales antes de impuestos/excesos. Hay créditos publicados en ambos proveedores para determinados consumos, pero no se toman como descuento garantizado. Revisar proyectos/compute que causan cobro y evitar duplicación de planes; el uso comercial no debería depender de Vercel Hobby, cuyo plan se publica para uso personal/no comercial.
+
+Supabase Free puede sostener prototipo, pero para operación comercial con registros privados conviene presupuestar Pro, política de backup, límites de gasto y monitoreo. No elevar a un servicio persistente adicional hasta identificar una necesidad que la plataforma actual no pueda cubrir.
+
+### 4.2 IA y límites por plan
+
+Con precio OpenAI publicado para gpt-4.1-mini ($0.40/M tokens input; $1.60/M output) y una hipótesis de 5,000 tokens de entrada + 450 de salida por respuesta, el costo calculado es $0.00272 USD, aproximadamente $0.050 MXN por respuesta con el supuesto de cambio de $18.50. Equivale a unos $5.03 por 100 respuestas y $10.06 por 200. El costo real debe medirse: historial y prompt pueden hacer variar tokens; no se debe vender Nora “ilimitada” sin telemetría y control de gasto.
+
+Propuesta de límites iniciales para validación beta, aún por diseñar y autorizar: Gratis con 10 respuestas de Nora mensuales; Aprende Plus con 100; Herramientas CFDI Pro con 100 explicaciones de hallazgos; Completa con 200 en total por usuario. Los límites son ejemplos de trabajo, no configuraciones ya existentes; instrumentar uso, probar abusos y decidir si los cupos son por mes calendario o ciclo de suscripción antes de publicarlos. El análisis CFDI local se mantiene sin cupo IA porque el cómputo ocurre en el dispositivo.
+
+### 4.3 Pago y contribución
+
+Tarifas públicas consultadas: Stripe México publica 3.6% + $3 MXN por tarjeta nacional y Stripe Billing añade 0.7% del volumen Billing. Mercado Pago Link anuncia 3.49% + $4 MXN al instante, más IVA sobre comisión; el costo final de suscripción automática debe confirmarse porque la fuente pública no establece una tarifa separada clara. Con Stripe + Billing, el pago de $129 deja aproximadamente $120.45 antes del IVA sobre comisión; $179 deja $168.30; $249 deja $235.29. Son netos del procesador, no ingresos netos contables.
+
+Al combinar el costo IA supuesto y una distribución de la infraestructura de $832.50 entre 100 abonados, quedan orientativamente $107 en Aprende Plus, $150 en Herramientas Pro con 200 llamadas IA y $217 en el paquete Completa con 200 llamadas. No incluyen impuestos, soporte, adquisición, desarrollo/contenido, chargebacks ni gasto variable mayor. No fijar el precio final solo a partir de estos márgenes: instrumentar 30–60 días de uso beta y observar conversión/retención.
+
+## 5. Secuencia de ejecución y decisiones de lanzamiento
+
+Los plazos son una estimación de planificación para un equipo pequeño, no compromiso. Cada etapa técnica queda pendiente de autorización específica.
+
+### Etapa A — Validación de valor y alcance (1–2 semanas)
+
+Entrevistar estudiantes y contadores independientes; observar cómo resuelven hoy dudas y revisan lotes CFDI; probar la promesa y tres precios; determinar qué parte del curso está lista para vender. Separar hipótesis (WTP, duración, uso de Nora) de hechos del producto. Diseñar páginas y mensajes distintos para Aprende, Herramientas y paquete; incluir lista explícita de exclusiones. **Salida:** confirmar segmento inicial, qué módulos/beneficios actuales están vendibles y una decisión de precio piloto.
+
+### Etapa B — Preparar producto y medición (1–2 semanas)
+
+Auditar flujos reales de curso, CFDI, auth e historial; definir eventos agregados de activación, uso, conversión y cancelación. Crear instrumentación sin guardar XML, RFC, prompts completos ni datos personales no necesarios. Medir tokens por respuesta y tiempo/tasa de uso local. Diseñar páginas públicas y términos visibles. **Salida:** definición de cuotas beta basada en medición inicial; si no hay datos, no anunciar “ilimitado”.
+
+### Etapa C — Derechos de usuario, cuotas y privacidad (2–3 semanas)
+
+Implementar entitlements en el servidor, consumo mensual durable y controles de presupuesto. Establecer separación de datos Aprende/Herramientas, RLS, retención, recuperación ante error de pago y transiciones de suscripción. Limitar Nora por usuario y plan en el endpoint, no por almacenamiento en memoria/IP. Añadir panel o función interna de consulta de estado para soporte controlado. **Salida:** usuario no puede desbloquear un plan modificando JS; cuentas concurrentes y webhooks repetidos no duplican uso/acceso; cancelación y vencimiento cambian derechos sin borrar progreso/documentos de manera accidental.
+
+### Etapa D — Cobro recurrente en sandbox (2–3 semanas)
+
+Elegir **un** procesador tras prueba comercial y revisión de renovaciones/costos. Stripe ofrece un esquema público más claro para Billing; Mercado Pago puede ofrecer encaje de mercado local, pero se debe confirmar el precio de suscripción y el plazo de depósito. Implementar checkout, webhook firmado/idempotente, portal/cancelación y estados `trialing/active/past_due/canceled/refunded` solo conforme al contrato real del proveedor. Probar en sandbox compra inicial, renovación, pago rechazado, reintento, cambio de plan, reembolso, cancelación y webhook duplicado. No usar compras reales durante pruebas. **Salida:** derechos coinciden con el estado confirmado por el proveedor en todos esos casos.
+
+### Etapa E — Separar experiencia de productos (1–2 semanas)
+
+En la SPA, ofrecer Inicio, Aprende y Herramientas con rutas/estados de sección claros. Páginas de producto distintas presentan para quién es, qué resuelve, lo gratuito, el plan, límites de IA y exclusiones. Mantener cuenta compartida y contexto de Nora específico: tutoría curricular para Aprende, explicación del resumen explícitamente compartido para CFDI. Los mensajes de pago no interrumpen análisis local ni prometen validación SAT. **Salida:** se entiende qué suscripción habilita cada producto y una persona puede usar uno sin comprar el otro.
+
+### Etapa F — PWA instalable (1–2 semanas)
+
+Añadir manifest, iconos, instalación guiada y service worker limitado al shell y materiales públicos/offline aprobados. Mantener las API, auth, pagos y contenido privado fuera del cache. Diseñar actualización/versionado del curso descargable y mensaje de actualización. Validar flujo instalado en Android/iOS compatibles y recuperación de conexión. **Salida:** instalación útil sin duplicar frontend y sin filtrar contenido privado offline.
+
+### Etapa G — Beta cerrada y lanzamiento piloto (2–4 semanas)
+
+Invitar una cohorte pequeña con prioridad en estudiantes y profesionales independientes. Ofrecer precios fundadores por tiempo definido, explicando renovación y cancelación; no fijar descuentos perpetuos antes de conocer unit economics. Recoger solicitudes, medir activación y éxito del primer flujo, conversión por producto, retención a 30/60 días, coste IA por usuario, errores CFDI y reembolsos. Ajustar onboarding/ayuda antes de gastar en campañas de alcance. **Salida:** no ampliar marketing pagado hasta que exista uso recurrente, soporte manejable y coste variable por plan bajo control.
+
+### Etapa H — Campañas de adquisición de bajo costo (continuo tras beta)
+
+1. **Contenido educativo buscable:** lecciones prácticas breves con ejemplos ficticios, glosario, checklist de revisión CFDI y artículos enlazados a fuente oficial. Ofrecer una ruta gratuita concreta, no replicar todo el portal SAT.
+2. **Demostración del valor CFDI:** video corto donde se muestra carga, preflight y explicación local, sin XML real ni datos identificables. CTA a probar el analizador gratuito y luego completar una guía Aprende.
+3. **Alianzas educativas:** docentes, universidades y comunidades contables para sesiones piloto y talleres con datasets sintéticos. Recoger feedback antes de negociar licencias institucionales.
+4. **Embudo separado:** Curso gratuito → práctica → Aprende Plus; analizador local gratuito → resumen revisado → Nora/historial Pro; paquete Completa solo a quienes usan ambos.
+5. **Experimentos de precio/mensaje:** probar páginas y precios con cohortes distintas, manteniendo una sola variable por prueba. Medir suscripción pagada y permanencia, no solo visitas o clics. No iniciar una campaña masiva con promesas funcionales no disponibles.
+6. **Correo y consentimiento:** mantener auth de Supabase al inicio. Añadir proveedor de correo solo cuando se necesite onboarding/campañas con consentimiento verificable, baja clara, dominio autenticado y separación entre correo de servicio y marketing.
+
+## 6. Indicadores y criterios de decisión
+
+- **Aprendizaje:** activación (inicia primer módulo), finalización de una práctica, regreso a una sesión posterior y progreso a 30 días.
+- **Herramientas:** primer análisis completado, proporción de preflight → análisis, retorno con otro lote, uso de ayuda contextual, tasa de error y solicitudes de soporte.
+- **Negocio:** conversión gratuita→pago por cada producto, uso del paquete, renovación a 30/60/90 días, cancelación y reembolso, ingresos recurrentes netos de comisiones.
+- **Costo y riesgo:** coste real de tokens por persona y por suscriptor, percentiles altos de uso, proporción de usuarios que alcanzan cuota, gasto mensual de proveedores, eventos de facturación sin conciliar y avisos de seguridad/privacidad.
+
+Se amplía presupuesto de marketing solo si la cohorte demuestra retorno y hay margen tras consumo de IA, fees y soporte. Se aplaza una función si exige datos bancarios o fiscales sensibles que no pueda protegerse con controles y permisos claramente diseñados.
+
+## 7. No incluido y autorizaciones futuras
+
+Este anexo no autoriza construir un módulo operativo de contabilidad, nómina, DIOT, monitor fiscal o conexiones bancarias; enviar campañas; crear cuentas en proveedores; activar Resend, Stripe, Mercado Pago o Anam; publicar precios; modificar planes Vercel/Supabase; migrar datos; desplegar; o cobrar. Tampoco declara certificación fiscal, validación SAT ni asesoría profesional automatizada.
+
+Para comenzar implementación comercial, la decisión posterior debe aprobar expresamente: (1) precios y beneficios beta, (2) procesador elegido y país de cobro, (3) persistencia y retención de datos de suscripción/uso, (4) cuotas de Nora y presupuesto máximo, y (5) primera fase técnica autorizada. Cambios de contrato, privacidad, impuestos, cancelación/reembolso y facturación requieren revisión profesional para el mercado mexicano.
+
+## 8. Referencias de tarifas y mercado
+
+- Vercel: [precios](https://vercel.com/pricing), [plan Hobby](https://vercel.com/docs/plans/hobby), [plan Pro](https://vercel.com/docs/plans/pro-plan).
+- Supabase: [precios](https://supabase.com/pricing), [facturación por organización](https://supabase.com/docs/guides/platform/org-based-billing), [compute](https://supabase.com/docs/guides/platform/manage-your-usage/compute).
+- OpenAI: [precios de API](https://developers.openai.com/api/docs/pricing); Vercel: [GPT-4.1 mini en AI Gateway](https://vercel.com/ai-gateway/models/gpt-4.1-mini), [precios de AI Gateway](https://vercel.com/docs/ai-gateway/pricing).
+- Procesamiento: [Stripe México](https://stripe.com/mx/pricing), [Stripe Billing](https://stripe.com/mx/billing/pricing), [Mercado Pago Link de pago](https://www.mercadopago.com.mx/herramientas-para-vender/link-de-pago), [suscripciones de Mercado Pago](https://www.mercadopago.com.mx/herramientas-para-vender/suscripciones).
+- Servicios opcionales: [Resend](https://resend.com/pricing), [Anam](https://anam.ai/pricing).
+- Mercado de referencia: [Alegra México](https://www.alegra.com/mexico/precios/), [Facturama](https://facturama.mx/planes-facturacion), [curso Aprende.org](https://aprende.org/cursos/view/168), [material SAT](https://www.sat.gob.mx/minisitio/Factura/emite_materialdeayudaparafactura.htm), [guía CONTPAQi](https://www.contpaqi.com/blog/guia-software-contable-mexico).
+
+
+## Autorización puntual — separación y diseño de productos
+
+El 21 de octubre de 2026 el usuario indicó: «ContaIA Aprende y ContaIA Herramientas. Procede con la separación y el diseño de la página». Queda autorizado el trabajo de interfaz descrito en la nueva sección de TODO.md: presentar ambos productos como las dos ofertas principales, actualizar copy y navegación de la aplicación autenticada y conectar con las rutas y funciones existentes. El Asistente/Nora se conserva como capacidad transversal, no como tercer producto principal.
+
+Esta instrucción **no** aprueba los precios propuestos ni autoriza mostrar planes/compra, crear suscripciones, cuotas, nuevos endpoints/tablas, activar servicios de pago/correo/voz, ampliar capacidades fiscales, migrar a una PWA/app nativa, hacer commit, push o despliegue. Las funciones, privacidad, persistencia y contratos existentes se conservan.
