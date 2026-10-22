@@ -26,7 +26,7 @@
 
 - [x] **CFDI como herramienta demostrativa, sin ampliar su funcionalidad**
   - Adaptar visualmente el flujo existente de importación local, revisión previa del lote, análisis, hallazgos, resultados, historial y acciones posteriores al shell común. Conservar selección/arrastre, eliminación de archivos y confirmación explícita para analizar.
-  - Mantener los formatos actualmente soportados: XML y ZIP; no anunciar ni habilitar PDF en esta iteración. Conservar los límites existentes: hasta 100 archivos por lote, XML de hasta 5 MB, ZIP de hasta 20 MB y hasta 25 MB de XML extraídos.
+  - Mantener los formatos actualmente soportados: XML y ZIP; no anunciar ni habilitar PDF en esta iteración. Conservar los límites: hasta 5,000 archivos por lote, XML de hasta 5 MB, ZIP de hasta 20 MB y hasta 25 MB de XML extraídos.
   - Representar validez, advertencias y errores solo según las comprobaciones que el parser/análisis realmente ejecuta. No describirlo como validación oficial del SAT ni afirmar cumplimiento fiscal que no haya sido verificado.
   - El XML y los nombres de archivo permanecen locales; no subirlos ni enviarlos a Nora automáticamente. El guardado opcional continúa almacenando solo el resultado autorizado por el contrato existente. El resumen CFDI se comparte con Nora únicamente por la acción explícita ya disponible y sigue acotado por el backend.
   - Mostrar resultados/hallazgos, relaciones, historial y cifras que ya produzca el análisis; no calcular ni inventar datos nuevos por necesidades visuales. Los enlaces de estudio conducen a módulos o prácticas existentes.

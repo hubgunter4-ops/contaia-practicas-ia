@@ -178,7 +178,7 @@ export function parsearXML(xmlText, fileName = "") {
 export async function parseFiles(files) {
   const selected = Array.from(files || []);
   if (!selected.length) throw new Error("Selecciona al menos un archivo XML o ZIP.");
-  if (selected.length > 100) throw new Error("Puedes cargar hasta 100 archivos por análisis.");
+  if (selected.length > MAX_XML_FILES) throw new Error(`Puedes cargar hasta ${MAX_XML_FILES.toLocaleString("es-MX")} archivos por análisis.`);
   if (selected.some((file) => file.size > MAX_UPLOAD_BYTES)) throw new Error("Cada archivo debe pesar 20 MB o menos.");
   const result = { pagos: [], facturas: [], conceptos: [] };
   let xmlCount = 0; let totalInflated = 0;
@@ -188,7 +188,7 @@ export async function parseFiles(files) {
     totalInflated += bytes;
     if (totalInflated > MAX_TOTAL_XML_BYTES) throw new Error("El contenido XML extraído supera el límite total de 25 MB.");
     xmlCount += 1;
-    if (xmlCount > MAX_XML_FILES) throw new Error("El ZIP contiene más de 100 XML.");
+    if (xmlCount > MAX_XML_FILES) throw new Error(`El ZIP contiene más de ${MAX_XML_FILES.toLocaleString("es-MX")} XML.`);
     const parsed = parsearXML(text, name);
     result.pagos.push(...parsed.pagos);
     result.facturas.push(...parsed.facturas);
@@ -201,7 +201,7 @@ export async function parseFiles(files) {
     } else if (lower.endsWith(".zip")) {
       const zip = await JSZip.loadAsync(file, { checkCRC32: false });
       const xmlEntries = Object.entries(zip.files).filter(([name, entry]) => !entry.dir && name.toLowerCase().endsWith(".xml"));
-      if (xmlEntries.length + xmlCount > MAX_XML_FILES) throw new Error("El ZIP y los archivos seleccionados superan el límite de 100 XML.");
+      if (xmlEntries.length + xmlCount > MAX_XML_FILES) throw new Error(`El ZIP y los archivos seleccionados superan el límite de ${MAX_XML_FILES.toLocaleString("es-MX")} XML.`);
       for (const [entryName, entry] of xmlEntries) {
         const declaredSize = entry._data?.uncompressedSize;
         if (Number.isFinite(declaredSize) && declaredSize > MAX_XML_BYTES) throw new Error("Un XML dentro del ZIP supera el límite de 5 MB.");

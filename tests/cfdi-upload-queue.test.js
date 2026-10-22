@@ -7,6 +7,7 @@ import {
   reviewCfdiQueue,
   validateCfdiUploadFile,
 } from "../src/cfdi/upload-queue.js";
+import { parserLimits } from "../src/cfdi/parser.js";
 import { bindCfdiWorkspace, cfdiState, renderCfdiWorkspace } from "../src/cfdi/workspace.js";
 
 const makeFile = (name, size = 1024) => ({ name, size, lastModified: 1 });
@@ -35,12 +36,18 @@ test("valida extensión y tamaño antes de iniciar el análisis", () => {
   assert.match(validateCfdiUploadFile(makeFile("lote.zip", MAX_UPLOAD_BYTES + 1)).reason, /20 MB/);
 });
 
-test("limita el lote a 100 archivos y reporta cuántos quedaron fuera", () => {
+test("limita el lote a 5,000 archivos y reporta cuántos quedaron fuera", () => {
   const files = Array.from({ length: MAX_BATCH_FILES + 5 }, (_, index) => makeFile(`cfdi-${index}.xml`, 1));
   const result = addCfdiFilesToQueue([], files);
   assert.equal(result.files.length, MAX_BATCH_FILES);
   assert.equal(result.skipped, 5);
   assert.equal(reviewCfdiQueue(result.files).canAnalyze, true);
+});
+
+test("el parser conserva el máximo de 5,000 XML sin cambiar los límites de tamaño", () => {
+  assert.equal(parserLimits.maxXmlFiles, 5000);
+  assert.equal(parserLimits.maxXmlBytes, 5 * 1024 * 1024);
+  assert.equal(parserLimits.maxTotalXmlBytes, 25 * 1024 * 1024);
 });
 
 test("bloquea el análisis de lotes con archivos inválidos", () => {

@@ -1,4 +1,4 @@
-export const MAX_BATCH_FILES = 100;
+export const MAX_BATCH_FILES = 5000;
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 export function validateCfdiUploadFile(file) {
