@@ -58,6 +58,9 @@ function renderToolConnectionSummary(tool, workspace = {}) {
   if (tool.id === "reconciliation") {
     return `<div class="tools-card-connection tools-card-connection--local"><span class="tools-card-connection-label">CONEXIÓN BANCARIA</span><span class="tools-connection-status is-not-configured" data-connection-status="not_configured" aria-label="Sin conexión bancaria"><span class="tools-connection-status-icon" aria-hidden="true">○</span><span class="tools-connection-status-label">Sin conexión · archivos locales</span></span><small>Este módulo no solicita credenciales ni accede a cuentas bancarias.</small></div>`;
   }
+  if (tool.id === "diot") {
+    return `<div class="tools-card-connection tools-card-connection--local"><span class="tools-card-connection-label">PREPARACIÓN DIOT</span><span class="tools-connection-status is-not-configured" data-connection-status="not_configured" aria-label="Trabajo local"><span class="tools-connection-status-icon" aria-hidden="true">○</span><span class="tools-connection-status-label">Local · CFDI seleccionados</span></span><small>No conecta al SAT, no solicita credenciales y no presenta declaraciones.</small></div>`;
+  }
   if (workspace.loading || workspace.connectionsLoading) {
     return `<div class="tools-card-connection"><span class="tools-card-connection-label">ESTADO DE INTEGRACIÓN</span><span class="tools-connection-loading" role="status">Consultando estados…</span></div>`;
   }
@@ -167,7 +170,7 @@ function renderConnections(workspace) {
   if (!workspace.selectedProfileId) return `<p class="tools-empty-state">Crea o selecciona un perfil fiscal para consultar sus conexiones.</p>`;
   if (workspace.connectionsLoading) return `<p class="tools-empty-state" role="status">Cargando conexiones de este perfil…</p>`;
   const connections = Array.isArray(workspace.connections) ? workspace.connections : [];
-  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.filter((tool) => tool.id !== "reconciliation").map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
+  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.filter((tool) => !["reconciliation", "diot"].includes(tool.id)).map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
     const connection = connections.find((item) => item.tool_key === tool.id && item.environment === key);
     return `<article class="tools-connection-row" data-tool-key="${escapeHtml(tool.id)}" data-environment="${key}"><div><b>${escapeHtml(tool.title)}</b><span class="tools-connection-row-environment">${label}</span></div>${renderConnectionStatusBadge(connection?.status ?? "not_configured")}<button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="${key}">${connection ? "Actualizar registro" : "Registrar pendiente"}</button></article>`;
   }).join("")).join("")}</div>`;

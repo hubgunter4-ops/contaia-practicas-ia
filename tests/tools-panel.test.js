@@ -99,7 +99,7 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
       { tool_key: "cfdi", environment: "sandbox", status: "pending" },
       { tool_key: "accounting", environment: "production", status: "connected" },
       { tool_key: "payroll", environment: "sandbox", status: "degraded" },
-      { tool_key: "diot", environment: "production", status: "error" },
+      { tool_key: "monitor", environment: "production", status: "error" },
     ],
   } });
   const expectedStates = [
@@ -118,9 +118,9 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
   const cards = html.match(/<article class="tools-card[\s\S]*?<\/article>/g) || [];
   assert.equal(cards.length, TOOL_DEFINITIONS.length);
   for (const card of cards) {
-    if (card.includes('data-tool-card="reconciliation"')) {
-      assert.match(card, /CONEXIÓN BANCARIA/);
-      assert.match(card, /Sin conexión · archivos locales/);
+    if (card.includes('data-tool-card="reconciliation"') || card.includes('data-tool-card="diot"')) {
+      assert.match(card, card.includes('data-tool-card="diot"') ? /PREPARACIÓN DIOT/ : /CONEXIÓN BANCARIA/);
+      assert.match(card, card.includes('data-tool-card="diot"') ? /No conecta al SAT/ : /Sin conexión · archivos locales/);
       assert.doesNotMatch(card, /data-environment="production"|data-connection-status="connected"/);
       continue;
     }
@@ -129,7 +129,7 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
     assert.match(card, /data-environment="sandbox"/);
     assert.match(card, /data-environment="production"/);
   }
-  assert.equal((html.match(/class="tools-connection-row" data-tool-key=/g) || []).length, 10);
+  assert.equal((html.match(/class="tools-connection-row" data-tool-key=/g) || []).length, 8);
 });
 
 test("el resumen cuenta estados guardados sin exponer títulos de alertas o vencimientos", () => {

@@ -693,3 +693,196 @@ Los criterios de aceptación siguientes definen el comportamiento futuro; no des
 Con autorización de implementación, el corte actual incorpora una primera versión local de **Pólizas contables sugeridas**. Incluye el adaptador de fuentes CFDI y movimientos ya normalizados en la sesión, catálogo de cuentas ficticio por empresa local opaca, reglas declarativas editables, generación determinista, importes en unidades menores, validación exacta de cargos/abonos, estados de revisión y aprobación local, además del panel contextual de Nora sin adjuntos ni contexto fiscal automático.
 
 Este corte no crea tablas, endpoints, escrituras de Supabase, conexiones bancarias, exportación contable oficial, libro mayor, impuestos automáticos, roles, sincronización ni despliegue. «Aprobada localmente» sigue significando «no contabilizada». Las decisiones y criterios no cubiertos permanecen en el anexo de pólizas y en `TODO.md`.
+
+
+---
+
+# Anexo propuesto — DIOT asistida
+
+**Estado:** implementación local validada, aún sin publicar. El corte incluye selección explícita de CFDI I/E en memoria, clasificación manual, sumas exactas, incidencias, CSV/JSON de trabajo y Nora sin contexto automático. No crea endpoints, tablas o persistencia, no conecta con el SAT y no presenta declaraciones. El esquema `diot-review-cfdi-v1` es una preparación de revisión, no un formato oficial compatible; la exportación oficial permanece bloqueada hasta verificar versión, campos, catálogos y fixtures vigentes.
+
+## 1. Objetivo y frontera del producto
+
+**DIOT asistida** debe convertir fuentes fiscales seleccionadas en una preparación revisable: identificar terceros, clasificar operaciones, agrupar importes por periodo y categoría, señalar información faltante y producir un archivo descargable de trabajo. La herramienta no debe afirmar que una fila es fiscalmente correcta solo porque sus importes cuadren, ni debe presentar, firmar, enviar o consultar acuses ante el SAT.
+
+El Anexo 1 de la RMF 2026 identifica la DIOT como la **Declaración Informativa de Operaciones con Terceros** y señala como medio el programa electrónico del SAT y el servicio por Internet [1]. Por eso el exportador debe tratar el esquema como una versión externa que puede cambiar. La aplicación no debe hardcodear un formato histórico como si fuera una especificación vigente.
+
+La fuente oficial de facilidades describe, entre otras condiciones, el campo de IVA pagado no acreditable y el tratamiento de proveedores globales; también fija límites y exclusiones para esa facilidad [2]. Esos datos deben mostrarse como reglas de revisión versionadas, no como una clasificación automática irrevocable. Una persona responsable debe confirmar que la facilidad aplica a su caso.
+
+Una página del SAT sobre operaciones de partes relacionadas enumera dimensiones útiles —tipo de tercero, RFC o identificador extranjero, país, nacionalidad, tipo de operación y bases separadas por tratamiento de IVA—, pero contiene tasas de ejemplo que no deben trasladarse sin verificar su vigencia [3]. El adaptador de DIOT debe cargar el catálogo y las tasas de la versión oficial confirmada antes de habilitar exportación compatible.
+
+## 2. Alcance del primer incremento
+
+El primer incremento recomendado es local-first y se divide en cinco etapas visibles:
+
+1. **Preparar periodo y contexto.** Seleccionar ejercicio, periodo, tipo de persona/contribuyente y obligación aplicable, sin inferir que un perfil fiscal abierto es el declarante.
+2. **Seleccionar fuentes.** Elegir explícitamente un análisis CFDI vigente en memoria o una corrida autenticada que la persona abra de forma consciente. El sistema no debe leer todo el historial automáticamente.
+3. **Clasificar y agrupar.** Normalizar tercero, operación, importe base, IVA y procedencia; después agrupar por tercero y categoría del esquema activo.
+4. **Revisar incidencias.** Presentar faltantes, conflictos, duplicados, importes derivados, moneda no compatible, periodo ambiguo y reglas que requieren decisión humana.
+5. **Descargar.** Generar un archivo de trabajo revisado y, solo cuando exista una plantilla oficial comprobada, un archivo compatible con esa versión. Ninguna descarga implica presentación.
+
+El MVP no calcula impuestos desde cero. Consume importes y desglose fiscal disponibles en CFDI, conserva su procedencia y marca como pendiente cualquier valor faltante o derivado de una aproximación. No convierte moneda automáticamente, no decide acreditamiento, no determina deducibilidad y no sustituye la revisión de un profesional.
+
+## 3. Fuentes y modelo de datos
+
+Reutilizar el parser y análisis local de CFDI existentes. Cada registro DIOT debe mantener una identidad local de operación y sus evidencias, sin convertir una fila agrupada en una nueva factura. El modelo propuesto es:
+
+- `diotRunId`: identificador aleatorio de la preparación, solo en memoria durante el primer incremento.
+- `schemaVersion`: versión del esquema/catálogo oficial usado para mapear y exportar.
+- `period`: ejercicio, mes o periodo elegido y estado de confirmación.
+- `taxpayerContext`: tipo de persona, régimen/obligación solo si fue seleccionado o verificado; nunca inferido silenciosamente.
+- `thirdParty`: tipo nacional/extranjero/global, RFC o identificador extranjero, nombre, país y nacionalidad cuando el esquema lo solicite.
+- `operationType`: código cerrado de la versión oficial, con etiqueta legible y fuente del código.
+- `taxBuckets`: mapa de categorías oficiales de base, IVA trasladado, IVA retenido, IVA no acreditable, importación, exento, tasa cero u otras que el esquema vigente requiera.
+- `currency`: moneda original y monto exacto; la agrupación no mezcla monedas.
+- `evidence`: UUID, folio, fecha, documento seleccionado, línea de concepto y advertencias locales; la vista puede ocultar identificadores, pero no los elimina de la revisión local.
+- `quality`: `exact`, `derived_from_number`, `missing`, `conflict` o `not_applicable`.
+- `review`: estado, motivo, actor de sesión y decisiones expresas.
+
+Los importes deben conservar cadenas decimales y convertirse a unidades menores con escala y moneda. Las sumas se calculan con enteros exactos y se formatean solo al mostrar. Si un CFDI no contiene el dato necesario, la aplicación muestra «faltante»; no usa cero como sustituto.
+
+## 4. Normalización y reglas de clasificación
+
+La normalización debe ser reversible. Junto a cada valor interpretado se muestra el dato original, la regla aplicada, la confianza del mapeo y la acción necesaria para corregirlo. La inferencia automática solo puede sugerir; no puede transformar una sugerencia en una clasificación final.
+
+El tipo de tercero se obtiene de datos disponibles y selección explícita. Para proveedores nacionales se valida la estructura del RFC; para extranjeros se solicita el identificador, nombre, país y nacionalidad que exija el esquema activo. Si faltan datos, la operación queda en **Requiere revisión** y no se exporta como lista final sin una acción explícita.
+
+El tipo de operación se propone a partir del tipo de CFDI, conceptos, impuestos y contexto elegido, pero se confirma en la interfaz cuando existan alternativas. Un CFDI de ingreso, egreso, pago o traslado no determina por sí solo el tratamiento que la empresa debe reportar en todos los casos.
+
+Las tasas y categorías se representan por códigos de esquema, no por porcentajes incrustados en el renderer. Cada código debe incluir etiqueta, vigencia, fuente oficial y si permite base, IVA, retención o importación. La configuración inicial debe rechazar un esquema vencido o incompleto antes de exportar.
+
+## 5. Agrupación y proveedor global
+
+La agrupación principal debe ser por tercero, tipo de operación, periodo, moneda y categoría fiscal del esquema. Las operaciones de un mismo tercero no se fusionan si difieren en moneda, tratamiento, calidad del dato o procedencia. La vista debe permitir abrir cada total hasta sus CFDI de origen.
+
+El modo **proveedor global** se presenta como una decisión separada. La fuente oficial consultada menciona un máximo del 10% del total de pagos efectivamente realizados y un límite de $50,000 por proveedor, además de exclusiones para ciertos combustibles y beneficios fiscales [2]. Como esos límites pueden depender del supuesto jurídico y de la versión vigente, la aplicación debe:
+
+- mostrar la versión y fuente de la regla;
+- calcular el indicador solo si el total de pagos del periodo está completo y en una base comparable;
+- separar operaciones candidatas de operaciones excluidas;
+- impedir que una persona convierta en global una operación que requiere relacionarse individualmente;
+- solicitar confirmación y motivo antes de agrupar;
+- conservar el detalle de los comprobantes que forman el agregado;
+- marcar el resultado como «facilidad sugerida; revisar aplicabilidad», nunca como cumplimiento garantizado.
+
+Si el total del periodo está incompleto, la herramienta no debe presentar un porcentaje global como válido. Debe mostrar **No determinable con las fuentes seleccionadas**.
+
+## 6. Validaciones y estados
+
+Usar estados consistentes con ContaIA Herramientas:
+
+- **Sin configurar:** falta periodo, contexto o versión de esquema.
+- **En preparación:** las fuentes fueron seleccionadas, pero aún no se han clasificado.
+- **Requiere revisión:** existen faltantes, conflictos, duplicados, ambigüedades o decisiones pendientes.
+- **Lista para descargar:** todas las filas incluidas tienen clasificación, importes y evidencia suficientes para el archivo elegido; esto no significa declaración presentada ni cumplimiento fiscal.
+- **Descargada para revisión:** se generó un archivo con la versión, fecha local y advertencias visibles.
+- **Error:** el archivo o esquema no puede procesarse de forma segura.
+
+Bloqueos mínimos: periodo ausente, esquema vencido, tercero sin identificador requerido, operación sin categoría, moneda mezclada sin conversión autorizada, importe inválido, impuesto incongruente con la fuente, duplicado no resuelto, archivo excedido o campo obligatorio sin evidencia. Las advertencias no bloqueantes deben reconocerse antes de descargar un archivo marcado como revisado.
+
+No debe existir un estado «Presentada», «Aceptada por SAT» o «Validada fiscalmente». El único resultado externo de este módulo es un archivo descargable y una revisión local.
+
+## 7. Diseño de interfaz — Confianza fiscal
+
+Conservar el sistema visual marfil, petróleo, jade, arena, amarillo de validación y coral. DIOT debe sentirse como una mesa de preparación documental, no como un portal de presentación. La acción principal cambia por etapa y nunca hay dos CTAs principales compitiendo.
+
+### Encabezado
+
+Mostrar:
+
+- `ContaIA Herramientas / DIOT asistida`.
+- Estado actual con texto e icono.
+- Mensaje: **«Prepara, revisa y descarga; no presenta declaraciones»**.
+- Periodo y contexto fiscal seleccionados.
+- Ayuda contextual de Nora cerrada por defecto.
+
+### Ruta por etapas
+
+Usar una línea de cinco pasos en escritorio y un selector compacto en móvil:
+
+`01 Contexto → 02 Fuentes → 03 Clasificar → 04 Revisar → 05 Descargar`
+
+El paso activo usa petróleo y jade. Un paso con bloqueos usa amarillo o coral según severidad; nunca se comunica el estado solo por color.
+
+### Paso 01 — Contexto
+
+Tarjeta clara con ejercicio, periodo, persona/contexto, moneda de trabajo y versión de esquema. Debe explicar qué se usará y qué no se inferirá. La acción es **Confirmar contexto**. Al cambiar periodo se invalidan agrupaciones y exportaciones anteriores.
+
+### Paso 02 — Fuentes
+
+Mostrar análisis CFDI disponibles con fecha de creación, conteos, moneda, origen y estado de exactitud. La selección requiere una casilla o acción explícita. Si la corrida proviene de Supabase, se lee solo después de seleccionarla, usando autenticación y RLS existentes. No se muestran nombres de archivos completos en listas públicas ni se envían XML a Nora.
+
+### Paso 03 — Clasificar
+
+Presentar una tabla filtrable con tercero, tipo, operación, base, IVA, categoría, evidencia y estado. Cada celda inferida lleva un indicador «Sugerido» y permite cambiarla mediante un selector cerrado. Un panel lateral muestra la regla aplicada y los comprobantes fuente.
+
+Filtros: **Todos**, **Sin RFC/ID**, **Tipo pendiente**, **IVA pendiente**, **Duplicados**, **Moneda**, **Proveedor global**, **Listos**. La tabla ofrece una vista resumida en móvil y una vista de detalle por operación; no fuerza scroll horizontal de toda la página.
+
+### Paso 04 — Revisar
+
+Usar un resumen de incidencias agrupadas por severidad. Cada incidencia debe responder: qué fila afecta, qué dato falta, por qué importa y cuál es la acción humana. Mostrar totales por moneda y categoría sin sumarlos entre sí. Un panel de trazabilidad abre la lista de CFDI que compone cada total.
+
+Antes de avanzar, la persona puede excluir una fila con motivo. La exclusión no borra el CFDI; queda visible como **Excluida de esta preparación** y no se incluye en el archivo.
+
+### Paso 05 — Descargar
+
+Mostrar una vista previa del archivo: nombre, periodo, esquema, número de filas, operaciones excluidas, incidencias restantes, monedas, fecha local y advertencias. Ofrecer:
+
+- **Descargar archivo de trabajo CSV**, siempre que la preparación tenga datos suficientes.
+- **Descargar copia de revisión JSON**, opcional y solo local, con configuración y procedencia; no incluir XML completo por defecto.
+- **Formato oficial compatible**, únicamente cuando la versión oficial del SAT esté verificada y el adaptador tenga fixture de prueba. Etiquetarlo como «compatible con versión X», nunca como «enviado».
+
+El botón debe decir **Descargar para revisar**, no «Presentar», «Enviar» ni «Validar ante SAT».
+
+### Nora dentro de DIOT
+
+El panel se etiqueta **Nora · Asistente abierto · DIOT asistida**. Cerrarlo o abrirlo no comparte fuentes. Puede responder dudas genéricas sobre el flujo, explicar qué significa un estado o sugerir qué dato revisar. En el primer incremento no recibe automáticamente RFC, XML, importes, proveedores, filas ni archivo de exportación. El usuario puede enviar una pregunta escrita mediante el contrato genérico existente; el aviso debe distinguir «no se comparte la fuente al abrir» de «la pregunta que escribas puede enviarse al proveedor configurado».
+
+### Responsive y accesibilidad
+
+En móvil, convertir la ruta en una barra de etapa desplazable con el paso actual siempre visible; mostrar filas como tarjetas con una acción de revisar; mantener el resumen de incidencias antes de la tabla; usar controles de al menos 44 px; no ocultar el botón de descarga detrás de la barra inferior. Mantener `aria-current`, `aria-expanded`, `aria-controls`, foco visible, lectura de errores y `prefers-reduced-motion`.
+
+## 8. Arquitectura propuesta
+
+Reutilizar la SPA y el catálogo de herramientas. La implementación futura puede separar el dominio en:
+
+- `src/diot/schema.js`: versiones, campos, catálogos, vigencia, fuente y reglas de exportación.
+- `src/diot/sources.js`: adaptadores de análisis CFDI seleccionados y evidencia local.
+- `src/diot/normalizer.js`: tercero, operación, moneda, importes y procedencia reversible.
+- `src/diot/aggregator.js`: agrupación exacta, trazabilidad y proveedor global como sugerencia controlada.
+- `src/diot/validation.js`: faltantes, conflictos, duplicados, periodo, esquema y bloqueos.
+- `src/diot/exporter.js`: CSV de trabajo, JSON de revisión y, después de verificación, adaptador oficial versionado.
+- `src/diot/workspace.js`: estado, etapas, tabla, filtros, revisiones, descarga y panel de Nora.
+- `src/diot/diot.css`: estilos acotados a Herramientas y responsive.
+- `tests/diot.test.js` y `tests/e2e/diot.spec.js`: reglas deterministas, privacidad, descarga y móvil.
+
+No crear una API nueva para el primer incremento. No reutilizar `documentText` ni `cfdiContext` para transportar una preparación DIOT. El endpoint actual de Nora no se convierte en un receptor de archivos. Si en el futuro se quiere explicar un resumen estructurado, debe existir un contrato backend separado, con consentimiento, sanitización, límite, proveedor, logs y retención aprobados.
+
+## 9. Fases y puertas de autorización
+
+**Fase 0 — verificación normativa.** Obtener la versión vigente del esquema, campos, catálogos, tasas y archivo de carga desde material oficial del SAT. Crear fixtures de prueba con datos ficticios. Si la documentación oficial es ambigua, no habilitar exportación compatible; ofrecer únicamente CSV de revisión.
+
+**Fase 1 — dominio local.** Implementar normalización reversible, importes exactos, agrupación, trazabilidad y validaciones sin UI. Probar duplicados, monedas, extranjeros, globales, faltantes y valores derivados.
+
+**Fase 2 — workspace.** Montar las cinco etapas, tabla, detalle, filtros, incidencias, estados, exclusiones y panel estático/genérico de Nora. Mantener la herramienta en «En preparación» hasta validar todo el flujo.
+
+**Fase 3 — descarga.** Generar CSV de trabajo y, si está autorizado, JSON de revisión. Implementar el adaptador oficial solo contra una versión comprobada, con descarga separada y advertencia clara.
+
+**Fase 4 — validación.** Ejecutar pruebas unitarias, E2E de escritorio/móvil, descarga real, no envío de archivos, limpieza al cambiar de usuario, manejo de error y regresión de CFDI/conciliación/pólizas.
+
+**Fase 5 — publicación.** Requiere autorización independiente para commit y despliegue. No activar presentación, autenticación SAT, pagos, persistencia nueva ni integración externa como parte de esta herramienta.
+
+## 10. Decisiones pendientes antes de implementar
+
+1. Confirmar si el primer input será exclusivamente el análisis CFDI seleccionado o si también se requiere un CSV manual de compras.
+2. Confirmar si el primer entregable descargable será solo CSV de revisión o si existe un archivo oficial vigente que deba reproducirse desde el inicio.
+3. Confirmar qué contextos de persona/régimen se habilitarán, sin convertir la herramienta en un asesor de obligaciones.
+4. Confirmar si el proveedor global se mostrará solo como indicador o si se permitirá proponerlo con reconocimiento expreso de la regla.
+5. Confirmar política de exportación de identificadores: conservarlos localmente para trazabilidad, pero minimizarlos en la copia de revisión.
+6. Confirmar si el usuario quiere conectar una corrida CFDI guardada; esa decisión reutilizaría RLS existente, pero no autoriza nuevas tablas ni lecturas automáticas.
+
+## Referencias
+
+[1]: https://www.sat.gob.mx/minisitio/NormatividadRMFyRGCE/documentos2026/rmf/anexos/Anexo-1-RMF-2026_DOF-28122025.pdf "Anexo 1 de la RMF 2026"
+[2]: https://www.sat.gob.mx/cs/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs&blobwhere=1461172244551&ssbinary=true "DIOT facilidades para el llenado del formato electrónico"
+[3]: http://www.sat.gob.mx/gobmx/Paginas/SAT_08_070-20ISR.html "Solicitudes, avisos y documentos diversos del SAT"

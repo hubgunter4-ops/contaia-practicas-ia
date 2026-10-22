@@ -21,8 +21,8 @@ export const TOOL_DEFINITIONS = Object.freeze([
   }),
   Object.freeze({
     id: "diot", icon: "IVA", group: "compliance", eyebrow: "05 · IMPUESTO AL VALOR AGREGADO", title: "DIOT",
-    description: "La revisión de operaciones con terceros y la preparación de declaraciones están en preparación.",
-    availability: "preparation", actionLabel: "Registrar pendiente", detail: "No genera ni presenta declaraciones.",
+    description: "Prepara localmente operaciones con terceros e IVA desde CFDI seleccionados, señala faltantes y descarga un archivo de revisión.",
+    availability: "preparation", actionLabel: "Abrir preparación local", detail: "No presenta declaraciones ni usa un formato oficial compatible.",
   }),
   Object.freeze({
     id: "monitor", icon: "!", group: "compliance", eyebrow: "06 · CONTROL CONTINUO", title: "Monitor fiscal",

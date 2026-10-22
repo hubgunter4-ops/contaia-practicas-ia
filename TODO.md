@@ -219,3 +219,123 @@ Validación de la versión efectivamente publicada: una copia limpia sin el cód
 - [ ] En móvil las partidas se apilan, la ayuda permanece dentro de la herramienta, los controles críticos son táctiles de al menos 44 px y la barra inferior no los tapa. No hay desbordamiento global; teclado, foco, lectores de pantalla y movimiento reducido se conservan.
 - [ ] El catálogo comunica preparación/configuración/error con datos reales. Falta de evidencia o proveedor no se representa como cero problemas, validación SAT o operación completada.
 - [ ] Cualquier implementación, backend, persistencia, exportación de pólizas, roles, commit o despliegue requiere autorización correspondiente. No incluye pagos, APIs bancarias ni publicación automática de conciliación. El trabajo autorizado actual modifica únicamente documentación.
+
+
+---
+
+## Criterios propuestos — DIOT asistida
+
+**Estado:** corte local implementado y validado, aún sin publicar. Permanecen pendientes los elementos que requieren verificación normativa o autorización adicional. La herramienta no presenta declaraciones y no crea backend, tablas, pagos ni conexión con el SAT. El esquema y los catálogos deben verificarse contra la versión oficial vigente antes de habilitar una exportación compatible.
+
+### 1. Alcance, contexto y privacidad
+
+- [ ] La vista se identifica como **DIOT asistida** y comunica de forma persistente: «Prepara, revisa y descarga; no presenta declaraciones».
+- [ ] La herramienta permite elegir ejercicio, periodo, contexto de contribuyente y moneda antes de clasificar. No atribuye automáticamente un análisis CFDI a un perfil fiscal solo porque esté abierto.
+- [ ] El estado de contexto distingue «Sin configurar», «En preparación», «Requiere revisión», «Lista para descargar», «Descargada para revisión» y «Error».
+- [ ] El archivo original, XML, análisis seleccionado, datos de terceros y preparación permanecen en memoria local durante el primer incremento. No se envían automáticamente a `/api/documents`, Nora, Supabase, SAT o un proveedor externo.
+- [ ] Si se permite abrir una corrida CFDI guardada, la persona la selecciona explícitamente y la lectura usa la autenticación/RLS existente. No se realizan lecturas masivas ni se crea una nueva tabla.
+- [ ] Recargar, cerrar sesión, cambiar de usuario o cambiar de periodo limpia la preparación activa, las decisiones y las descargas pendientes; la UI advierte cuando se perdería trabajo no descargado.
+
+### 2. Esquema versionado y fuentes oficiales
+
+- [ ] Cada preparación conserva `schemaVersion`, fecha de verificación, fuente oficial y estado de vigencia del esquema usado.
+- [ ] Las tasas, categorías, campos obligatorios y catálogos no se incrustan como porcentajes históricos en el renderer. Una versión vencida o incompleta bloquea el exportador compatible.
+- [ ] La aplicación separa el CSV de trabajo de cualquier archivo compatible con una plantilla oficial. La etiqueta «compatible con versión X» solo aparece después de verificar una plantilla y fixtures de prueba.
+- [ ] La fuente y la regla de proveedor global se muestran junto al indicador; una regla de facilidad no se presenta como garantía de cumplimiento.
+- [ ] La interfaz conserva evidencia de qué documentación oficial fundamenta el esquema, sin afirmar que ContaIA valida la declaración ante el SAT.
+
+### 3. Selección y normalización de fuentes
+
+- [ ] La persona selecciona de forma explícita los análisis CFDI que alimentarán la preparación y puede ver periodo, fecha de análisis, conteos, monedas y calidad de importes antes de abrirlos.
+- [ ] Solo se agrupan facturas, pagos y conceptos provenientes de las fuentes seleccionadas; no se incorporan documentos del historial por coincidencia de RFC o periodo.
+- [ ] Cada fila conserva su fuente, UUID/folio disponible, fecha, línea de concepto y calidad del dato. La vista puede ocultar identificadores, pero la trazabilidad local permanece para revisar el total.
+- [ ] Los importes se conservan como decimales exactos con moneda y escala. Un número derivado de un análisis legado se marca `derived_from_number` y no se presenta como exactitud original.
+- [ ] La ausencia de un importe, moneda, fecha o desglose fiscal produce «Faltante» o «No determinable», nunca cero silencioso.
+- [ ] Las filas duplicadas, UUID repetidos, documentos relacionados ambiguos y fuentes recargadas se señalan sin eliminar ni fusionar registros automáticamente.
+
+### 4. Terceros y operaciones
+
+- [ ] La herramienta distingue proveedor nacional, proveedor extranjero y proveedor global solo cuando el esquema vigente los admite.
+- [ ] Para proveedor nacional valida el RFC disponible; para proveedor extranjero solicita y valida los identificadores y datos que exija la versión vigente, como nombre, país de residencia y nacionalidad.
+- [ ] El tipo de operación se selecciona mediante catálogo cerrado y muestra etiqueta legible, código, versión y procedencia. Una sugerencia automática requiere confirmación cuando hay más de una opción.
+- [ ] Los datos originales y normalizados se muestran lado a lado; la normalización no borra ceros iniciales, signos, referencias o nombres originales.
+- [ ] Un tercero sin identificador obligatorio, con identidad conflictiva o con operación no clasificada queda en «Requiere revisión» y no se incluye en un archivo final revisado sin acción explícita.
+
+### 5. IVA, importes y agrupación
+
+- [ ] El modelo representa las categorías de base, IVA trasladado, IVA retenido, IVA no acreditable, importación, exento, tasa cero u otras únicamente si existen en el esquema activo.
+- [ ] No se mezclan monedas, periodos, categorías ni tratamientos distintos en un mismo total. Los totales se muestran por moneda y categoría.
+- [ ] La base y el IVA se comparan con la evidencia disponible del CFDI. Una diferencia se marca y se explica; el sistema no recalcula o completa impuestos para que la fila cuadre.
+- [ ] La agrupación se puede abrir hasta sus comprobantes fuente y conserva tercero, operación, periodo, moneda y calidad del importe como claves de agrupación.
+- [ ] Un CFDI de ingreso, egreso, pago o traslado no determina automáticamente el tratamiento fiscal final de la persona; las excepciones y el papel del contribuyente requieren contexto y revisión.
+- [ ] Los importes con moneda extranjera quedan pendientes si no existe una conversión autorizada, tipo de cambio verificable y regla de esquema aplicable. No se convierten a MXN silenciosamente.
+
+### 6. Proveedor global
+
+- [ ] Proveedor global se muestra como decisión separada y no como una deducción automática de RFC faltante.
+- [ ] El indicador de global solo se calcula cuando el total de pagos del periodo está completo y en una base comparable; si no, muestra «No determinable con las fuentes seleccionadas».
+- [ ] La UI muestra la versión y fuente de la regla, incluyendo los límites aplicables en esa versión, y separa operaciones candidatas de operaciones excluidas.
+- [ ] Antes de agrupar, la persona confirma la operación, el motivo y las advertencias. Los comprobantes que forman el agregado permanecen trazables.
+- [ ] Combustibles, beneficios fiscales u otras exclusiones no se absorben en global por defecto. Una operación excluida queda individual o pendiente.
+- [ ] El resultado se etiqueta «facilidad sugerida; revisar aplicabilidad», nunca «cumplimiento confirmado».
+
+### 7. Revisión, incidencias y estados
+
+- [ ] Cada incidencia explica fila afectada, dato faltante/conflictivo, motivo y siguiente acción. La interfaz permite filtrar por faltantes, duplicados, moneda, IVA, global y listos.
+- [ ] El resumen cuenta filas, terceros, periodos, monedas, operaciones excluidas e incidencias reales. Falta de fuente no se muestra como cero incidencias.
+- [ ] El estado «Lista para descargar» requiere que cada fila incluida tenga clasificación, importe, moneda, evidencia y esquema compatibles con el tipo de archivo elegido.
+- [ ] Advertencias no bloqueantes se reconocen de forma explícita antes de descargar un archivo marcado como revisado. Reconocer una advertencia no modifica la fuente.
+- [ ] Un error de esquema, importe inválido, tercero incompleto, moneda incompatible, duplicado no resuelto o campo obligatorio faltante deshabilita la descarga compatible y explica la causa.
+- [ ] Una fila excluida conserva su motivo y aparece en el resumen; excluir no borra el CFDI ni lo presenta como corregido.
+- [ ] No existen estados «Presentada», «Aceptada por SAT», «Validada por SAT» o equivalentes.
+
+### 8. Exportación descargable
+
+- [ ] La vista previa muestra nombre de archivo, ejercicio, periodo, versión de esquema, fecha local, número de filas, monedas, exclusiones, incidencias y advertencias.
+- [ ] La acción principal se llama **Descargar para revisar** o equivalente y nunca «Presentar», «Enviar» o «Validar ante SAT».
+- [ ] El CSV de trabajo conserva encabezados legibles, códigos de esquema, importes exactos formateados, moneda, procedencia y estado de revisión.
+- [ ] El JSON de revisión opcional contiene configuración, mapeos y procedencia mínima sin incrustar XML completo por defecto ni secretos.
+- [ ] El archivo compatible con formato oficial solo se ofrece para una versión comprobada; su nombre incluye la versión y la UI mantiene la advertencia de que la presentación ocurre fuera de ContaIA.
+- [ ] La descarga se genera localmente, no hace una solicitud de red ni cambia el estado a «Presentada». Se puede descargar de nuevo el mismo snapshot sin crear una segunda preparación.
+- [ ] Un archivo descargado no se vuelve a importar o sincronizar automáticamente; cualquier nueva preparación requiere acción explícita.
+
+### 9. Nora y ayuda contextual
+
+- [ ] El panel se identifica como **Nora · Asistente abierto · DIOT asistida**, está cerrado por defecto y su apertura no comparte fuentes.
+- [ ] Nora puede explicar estados, campos y pasos de revisión de forma genérica. No recibe automáticamente RFC, XML, importes, proveedores, filas ni archivos de exportación.
+- [ ] El panel usa la conversación abierta existente y no el tutor curricular: no incluye módulo, fase, ejercicio, progreso, notas ni historial educativo.
+- [ ] Solo «Enviar consulta» realiza la consulta al proveedor configurado. El aviso distingue que abrir el panel no comparte datos de la herramienta, pero una pregunta escrita puede enviarse.
+- [ ] Nora no cambia categorías, importes, terceros, exclusiones, advertencias, estados ni archivos. Toda modificación requiere una acción humana en el editor.
+- [ ] El panel no usa `documentText` o `cfdiContext` como atajo para enviar la preparación DIOT. Un resumen estructurado requiere autorización backend separada.
+
+### 10. Diseño responsive y accesibilidad
+
+- [ ] La ruta de cinco etapas conserva el paso actual visible en móvil y escritorio: Contexto, Fuentes, Clasificar, Revisar y Descargar.
+- [ ] En escritorio la tabla puede mostrar columnas de tercero, operación, base, IVA, categoría, evidencia y estado con detalle lateral.
+- [ ] En móvil cada fila se convierte en tarjeta o detalle apilado; no hay desbordamiento horizontal global y el resumen de incidencias queda antes de la tabla.
+- [ ] Los controles críticos miden al menos 44 px, tienen foco visible, nombres accesibles, `aria-current`, `aria-expanded` y `aria-controls` cuando corresponda.
+- [ ] Errores y estados se comunican con texto e iconos además de color. Se respeta `prefers-reduced-motion` y la barra inferior no tapa el botón de descarga.
+- [ ] La paleta Confianza fiscal y las tipografías actuales se mantienen sin alterar el Aula ni la navegación de otros productos.
+
+### 11. Pruebas y publicación
+
+- [ ] Las pruebas unitarias cubren normalización reversible, importes exactos, monedas, terceros nacionales/extranjeros, duplicados, categorías, proveedor global, bloqueos y agrupaciones trazables.
+- [ ] Las pruebas de exportación comprueban encabezados, versión, orden estable, caracteres, importes, advertencias y ausencia de XML/secrets no autorizados.
+- [ ] Las pruebas E2E cubren selección explícita, filtros, corrección manual, exclusión, descarga local, limpieza de sesión, Nora sin envío al abrir y responsive móvil.
+- [ ] Una regresión comprueba que CFDI, conciliación y Pólizas no cambian su flujo ni reciben llamadas nuevas por abrir DIOT.
+- [ ] La herramienta permanece en preparación hasta completar la verificación del esquema oficial y los criterios anteriores.
+- [ ] Cualquier implementación requiere autorización adicional. Commit, push, despliegue, backend, persistencia, autenticación SAT, pagos y presentación automática no quedan autorizados por este documento.
+
+### Corte local implementado — pendiente de publicación
+
+- [x] Workspace local con cinco etapas: Contexto, Fuentes, Clasificar, Revisar y Descargar; estado visible de preparación, revisión, listo y descarga local.
+- [x] Selección explícita de CFDI I/E analizados en memoria; no hay lectura de historial, conexión con SAT, API DIOT, persistencia ni envío automático de XML, terceros o importes.
+- [x] Clasificación humana de tercero, RFC/ID, operación, categoría e importes; los importes originados por el parser numérico se etiquetan como derivados y requieren cotejo/advertencia.
+- [x] Bloqueos deterministas de contexto, RFC/ID, categoría, base, IVA gravado, moneda, duplicados, proveedor global no determinable y exclusiones sin motivo.
+- [x] Agrupación con enteros exactos por tercero, operación, categoría, moneda y calidad, con evidencia UUID/folio/fecha conservada localmente.
+- [x] CSV/JSON de trabajo descargables solo en navegador; el control de formato oficial permanece deshabilitado y se etiqueta como no disponible.
+- [x] Nora contextual cerrada por defecto; abrirla no comparte fuentes y el único envío posible es la pregunta que el usuario escribe explícitamente, sin `documentText` ni `cfdiContext`.
+- [x] Pruebas unitarias DIOT, E2E de escritorio/móvil, descarga local y regresión general aprobadas en este corte.
+- [ ] Verificar y versionar una plantilla oficial vigente del SAT con fixtures antes de habilitar cualquier exportación compatible.
+- [ ] Ampliar la extracción XML con campos fiscales que el parser actual no conserva como texto original, si la especificación verificada lo requiere.
+- [ ] Solicitar autorización independiente antes de commit, push o despliegue; no habilitar autenticación SAT, presentación, backend o persistencia nueva.
