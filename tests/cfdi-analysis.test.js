@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildCfdiAnalysis, buildNoraCfdiContext, buildStoredAnalysis } from "../src/cfdi/analysis.js";
+import { buildCfdiAnalysis, buildCfdiTaxReport, buildNoraCfdiContext, buildStoredAnalysis } from "../src/cfdi/analysis.js";
 
 const invoice = {
   uuid: "UUID-FACTURA-PRIVADO", tipo: "I", serieFolio: "A-7", fecha: "2026-09-01T10:00:00",
@@ -45,4 +45,36 @@ test("el JSON de historial quita nombres de archivos y XML, conservando el resul
   assert.equal(encoded.includes("rawXml"), false);
   assert.equal(stored.facturas[0].uuid, invoice.uuid);
   assert.equal(stored.summary.invoiceCount, 1);
+});
+
+test("separa ventas y compras por RFC y desglosa IVA 0%, 16% e IEPS", () => {
+  const sales = {
+    ...invoice, uuid: "UUID-VENTA", rfcEmisor: "AAA010101AAA", rfcReceptor: "CLI010101BBB",
+    taxRates: ["0", "16"], taxBaseKnown: { zero: true, sixteen: true }, baseIva0: 400, iva0: 0, baseIva16: 600,
+    ieps: 24, iepsBreakdown: { "8%": 24 },
+  };
+  const purchases = {
+    ...invoice, uuid: "UUID-COMPRA", rfcEmisor: "PRO010101CCC", rfcReceptor: "AAA010101AAA",
+    taxRates: ["16"], taxBaseKnown: { zero: false, sixteen: true }, baseIva16: 800, iva16: 128,
+    ieps: 12, iepsBreakdown: { "Cuota ($0.50)": 12 },
+  };
+  const result = buildCfdiTaxReport({ facturas: [sales, purchases] }, " aaa010101aaa ");
+  assert.equal(result.status, "classified");
+  assert.equal(result.sales.invoiceCount, 1);
+  assert.equal(result.purchases.invoiceCount, 1);
+  assert.equal(result.unclassifiedCount, 0);
+  assert.deepEqual(result.sales.byCurrency[0], {
+    currency: "MXN", invoiceCount: 1, zeroRateInvoices: 1, sixteenRateInvoices: 1,
+    baseIva0: 400, iva0: 0, baseIva16: 600, iva16: 160, ieps: 24, iepsBreakdown: { "8%": 24 },
+    baseIva0Known: true, baseIva16Known: true,
+  });
+  assert.deepEqual(result.purchases.byCurrency[0].iepsBreakdown, { "Cuota ($0.50)": 12 });
+});
+
+test("no asigna ventas o compras sin el RFC explícito del comercio", () => {
+  const result = buildCfdiTaxReport({ facturas: [invoice] });
+  assert.equal(result.status, "needs_business_rfc");
+  assert.equal(result.sales.invoiceCount, 0);
+  assert.equal(result.purchases.invoiceCount, 0);
+  assert.equal(result.unclassifiedCount, 1);
 });

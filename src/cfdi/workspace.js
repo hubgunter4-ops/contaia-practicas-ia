@@ -1,4 +1,4 @@
-import { buildCfdiAnalysis, buildNoraCfdiContext, buildStoredAnalysis } from "./analysis.js";
+import { buildCfdiAnalysis, buildCfdiTaxReport, buildNoraCfdiContext, buildStoredAnalysis } from "./analysis.js";
 import { setAuthClient, updateAuthUser } from "../auth/client.js";
 import { MAX_BATCH_FILES, addCfdiFilesToQueue, formatCfdiFileSize, reviewCfdiQueue } from "./upload-queue.js";
 import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js";
@@ -6,7 +6,7 @@ import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js"
 export const cfdiState = {
   initialized: false, configStatus: "loading", configMessage: "Conectando con el almacenamiento privado…",
   client: null, user: null, authBusy: false, email: "", authMessage: "", authError: false,
-  analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "",
+  analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "", taxReportOpen: false, taxReport: null, taxReportBusinessRfc: "",
   savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false,
 };
 
@@ -39,6 +39,23 @@ function summaryCards(analysis) {
     <article><span>Conceptos</span><b>${summary.conceptCount}</b><small>Detalle extraído del XML</small></article>
     <article class="${summary.alerts.length ? "has-alert" : "is-ok"}"><span>Revisiones sugeridas</span><b>${summary.alerts.reduce((sum, alert) => sum + alert.count, 0)}</b><small>${summary.alerts.length ? "No equivalen a un dictamen" : "Sin alertas de regla básicas"}</small></article>
   </div>`;
+}
+
+function renderTaxCurrency(row) {
+  const rateMoney = (value, count, known = true) => count ? (known ? formatMoney(value, row.currency) : "No disponible") : "No identificada";
+  const taxMoney = (value, count) => count ? formatMoney(value, row.currency) : "No identificado";
+  const iepsRows = Object.entries(row.iepsBreakdown || {});
+  return `<article class="cfdi-tax-currency"><div class="cfdi-tax-currency-head"><b>${escapeHtml(row.currency)}</b><small>${row.invoiceCount} comprobante(s)</small></div><div class="cfdi-tax-rate-grid"><div><span>IVA 0% · base</span><strong>${rateMoney(row.baseIva0, row.zeroRateInvoices, row.baseIva0Known)}</strong><small>${row.zeroRateInvoices} con tasa explícita</small></div><div><span>IVA 16% · base</span><strong>${rateMoney(row.baseIva16, row.sixteenRateInvoices, row.baseIva16Known)}</strong><small>${row.sixteenRateInvoices} con tasa explícita</small></div><div><span>IVA trasladado 16%</span><strong>${taxMoney(row.iva16, row.sixteenRateInvoices)}</strong><small>La tasa 0% no genera IVA trasladado</small></div><div><span>IEPS total</span><strong>${taxMoney(row.ieps, iepsRows.length)}</strong><small>${iepsRows.length ? "Desglose disponible abajo" : "Sin IEPS explícito"}</small></div></div>${iepsRows.length ? `<details class="cfdi-ieps-breakdown"><summary>Desglosar IEPS por tasa o cuota</summary><ul>${iepsRows.map(([label, amount]) => `<li><span>${escapeHtml(label)}</span><strong>${formatMoney(amount, row.currency)}</strong></li>`).join("")}</ul></details>` : ""}</article>`;
+}
+
+function renderTaxSide(title, description, side) {
+  return `<section class="cfdi-tax-side"><div class="cfdi-section-title"><div><span>RFC ${title === "Ventas" ? "EMISOR" : "RECEPTOR"}</span><h3>${title}</h3></div><small>${escapeHtml(description)}</small></div>${side.byCurrency.length ? `<div class="cfdi-tax-currencies">${side.byCurrency.map(renderTaxCurrency).join("")}</div>` : `<div class="cfdi-empty-state"><b>No se encontraron ${title.toLowerCase()} con el RFC indicado.</b><p>Confirma que los CFDI seleccionados contienen el RFC de tu comercio/empresa como ${title === "Ventas" ? "emisor" : "receptor"}.</p></div>`}</section>`;
+}
+
+function renderTaxReport(analysis) {
+  if (!cfdiState.taxReportOpen) return `<section class="cfdi-tax-cta" aria-label="Generar reporte de ventas y compras"><div><span>LECTURA PARA COMERCIO / EMPRESA</span><b>Ventas y compras por tasa</b><p>Identifica IVA 0%, IVA 16% e IEPS desde el RFC que indiques, sin asumir si la empresa es emisor o receptor.</p></div><button type="button" data-cfdi-open-tax-report>Generar ventas y compras · 0% / 16% + IEPS</button></section>`;
+  const report = cfdiState.taxReport;
+  return `<section class="cfdi-tax-report" aria-labelledby="cfdi-tax-report-title"><div class="cfdi-section-title"><div><span>COMERCIO / EMPRESA · REPORTE LOCAL</span><h2 id="cfdi-tax-report-title">Ventas y compras por impuestos</h2></div><button type="button" class="cfdi-tax-close" data-cfdi-close-tax-report>Cerrar</button></div><p class="cfdi-tax-explanation">El RFC se usa solo en esta pestaña: ventas = RFC emisor; compras = RFC receptor. Los CFDI tipo E se mantienen como ajustes del conjunto y no se convierten automáticamente en ventas nuevas. IVA 0% no equivale a exento. No se mezclan monedas.</p><form class="cfdi-tax-form" data-cfdi-tax-report><label for="cfdi-business-rfc">RFC de tu comercio o empresa</label><div><input id="cfdi-business-rfc" data-cfdi-business-rfc name="businessRfc" maxlength="13" autocomplete="off" value="${escapeHtml(cfdiState.taxReportBusinessRfc)}" placeholder="Ej. ABC010101ABC" required/><button type="submit">Generar reporte local</button></div><small>No se envía a Nora ni se agrega a una solicitud remota por esta acción.</small></form>${report ? `<p class="cfdi-tax-status" role="status">Reporte generado con ${report.sales.invoiceCount + report.purchases.invoiceCount} comprobante(s) clasificado(s). ${report.unclassifiedCount ? `${report.unclassifiedCount} quedó(aron) fuera por no coincidir con emisor/receptor.` : "Todos los comprobantes coincidieron con una de las dos vistas."}</p><div class="cfdi-tax-sides">${renderTaxSide("Ventas", "La empresa aparece como emisor", report.sales)}${renderTaxSide("Compras", "La empresa aparece como receptor", report.purchases)}</div>` : `<div class="cfdi-tax-empty"><b>Falta contexto de empresa</b><p>Captura el RFC del comercio/empresa para separar ventas y compras. Sin ese dato, ContaIA no atribuye el papel fiscal por intuición.</p></div>`}</section>`;
 }
 
 function renderCurrencyTotals(analysis) {
@@ -108,7 +125,7 @@ export function renderCfdiWorkspace() {
   const currentTab = cfdiState.activeTab;
   const body = !analysis
     ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>${cfdiState.queuedFiles.length ? "Lote listo para analizar" : "El análisis empieza aquí"}</b><p>${cfdiState.queuedFiles.length ? "Confirma la revisión del lote para analizarlo localmente; los resultados aparecerán aquí." : "Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador."}</p></div>`
-    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
+    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderTaxReport(analysis)}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
   const pending = cfdiState.pendingRequest ? `<aside class="cfdi-origin-request"><div><span>DERIVADO DESDE ASISTENTE ABIERTO</span><p>${escapeHtml(cfdiState.pendingRequest)}</p></div><button type="button" data-cfdi-dismiss-request aria-label="Quitar solicitud de origen">×</button></aside>` : "";
   const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
   const statusLabel = cfdiState.status === "processing" ? "Analizando localmente" : cfdiState.error ? "Requiere revisión" : cfdiState.analysis ? "Análisis listo" : cfdiState.queuedFiles.length ? "Lote en revisión" : "Disponible · análisis local";
@@ -192,6 +209,8 @@ async function analyzeFiles(files) {
   cfdiState.processingStep = 0;
   cfdiState.error = "";
   cfdiState.operationMessage = "";
+  cfdiState.taxReport = null;
+  cfdiState.taxReportOpen = false;
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
   try {
     const { parseFiles } = await import("/vendor/cfdi-parser.js");
@@ -312,6 +331,8 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
       if (cfdiState.status !== "processing" && fileInput && !fileInput.disabled) fileInput.click();
       return;
     }
+    if (event.target.closest("[data-cfdi-open-tax-report]")) { cfdiState.taxReportOpen = true; onUpdate(); return; }
+    if (event.target.closest("[data-cfdi-close-tax-report]")) { cfdiState.taxReportOpen = false; cfdiState.taxReport = null; onUpdate(); return; }
     const analyzeBatch = event.target.closest("[data-cfdi-analyze-batch]");
     if (analyzeBatch) {
       const review = reviewCfdiQueue(cfdiState.queuedFiles);
@@ -341,7 +362,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     const tab = event.target.closest("[data-cfdi-tab]");
     if (tab) { cfdiState.activeTab = tab.dataset.cfdiTab; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-reset]")) {
-      cfdiState.analysis = null; cfdiState.fileCount = 0; cfdiState.status = "empty"; cfdiState.error = ""; cfdiState.operationMessage = ""; onUpdate(); return;
+      cfdiState.analysis = null; cfdiState.fileCount = 0; cfdiState.status = "empty"; cfdiState.error = ""; cfdiState.operationMessage = ""; cfdiState.taxReport = null; cfdiState.taxReportOpen = false; cfdiState.taxReportBusinessRfc = ""; onUpdate(); return;
     }
     if (event.target.closest("[data-cfdi-dismiss-request]")) { cfdiState.pendingRequest = ""; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-ask-nora]")) {
@@ -364,6 +385,8 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
         cfdiState.analysis = data.analysis_data;
         cfdiState.fileCount = 0;
         cfdiState.status = "ready";
+        cfdiState.taxReport = null;
+        cfdiState.taxReportOpen = false;
         cfdiState.operationMessage = "Análisis recuperado de tu historial. El XML original no está guardado.";
         cfdiState.operationError = false;
       } catch {
@@ -385,6 +408,15 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     if (event.target.matches("#cfdi-email")) cfdiState.email = event.target.value;
   });
   app.addEventListener("submit", (event) => {
+    const taxForm = event.target.closest("[data-cfdi-tax-report]");
+    if (taxForm) {
+      event.preventDefault();
+      const businessRfc = String(new FormData(taxForm).get("businessRfc") || "").trim().toUpperCase();
+      cfdiState.taxReportBusinessRfc = businessRfc;
+      cfdiState.taxReport = buildCfdiTaxReport(cfdiState.analysis, businessRfc);
+      onUpdate();
+      return;
+    }
     const authForm = event.target.closest("[data-cfdi-auth]");
     if (authForm) { event.preventDefault(); if (cfdiState.client) void authenticate(authForm); return; }
     const saveForm = event.target.closest("[data-cfdi-save]");

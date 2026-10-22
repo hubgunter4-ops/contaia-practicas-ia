@@ -32,6 +32,46 @@ function numAttr(element, name) { return safeNumber(attr(element, name)); }
 function getNodes(parent, name) { return Array.from(parent?.getElementsByTagNameNS?.("*", name) ?? []); }
 function getNode(parent, name) { return getNodes(parent, name)[0] ?? null; }
 function round2(value) { return Math.round((value + Number.EPSILON) * 100) / 100; }
+function isGlobalTaxNode(node) {
+  const parent = String(node?.parentElement?.localName || "").toLowerCase();
+  const grandparent = String(node?.parentElement?.parentElement?.localName || "").toLowerCase();
+  return parent.includes("impuestos") || grandparent.includes("impuestos");
+}
+function numericTaxRate(value) {
+  const parsed = Number.parseFloat(String(value || "").replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function summarizeIvaTransfers(nodes) {
+  let iva0 = 0; let baseIva0 = 0; let iva16 = 0; let baseIva16 = 0;
+  let zeroSeen = false; let sixteenSeen = false; let zeroBaseKnown = true; let sixteenBaseKnown = true;
+  const taxRates = new Set();
+  for (const traslado of nodes) {
+    if (attr(traslado, "Impuesto") !== "002") continue;
+    const factor = attr(traslado, "TipoFactor");
+    const rate = numericTaxRate(attr(traslado, "TasaOCuota"));
+    const baseText = attr(traslado, "Base").trim();
+    const base = numAttr(traslado, "Base");
+    const amount = numAttr(traslado, "Importe");
+    if (factor === "Exento" || rate === null) continue;
+    if (Math.abs(rate) < Number.EPSILON) {
+      zeroSeen = true;
+      zeroBaseKnown = zeroBaseKnown && Boolean(baseText);
+      baseIva0 += base;
+      taxRates.add("0");
+    } else if (Math.abs(rate - 0.16) < Number.EPSILON) {
+      sixteenSeen = true;
+      sixteenBaseKnown = sixteenBaseKnown && Boolean(baseText);
+      baseIva16 += base;
+      iva16 += amount;
+      taxRates.add("16");
+    }
+    if (Math.abs(rate) < Number.EPSILON) iva0 += amount;
+  }
+  return {
+    iva0: round2(iva0), baseIva0: round2(baseIva0), iva16: round2(iva16), baseIva16: round2(baseIva16),
+    taxRates: [...taxRates], taxBaseKnown: { zero: zeroSeen && zeroBaseKnown, sixteen: sixteenSeen && sixteenBaseKnown },
+  };
+}
 
 export function parsearXML(xmlText, fileName = "") {
   if (typeof DOMParser === "undefined") throw new Error("Este navegador no puede analizar XML localmente.");
@@ -101,27 +141,23 @@ export function parsearXML(xmlText, fileName = "") {
   } else if (tipo === "I" || tipo === "E") {
     const subtotal = numAttr(comprobante, "SubTotal");
     const descuento = numAttr(comprobante, "Descuento");
-    let iva16 = 0; let ieps = 0; let ivaRetenido = 0;
+    const allIvaTransfers = getNodes(doc, "Traslado").filter((node) => attr(node, "Impuesto") === "002");
+    const globalIvaTransfers = allIvaTransfers.filter(isGlobalTaxNode);
+    const ivaSummary = summarizeIvaTransfers(globalIvaTransfers.length ? globalIvaTransfers : allIvaTransfers);
+    const { iva0, baseIva0, iva16, baseIva16, taxRates, taxBaseKnown } = ivaSummary;
+    let ieps = 0; let ivaRetenido = 0;
     const iepsBreakdown = {};
     for (const traslado of getNodes(doc, "Traslado")) {
-      const isGlobal = traslado.parentElement?.parentElement?.localName?.includes("Comprobante") || traslado.parentElement?.localName?.includes("Impuestos");
+      const isGlobal = isGlobalTaxNode(traslado);
       if (!isGlobal) continue;
       const tax = attr(traslado, "Impuesto");
       const rate = attr(traslado, "TasaOCuota");
       const factor = attr(traslado, "TipoFactor");
       const amount = numAttr(traslado, "Importe");
-      if (tax === "002" && ["0.160000", "0.16"].includes(rate)) iva16 += amount;
-      else if (tax === "003" && amount > 0) {
+      if (tax === "003" && amount > 0) {
         ieps += amount;
         const label = formatIEPSRate(rate, factor);
         iepsBreakdown[label] = (iepsBreakdown[label] || 0) + amount;
-      }
-    }
-    if (iva16 === 0) {
-      for (const concept of getNodes(doc, "Concepto")) {
-        for (const traslado of getNodes(concept, "Traslado")) {
-          if (attr(traslado, "Impuesto") === "002" && ["0.160000", "0.16"].includes(attr(traslado, "TasaOCuota"))) iva16 += numAttr(traslado, "Importe");
-        }
       }
     }
     const conceptIeps = {};
@@ -138,7 +174,7 @@ export function parsearXML(xmlText, fileName = "") {
       for (const [rate, amount] of Object.entries(conceptIeps)) { iepsBreakdown[rate] = (iepsBreakdown[rate] || 0) + amount; ieps += amount; }
     }
     for (const retention of getNodes(doc, "Retencion")) {
-      const isGlobal = retention.parentElement?.parentElement?.localName?.includes("Comprobante") || retention.parentElement?.localName?.includes("Impuestos");
+      const isGlobal = isGlobalTaxNode(retention);
       if (isGlobal && attr(retention, "Impuesto") === "002") ivaRetenido += numAttr(retention, "Importe");
     }
     if (ivaRetenido === 0) {
@@ -147,16 +183,18 @@ export function parsearXML(xmlText, fileName = "") {
     const cfdiRelacionado = getNodes(doc, "CfdiRelacionado").map((node) => attr(node, "UUID")).filter(Boolean).join(", ");
     facturas.push({
       uuid, tipo, serieFolio, emisor: nombreEmisor, receptor: nombreReceptor, fecha,
-      formaPago: describePaymentForm(formaPago), metodoPago, moneda, subtotal, descuento, iva16, total,
+      formaPago: describePaymentForm(formaPago), metodoPago, moneda, subtotal, descuento, iva0, baseIva0, iva16, baseIva16, taxRates, taxBaseKnown, total,
       cfdiRelacionado, rfcEmisor, rfcReceptor, nombreEmisor, nombreReceptor, fileName, ivaRetenido, ieps, iepsBreakdown,
     });
     for (const concept of getNodes(doc, "Concepto")) {
-      let conceptIva16 = 0; let conceptIeps = 0;
+      let conceptIva0 = 0; let conceptBaseIva0 = 0; let conceptIva16 = 0; let conceptBaseIva16 = 0; let conceptIeps = 0;
       const conceptIepsBreakdown = {};
       for (const traslado of getNodes(concept, "Traslado")) {
         const tax = attr(traslado, "Impuesto"); const rate = attr(traslado, "TasaOCuota");
         const factor = attr(traslado, "TipoFactor"); const amount = numAttr(traslado, "Importe");
-        if (tax === "002" && ["0.160000", "0.16"].includes(rate)) conceptIva16 += amount;
+        const parsedRate = numericTaxRate(rate);
+        if (tax === "002" && parsedRate !== null && Math.abs(parsedRate) < Number.EPSILON) { conceptIva0 += amount; conceptBaseIva0 += numAttr(traslado, "Base"); }
+        else if (tax === "002" && parsedRate !== null && Math.abs(parsedRate - 0.16) < Number.EPSILON) { conceptIva16 += amount; conceptBaseIva16 += numAttr(traslado, "Base"); }
         else if (tax === "003" && amount > 0) {
           conceptIeps += amount;
           const label = formatIEPSRate(rate, factor);
@@ -167,7 +205,7 @@ export function parsearXML(xmlText, fileName = "") {
         uuid, tipo, moneda, emisor: nombreEmisor, fecha, claveProdServ: attr(concept, "ClaveProdServ"),
         descripcion: attr(concept, "Descripcion"), cantidad: numAttr(concept, "Cantidad"),
         unidad: attr(concept, "ClaveUnidad"), valorUnitario: numAttr(concept, "ValorUnitario"),
-        descuento: numAttr(concept, "Descuento"), importe: numAttr(concept, "Importe"), iva16: conceptIva16,
+        descuento: numAttr(concept, "Descuento"), importe: numAttr(concept, "Importe"), iva0: conceptIva0, baseIva0: conceptBaseIva0, iva16: conceptIva16, baseIva16: conceptBaseIva16,
         serieFolio, ieps: conceptIeps, iepsBreakdown: conceptIepsBreakdown,
       });
     }

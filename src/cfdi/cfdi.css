@@ -116,6 +116,46 @@
 .cfdi-metrics article.has-alert > b { color: #f0c25a; }
 .cfdi-metrics article.is-ok { border-color: #315844; background: #14251e; }
 .cfdi-metrics article.is-ok > b { color: #9de0b9; }
+.cfdi-tax-cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px; border: 1px solid #456447; border-radius: 8px; background: linear-gradient(110deg, #19271d, #111d24); }
+.cfdi-tax-cta > div { min-width: 0; }
+.cfdi-tax-cta > div > span { display: block; margin-bottom: 4px; color: #b2d96d; font: 8px "DM Mono", Consolas, monospace; letter-spacing: .1em; }
+.cfdi-tax-cta > div > b { display: block; color: #e8f0e4; font-size: 12px; }
+.cfdi-tax-cta > div > p { max-width: 700px; margin: 5px 0 0; color: #aab8aa; font-size: 9px; line-height: 1.45; }
+.cfdi-tax-cta > button, .cfdi-tax-close { flex: none; min-height: 36px; padding: 8px 11px; border: 1px solid #b2d96d; border-radius: 5px; background: #b2d96d; color: #20372d; font-size: 9px; font-weight: 700; cursor: pointer; }
+.cfdi-tax-report { display: grid; gap: 11px; padding: 13px; border: 1px solid #456447; border-radius: 8px; background: #111e22; }
+.cfdi-tax-report .cfdi-section-title { margin-bottom: 0; }
+.cfdi-tax-report .cfdi-section-title h2 { color: #e8f0e4; }
+.cfdi-tax-report .cfdi-section-title > div > span { color: #b2d96d; }
+.cfdi-tax-close { min-height: 29px; padding: 5px 8px; border-color: #52665a; background: transparent; color: #b9c8ba; font-size: 8px; }
+.cfdi-tax-explanation, .cfdi-tax-form small, .cfdi-tax-status { margin: 0; color: #aab8aa; font-size: 9px; line-height: 1.45; }
+.cfdi-tax-form { display: grid; gap: 6px; padding: 10px; border: 1px solid #2f4b3d; border-radius: 7px; background: #14251e; }
+.cfdi-tax-form label { color: #dce9dc; font-size: 9px; font-weight: 650; }
+.cfdi-tax-form > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.cfdi-tax-form input { min-width: 0; min-height: 34px; padding: 7px 9px; border: 1px solid #52665a; border-radius: 5px; background: #0d1724; color: #e8f0e4; font: 10px "DM Mono", Consolas, monospace; text-transform: uppercase; }
+.cfdi-tax-form button { min-height: 34px; padding: 7px 10px; border: 1px solid #b2d96d; border-radius: 5px; background: #b2d96d; color: #20372d; font-size: 9px; font-weight: 700; cursor: pointer; }
+.cfdi-tax-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cfdi-tax-side { min-width: 0; display: grid; gap: 8px; padding: 10px; border: 1px solid #2d4650; border-radius: 7px; background: #0d1724; }
+.cfdi-tax-side .cfdi-section-title { align-items: end; }
+.cfdi-tax-side .cfdi-section-title h3 { margin: 0; color: #e8edf4; font-size: 13px; }
+.cfdi-tax-side .cfdi-section-title small { max-width: 150px; color: #8fa19b; font-size: 8px; text-align: right; }
+.cfdi-tax-currencies { display: grid; gap: 8px; }
+.cfdi-tax-currency { display: grid; gap: 8px; padding: 9px; border: 1px solid #2a3b4f; border-radius: 6px; background: #152235; }
+.cfdi-tax-currency-head { display: flex; justify-content: space-between; gap: 8px; }
+.cfdi-tax-currency-head b { color: #efc45d; font: 9px "DM Mono", Consolas, monospace; }
+.cfdi-tax-currency-head small { color: #8d9cad; font-size: 8px; }
+.cfdi-tax-rate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.cfdi-tax-rate-grid > div { display: grid; gap: 3px; padding: 7px; border: 1px solid #30445a; border-radius: 5px; }
+.cfdi-tax-rate-grid span { color: #9eabb9; font-size: 8px; }
+.cfdi-tax-rate-grid strong { color: #e9eef4; font: 10px "DM Mono", Consolas, monospace; }
+.cfdi-tax-rate-grid small { color: #8594a6; font-size: 7px; line-height: 1.3; }
+.cfdi-ieps-breakdown { border-top: 1px solid #30445a; padding-top: 7px; }
+.cfdi-ieps-breakdown summary { color: #c8e78b; font-size: 8px; cursor: pointer; }
+.cfdi-ieps-breakdown ul { display: grid; gap: 4px; margin: 7px 0 0; padding: 0; list-style: none; }
+.cfdi-ieps-breakdown li { display: flex; justify-content: space-between; gap: 8px; color: #9eabb9; font-size: 8px; }
+.cfdi-ieps-breakdown li strong { color: #e0e8f1; font: 8px "DM Mono", Consolas, monospace; }
+.cfdi-tax-empty { padding: 10px; border: 1px dashed #52665a; border-radius: 6px; background: #14251e; }
+.cfdi-tax-empty b { color: #e1efdf; font-size: 10px; }
+.cfdi-tax-empty p { margin: 4px 0 0; color: #aab8aa; font-size: 9px; line-height: 1.45; }
 .cfdi-page .cfdi-total-block, .cfdi-page .cfdi-alert-list { display: grid; gap: 9px; }
 .cfdi-page .cfdi-total-block .cfdi-section-title small { color: #8c99a8; font-size: 8px; }
 .cfdi-currency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
@@ -177,6 +217,9 @@
   .cfdi-page .cfdi-nora-handoff { align-items: flex-start; flex-direction: column; }
   .cfdi-page .cfdi-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cfdi-page .cfdi-results, .cfdi-page .cfdi-upload-card { padding: 11px; }
+  .cfdi-tax-cta { align-items: stretch; flex-direction: column; }
+  .cfdi-tax-cta > button, .cfdi-tax-form button { width: 100%; }
+  .cfdi-tax-sides { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 420px) {
   .cfdi-page .cfdi-metrics { gap: 6px; }
@@ -184,6 +227,7 @@
   .cfdi-metrics article > b { font-size: 15px; }
   .cfdi-page .cfdi-auth-form > div { grid-template-columns: minmax(0, 1fr); }
   .cfdi-page .cfdi-parse-error { flex-direction: column; }
+  .cfdi-tax-form > div { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cfdi-dropzone { transition: none; }
@@ -383,3 +427,26 @@
 
 .app-shell--fiscal .cfdi-page .cfdi-nora-handoff > button { border: 1px solid var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
 .app-shell--fiscal .cfdi-page .cfdi-nora-handoff > button:hover { background: #116b59; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-cta { border-color: #b7d9ce; background: linear-gradient(110deg, #edf6ef, #f5f8f2); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-cta > div > span, .app-shell--fiscal .cfdi-page .cfdi-tax-report .cfdi-section-title > div > span { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-cta > div > b, .app-shell--fiscal .cfdi-page .cfdi-tax-report .cfdi-section-title h2 { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-cta > div > p, .app-shell--fiscal .cfdi-page .cfdi-tax-explanation, .app-shell--fiscal .cfdi-page .cfdi-tax-form small, .app-shell--fiscal .cfdi-page .cfdi-tax-status { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-cta > button, .app-shell--fiscal .cfdi-page .cfdi-tax-form button { border-color: var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-report { border-color: #b7d9ce; background: #f5f8f2; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-close { border-color: var(--fiscal-line); background: #fff; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-form { border-color: #cddbd3; background: #eaf5f0; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-form label { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-form input { border-color: var(--fiscal-line); background: #fff; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-side { border-color: var(--fiscal-line); background: #fff; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-side .cfdi-section-title h3 { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-side .cfdi-section-title small, .app-shell--fiscal .cfdi-page .cfdi-tax-currency-head small { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-currency { border-color: var(--fiscal-line); background: #f8f9f5; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-currency-head b { color: #695516; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-rate-grid > div { border-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-rate-grid span, .app-shell--fiscal .cfdi-page .cfdi-tax-rate-grid small, .app-shell--fiscal .cfdi-page .cfdi-ieps-breakdown li { color: var(--fiscal-muted); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-rate-grid strong, .app-shell--fiscal .cfdi-page .cfdi-ieps-breakdown li strong { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-ieps-breakdown { border-top-color: var(--fiscal-line); }
+.app-shell--fiscal .cfdi-page .cfdi-ieps-breakdown summary { color: var(--fiscal-jade); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-empty { border-color: #b7d9ce; background: #eaf5f0; }
+.app-shell--fiscal .cfdi-page .cfdi-tax-empty b { color: var(--fiscal-petroleum); }
+.app-shell--fiscal .cfdi-page .cfdi-tax-empty p { color: var(--fiscal-muted); }

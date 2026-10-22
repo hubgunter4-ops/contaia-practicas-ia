@@ -2,6 +2,72 @@ import { enriquecerPagosConFacturas } from "./relations.js";
 
 const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const normalizedUuid = (value) => String(value || "").trim().toLowerCase();
+const normalizedRfc = (value) => String(value || "").trim().toUpperCase();
+
+function emptyTaxCurrency(currency) {
+  return {
+    currency, invoiceCount: 0, zeroRateInvoices: 0, sixteenRateInvoices: 0,
+    baseIva0: 0, iva0: 0, baseIva16: 0, iva16: 0, ieps: 0, iepsBreakdown: {},
+    baseIva0Known: true, baseIva16Known: true,
+  };
+}
+
+function summarizeTaxSide(invoices) {
+  const byCurrency = new Map();
+  for (const invoice of invoices) {
+    const currency = invoice.moneda || "Sin moneda indicada";
+    const row = byCurrency.get(currency) || emptyTaxCurrency(currency);
+    const rates = Array.isArray(invoice.taxRates) ? invoice.taxRates : [];
+    const hasZero = rates.includes("0");
+    const hasSixteen = rates.includes("16");
+    row.invoiceCount += 1;
+    if (hasZero) {
+      row.zeroRateInvoices += 1;
+      row.baseIva0 += Number(invoice.baseIva0 || 0);
+      row.iva0 += Number(invoice.iva0 || 0);
+      row.baseIva0Known = row.baseIva0Known && invoice.taxBaseKnown?.zero !== false;
+    }
+    if (hasSixteen) {
+      row.sixteenRateInvoices += 1;
+      row.baseIva16 += Number(invoice.baseIva16 || 0);
+      row.iva16 += Number(invoice.iva16 || 0);
+      row.baseIva16Known = row.baseIva16Known && invoice.taxBaseKnown?.sixteen !== false;
+    }
+    row.ieps += Number(invoice.ieps || 0);
+    for (const [label, amount] of Object.entries(invoice.iepsBreakdown || {})) row.iepsBreakdown[label] = (row.iepsBreakdown[label] || 0) + Number(amount || 0);
+    byCurrency.set(currency, row);
+  }
+  return {
+    invoiceCount: invoices.length,
+    byCurrency: [...byCurrency.values()].map((row) => ({
+      ...row,
+      baseIva0: round2(row.baseIva0), iva0: round2(row.iva0), baseIva16: round2(row.baseIva16), iva16: round2(row.iva16), ieps: round2(row.ieps),
+      iepsBreakdown: Object.fromEntries(Object.entries(row.iepsBreakdown).map(([label, amount]) => [label, round2(amount)])),
+    })),
+  };
+}
+
+export function buildCfdiTaxReport(analysis, businessRfc = "") {
+  const normalizedBusinessRfc = normalizedRfc(businessRfc);
+  const invoices = Array.isArray(analysis?.facturas) ? analysis.facturas : [];
+  if (!normalizedBusinessRfc) {
+    return { schemaVersion: "cfdi-tax-report-v1", status: "needs_business_rfc", businessRfc: "", sales: summarizeTaxSide([]), purchases: summarizeTaxSide([]), unclassifiedCount: invoices.length };
+  }
+  const sales = [];
+  const purchases = [];
+  const unclassified = [];
+  for (const invoice of invoices) {
+    const issuerMatches = normalizedRfc(invoice.rfcEmisor) === normalizedBusinessRfc;
+    const receiverMatches = normalizedRfc(invoice.rfcReceptor) === normalizedBusinessRfc;
+    if (issuerMatches && !receiverMatches) sales.push(invoice);
+    else if (receiverMatches && !issuerMatches) purchases.push(invoice);
+    else unclassified.push(invoice);
+  }
+  return {
+    schemaVersion: "cfdi-tax-report-v1", status: "classified", businessRfc: normalizedBusinessRfc,
+    sales: summarizeTaxSide(sales), purchases: summarizeTaxSide(purchases), unclassifiedCount: unclassified.length,
+  };
+}
 
 export function buildCfdiAnalysis(parsed) {
   const facturas = Array.isArray(parsed?.facturas) ? parsed.facturas : [];
