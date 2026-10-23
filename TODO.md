@@ -717,7 +717,7 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 ---
 ## Fase IA E3 — Rate limiting distribuido, TTL y circuit breaker
-**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+**Estado:** terminada, validada y publicada en el checkpoint firmado de E3; la activación Redis real sigue pendiente de secretos privados.
 - [x] Crear store Redis REST opcional con operaciones atómicas Lua de reserva, cierre y liberación por cuenta opaca, capability y periodo UTC.
 - [x] Aplicar TTL de 30 segundos a reservas y retención de 62 días para distinguir `reserved`, `completed`, `released` y `expired` sin permitir replay silencioso.
 - [x] Mantener store en memoria compatible solo para desarrollo/pruebas cuando no existan las variables privadas del store distribuido; la configuración inválida falla cerrada para la admisión remota.
@@ -729,3 +729,17 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [ ] Las variables `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN` quedaron preparadas pero no configuradas en este sandbox; la activación distribuida real requiere definirlas como secretos privados en Vercel.
 - [ ] No se añadió todavía un semáforo distribuido independiente para `tools.ai.concurrent.requests`; queda como parte de la siguiente revisión de capacidad/resiliencia.
 **Siguiente fase propuesta tras E3:** E4 — observabilidad redacted y métricas agregadas sin prompts ni datos fiscales, previa confirmación explícita.
+
+
+---
+## Fase IA E4 — Observabilidad redacted y métricas agregadas
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+- [x] Crear el contrato `ai-observability-v1` sobre los eventos E0 existentes, con campos enumerados y sin prompts, cuerpos, headers, XML, RFC, UUID, importes, cookies, tokens ni credenciales.
+- [x] Implementar un registry de métricas en memoria que conserva únicamente contadores y buckets de latencia; no guarda eventos completos ni textos de solicitud.
+- [x] Emitir eventos seguros para admisión permitida/bloqueada, planner solicitado/completado/fallback, explicación CFDI sanitizada/confirmada/fallida y cancelación de lifecycle.
+- [x] Permitir un sink de logs redacted solo mediante `AI_OBSERVABILITY_SINK=console`; el entorno de pruebas usa sink nulo.
+- [x] Instrumentar planner CFDI y explicación `cfdi-summary-v1` sin cambiar el payload remoto ni exponer el snapshot.
+- [x] Añadir pruebas de no filtración, enums, agregación, buckets, sink y rutas server-side.
+- [x] Validar **301/301 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E** completas en serie.
+- [ ] No se añadió un endpoint público de métricas, persistencia de eventos, dashboard externo ni telemetría con datos fiscales; E5 queda pendiente.
+**Siguiente fase propuesta tras E4:** E5 — matriz y aprobación de modelos/proveedores, previa confirmación explícita.

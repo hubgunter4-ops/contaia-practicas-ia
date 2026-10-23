@@ -1792,4 +1792,15 @@ Se implementaron `src/cfdi/ai/ai-resilience.js` y `src/cfdi/ai/ai-distributed-st
 
 El circuit breaker abre después de tres fallos transitorios, espera 30 segundos, permite una prueba half-open y responde 503 con `Retry-After`. La función planner declara `maxDuration: 20`; el timeout de Gateway es configurable y su valor por defecto es 15 segundos. No se añadieron tablas, pagos, persistencia de prompts, telemetría conectada ni acciones fiscales; tampoco se activó la configuración Redis en el sandbox. E3 quedó validada con **290/290 unitarias**, **9/9 pruebas focalizadas E3**, **24/24 E2E focalizadas** y **110/110 E2E completas**, además del build estático aprobado.
 
-E4 — observabilidad redacted y métricas agregadas — permanece pendiente y requiere autorización independiente.
+E4 — observabilidad redacted y métricas agregadas — queda implementada en el anexo siguiente; E5 requiere autorización independiente.
+
+
+### Fase IA E4 — Observabilidad redacted y métricas agregadas
+
+E4 implementa `src/cfdi/ai/ai-observability.js` como una frontera pura entre el runtime remoto y cualquier observabilidad. Reutiliza `createAiTelemetryEvent()` y las enumeraciones de E0; no amplía el contrato para aceptar texto libre. Cada request tiene un identificador opaco `ai:*`, el identificador de cuenta se transforma a una referencia no reversible `acct_*` y el proveedor se reduce a una familia allowlisted.
+
+El registry solo conserva contadores y buckets de latencia (`lt_100`, `100_499`, `500_999`, `1s_2s`, `2s_plus`), además de un contador de eventos rechazados. No conserva payloads, mensajes, prompts, bodies, headers, snapshots, XML, RFC, UUID, importes, cookies, tokens ni credenciales. Un sink de logs redacted puede activarse explícitamente con `AI_OBSERVABILITY_SINK=console`; sin esa variable el sink es nulo en desarrollo/pruebas. Incluso con sink activo, cada evento se valida mediante el contrato E0 antes de salir.
+
+El servidor emite eventos de admisión, planner y explicación CFDI únicamente en puntos de decisión: admisión permitida/bloqueada, planner solicitado/completado/fallback local, resumen sanitizado/confirmado/fallido y cancelación por lifecycle. No se añade un endpoint público para consultar métricas ni se incluye el snapshot en respuestas de usuario. La instrumentación es best effort: un error del registry o del sink nunca rompe una consulta ni cambia el cálculo fiscal.
+
+La fase se validó con **301/301 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** de CFDI/admisión/Nora y **110/110 E2E** completas en serie. E4 no incorpora tablas, proveedor de telemetría, dashboards externos, cookies nuevas, retención persistente ni transmisión automática de fuentes locales. E5 queda pendiente para la matriz de modelos y aprobación de proveedores.

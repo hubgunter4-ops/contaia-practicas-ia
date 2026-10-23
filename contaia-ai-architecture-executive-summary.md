@@ -187,15 +187,16 @@ La petición del usuario puede viajar al endpoint planner únicamente después d
 | **IA E1** | `AiDataLossPreventionGate` local, modo planner estricto y rechazo antes de Gateway | Terminada localmente |
 | **IA E2** | Admisión autenticada, entitlement server-side Free/Premium, cuota mensual e idempotencia | Terminada localmente |
 | **IA E3** | Store Redis REST opcional, TTL de leases, timeout, `Retry-After` y circuit breaker | Implementada localmente; activación Redis pendiente |
-| **IA E4-E6** | Observabilidad conectada, revisión de proveedores y UX Premium | Pendientes |
+| **IA E4** | Eventos redacted, contadores/buckets en memoria y sink de consola opcional | Terminada localmente; sin persistencia ni endpoint público |
+| **IA E5-E6** | Revisión de proveedores y UX Premium | Pendientes |
 
 ## 8. Evidencia de validación
 
 La validación acumulada del estado actual incluye:
 
-- **290/290 pruebas unitarias aprobadas.**
+- **301/301 pruebas unitarias aprobadas.**
 - **110/110 pruebas E2E aprobadas** en escritorio y Pixel 5.
-- **9/9 pruebas focalizadas E3** y **24/24 E2E focalizadas** de planner, admisión, Nora y resiliencia aprobadas.
+- **9/9 pruebas focalizadas E3** y **24/24 E2E focalizadas** de planner, admisión, Nora, resiliencia y observabilidad aprobadas.
 - **21/21 pruebas focalizadas** de DLP y servidor aprobadas.
 - Build estático `npm run build:vercel` aprobado.
 - Compilación focalizada de planner, orquestador y endpoint aprobada.
@@ -224,7 +225,7 @@ El planner es opcional. Las acciones deterministas deben seguir funcionando aunq
 
 ### Observabilidad
 
-Actualmente la privacidad impide guardar prompts y payloads completos por defecto. Antes de operar a escala conviene definir métricas agregadas y no sensibles: latencia, tasa de JSON inválido, tasa de fallback, errores por proveedor y cantidad de planes bloqueados.
+E4 ya define métricas agregadas no sensibles: latencia por buckets, JSON inválido, fallback, errores por proveedor, admisión bloqueada, DLP y cancelación. El registry es efímero y el sink de consola requiere `AI_OBSERVABILITY_SINK=console`; no existe endpoint público, persistencia de eventos ni dashboard externo.
 
 ### Alcance fiscal
 
@@ -232,7 +233,7 @@ El planner no aprueba pólizas, no presenta declaraciones, no cancela CFDI, no m
 
 ### Monetización y Premium
 
-E2 aplica cuotas y entitlements server-side en las rutas remotas: planner Free/Premium y explicación/snapshot CFDI explícito. Free conserva las herramientas locales, pero no puede compartir `cfdi-summary-v1` con Nora. E3 añade resiliencia y el adaptador de almacenamiento distribuido; la allowlist privada de Premium sigue siendo una transición operativa, no cobro, checkout ni fuente comercial definitiva. E4–E6 deben aportar observabilidad redacted, revisión de proveedores y UX de upgrade.
+E2 aplica cuotas y entitlements server-side en las rutas remotas: planner Free/Premium y explicación/snapshot CFDI explícito. Free conserva las herramientas locales, pero no puede compartir `cfdi-summary-v1` con Nora. E3 añade resiliencia y el adaptador de almacenamiento distribuido; la allowlist privada de Premium sigue siendo una transición operativa, no cobro, checkout ni fuente comercial definitiva. E4 aporta observabilidad redacted; E5 debe revisar proveedores y E6 la UX de upgrade.
 
 ## 10. Recomendación para la revisión de arquitectura
 
@@ -256,6 +257,8 @@ Antes de una publicación productiva del planner se recomienda aprobar explícit
 - [Cliente del planner](/home/ubuntu/contaia-practicas-ia/src/cfdi/ai/planner-api.js)
 - [Endpoint del planner](/home/ubuntu/contaia-practicas-ia/api/cfdi/planner.js)
 - [Servidor de Nora y Gateway](/home/ubuntu/contaia-practicas-ia/src/tutor/server.js)
+- [Contrato técnico de observabilidad E4](/home/ubuntu/contaia-practicas-ia/contaia-ai-phase-e4-observability.md)
+- [Registry de observabilidad E4](/home/ubuntu/contaia-practicas-ia/src/cfdi/ai/ai-observability.js)
 - [Checklist de implementación](/home/ubuntu/contaia-practicas-ia/TODO.md)
 - [Contrato de gobernanza E0](/home/ubuntu/contaia-practicas-ia/contaia-ai-phase-e0-governance-contract.md)
 - [Contrato de DLP E1](/home/ubuntu/contaia-practicas-ia/contaia-ai-phase-e1-dlp-gate.md)

@@ -36,4 +36,4 @@ El endpoint planner valida DLP antes de admisión y valida la salida JSON despu�
 
 La implementación aprobó **281/281** pruebas unitarias, compilación ESM focalizada, build estático, **6/6** E2E focalizadas y **110/110** E2E completas. Las fixtures de navegador emplean tokens sintéticos e interceptan la red; no usan credenciales, CFDI ni datos fiscales reales.
 
-E2 no incluye tablas, pagos, checkout, webhooks, persistencia de prompts, telemetría conectada, UI de upgrade, canary ni aprobación de modelos. E3 queda documentada en el diseño central; la siguiente fase propuesta es **E4 — observabilidad redacted y métricas agregadas**, previa autorización explícita.
+E2 no incluye tablas, pagos, checkout, webhooks, persistencia de prompts, telemetría conectada, UI de upgrade, canary ni aprobación de modelos. E3 y E4 quedan documentadas en el diseño central y sus contratos específicos; la siguiente fase propuesta es **E5 — matriz y aprobación de modelos/proveedores**, previa autorización explícita.

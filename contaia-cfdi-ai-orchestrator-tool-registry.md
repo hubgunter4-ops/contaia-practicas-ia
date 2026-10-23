@@ -933,7 +933,7 @@ Antes de llamar Gateway, `POST /api/cfdi/planner` exige Bearer e `Idempotency-Ke
 
 El store base de E2 era efímero por proceso, no sustituía una cuota distribuida ni introducía tablas, cobros, persistencia fiscal o telemetría conectada. E3 añade un adaptador Redis REST opcional con scripts atómicos, TTL y breaker, sin activarlo por defecto ni convertir la configuración del cliente en autoridad.
 
-La evidencia acumulada posterior a E3 es de 290/290 unitarias, build estático, 9 pruebas focalizadas E3, 24 E2E focalizadas y 110/110 E2E completas. El semáforo distribuido de concurrencia, la observabilidad conectada y la revisión formal de proveedores permanecen pendientes.
+La evidencia acumulada posterior a E3 es de 301/301 unitarias, build estático, 9 pruebas focalizadas E3, 24 E2E focalizadas y 110/110 E2E completas. El semáforo distribuido de concurrencia, la revisión formal de proveedores y la UX Premium permanecen pendientes.
 
 ### Actualización — Fase IA E3: rate limit distribuido y resiliencia
 
@@ -941,4 +941,12 @@ La evidencia acumulada posterior a E3 es de 290/290 unitarias, build estático, 
 
 `src/cfdi/ai/ai-resilience.js` implementa timeout compuesto y circuit breaker por proveedor/modelo. Tres fallos transitorios abren el circuito durante 30 segundos, una sola solicitud half-open puede probar recuperación y el servidor responde con `Retry-After` sin devolver diagnósticos upstream. `vercel.json` declara `maxDuration: 20` para el planner y el timeout de Gateway es 15 segundos por defecto.
 
-La activación distribuida depende de `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN` como variables privadas. Sin ellas, memoria es solo un modo compatible para desarrollo/pruebas; una configuración parcial o insegura bloquea la admisión remota de forma controlada. E4 — observabilidad redacted — es la siguiente fase pendiente.
+La activación distribuida depende de `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN` como variables privadas. Sin ellas, memoria es solo un modo compatible para desarrollo/pruebas; una configuración parcial o insegura bloquea la admisión remota de forma controlada.
+
+### Actualización — Fase IA E4: observabilidad redacted y métricas agregadas
+
+`src/cfdi/ai/ai-observability.js` implementa `ai-observability-v1` sobre los eventos enumerados de `ai-governance-v1`. Cada request usa un `ai:*` opaco y cada cuenta se reduce a `acct_*`; el registry solo conserva contadores, buckets de latencia y contadores de descarte. La cardinalidad está acotada y cualquier overflow se agrega sin conservar el evento original.
+
+El servidor instrumenta admisión permitida/bloqueada, planner solicitado/completado/fallback, explicación CFDI sanitizada/confirmada/fallida y cancelación de lifecycle. El sink de consola solo se activa con `AI_OBSERVABILITY_SINK=console`; en pruebas y desarrollo permanece nulo. No se añadió endpoint público, tabla, persistencia, dashboard ni payload adicional hacia Gateway. El contrato completo está en `contaia-ai-phase-e4-observability.md`.
+
+E4 se validó con 301/301 unitarias, 24/24 E2E focalizadas y 110/110 E2E completas, además del build estático. E5 — matriz y aprobación de proveedores — queda pendiente y requiere confirmación independiente.

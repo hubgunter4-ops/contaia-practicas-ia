@@ -1,8 +1,8 @@
 # ContaIA — Riesgos pendientes y contramedidas técnicas para Fase IA E
 
-**Corte:** revisión posterior a Fase IA E3
+**Corte:** revisión posterior a Fase IA E4
 **Alcance:** planner JSON CFDI, explicación segura con Nora, cuotas Premium, DLP y observabilidad
-**Estado:** E0, E1, E2 y E3 implementadas localmente; E4–E6 continúan como controles pendientes
+**Estado:** E0, E1, E2, E3 y E4 implementadas localmente; E5–E6 continúan como controles pendientes
 
 ## 1. Conclusión ejecutiva
 
@@ -514,14 +514,16 @@ Entregables:
 
 Entregables:
 
-- interfaz `AiTelemetry`;
-- eventos enumerados;
-- métricas y dashboards de latencia, fallback, DLP y schema;
-- alertas de costo y disponibilidad;
-- retención y control de acceso a logs;
-- pruebas de no filtración de prompt/body/header.
+- [x] interfaz `AiTelemetry` compatible con `ai-governance-v1`;
+- [x] eventos enumerados para admisión, planner, explicación y cancelación;
+- [x] métricas en memoria de latencia, fallback, DLP, schema y cardinalidad acotada;
+- [x] sink de consola redacted opcional, nulo por defecto en pruebas/desarrollo;
+- [x] pruebas de no filtración de prompt/body/header/snapshot;
+- [ ] dashboards externos, alertas de costo/disponibilidad y retención persistente.
 
-**Criterio de salida:** los fixtures con RFC, UUID, XML, correo y texto Nora no aparecen en ningún evento o log capturado.
+**Estado:** implementada localmente y validada; sin endpoint público, persistencia de eventos ni proveedor externo de telemetría.
+
+**Criterio de salida:** los fixtures con RFC, UUID, XML, correo, snapshot e instrucción Nora no aparecen en ningún evento o log capturado. Evidencia: **301/301 unitarias**, **24 E2E focalizadas** y **110/110 E2E completas**; E5 — matriz y aprobación de proveedores — queda pendiente.
 
 ### E5 — Compatibilidad de modelos y vendor review
 

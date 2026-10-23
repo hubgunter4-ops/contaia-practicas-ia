@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { AiAdmissionError, assertAiIdempotencyKey, createAiAdmissionService, createMemoryAiUsageStore } from "../cfdi/ai/ai-admission.js";
 import { createConfiguredRedisRestAiUsageStore } from "../cfdi/ai/ai-distributed-store.js";
 import { AiResilienceError, composeAbortSignal, createCircuitBreaker } from "../cfdi/ai/ai-resilience.js";
+import { createConfiguredAiObservability } from "../cfdi/ai/ai-observability.js";
 
 const maxBodyBytes = 192 * 1024;
 const maxMessageChars = 2000;
@@ -20,6 +21,8 @@ const gatewayEndpoint = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const gatewayCircuits = new Map();
 let defaultAiAdmissionService;
 let defaultAiAdmissionMode = "";
+let defaultAiObservability;
+let defaultAiObservabilityMode = "";
 
 const providerDefinitions = [
   { id: "openai", label: "OpenAI", keyEnv: "AI_GATEWAY_OPENAI_API_KEY", modelEnv: "AI_GATEWAY_OPENAI_MODEL", modelPrefix: "openai/" },
@@ -58,6 +61,19 @@ function getDefaultAiAdmissionService(env = process.env) {
     defaultAiAdmissionMode = mode;
   }
   return defaultAiAdmissionService;
+}
+
+function getDefaultAiObservability(env = process.env) {
+  const mode = `${env.VERCEL_ENV || ""}:${env.NODE_ENV || ""}:${env.AI_OBSERVABILITY_SINK || ""}`;
+  if (!defaultAiObservability || defaultAiObservabilityMode !== mode) {
+    defaultAiObservability = createConfiguredAiObservability({ env });
+    defaultAiObservabilityMode = mode;
+  }
+  return defaultAiObservability;
+}
+
+function observe(telemetry, eventName, payload) {
+  try { telemetry?.emit(eventName, payload); } catch { /* La observabilidad nunca interrumpe la operación. */ }
 }
 
 function gatewayCircuitKey(providerId, env) {
@@ -547,7 +563,16 @@ export async function handleCfdiPlanner(req, res, {
   resolveAccount = resolveAiAccount,
   createClientImpl = createClient,
   circuitBreaker,
+  observability,
 } = {}) {
+  const telemetry = observability || getDefaultAiObservability(env);
+  const trace = telemetry.startRequest();
+  const telemetryBase = {
+    requestId: trace.requestId,
+    route: "cfdi_planner",
+    capability: "tools.ai.planner.requests",
+    environment: telemetry.environment,
+  };
   if (!applyCors(req, res, env)) return sendJson(res, 403, { error: "Origen no autorizado." });
   if (req.method === "OPTIONS") {
     res.writeHead(204, { "Cache-Control": "no-store" });
@@ -558,9 +583,13 @@ export async function handleCfdiPlanner(req, res, {
   try {
     input = validateCfdiPlannerInput(await readJson(req));
   } catch (error) {
+    observe(telemetry, "ai.planner.fallback_local", { ...telemetryBase, errorCode: telemetry.errorCode(error), outcome: "fallback_local" });
     return sendJson(res, error.status || 400, { error: error.message });
   }
-  if (!withinRateLimit(req)) return sendJson(res, 429, { error: "Hay muchas consultas al planner desde esta conexión; espera unos minutos y vuelve a intentar." });
+  if (!withinRateLimit(req)) {
+    observe(telemetry, "ai.planner.rate_limited", { ...telemetryBase, errorCode: "ai_rate_limited" });
+    return sendJson(res, 429, { error: "Hay muchas consultas al planner desde esta conexión; espera unos minutos y vuelve a intentar." });
+  }
   let admission;
   const effectiveAdmissionService = admissionService || getDefaultAiAdmissionService(env);
   try {
@@ -571,9 +600,25 @@ export async function handleCfdiPlanner(req, res, {
       resolveAccount,
       createClientImpl,
     });
-    if (admission.replay && admission.cachedResult) return sendJson(res, 200, admission.cachedResult);
+    if (admission.replay && admission.cachedResult) {
+      observe(telemetry, "ai.admission.allowed", { ...telemetryBase, plan: admission.plan || "unknown", quotaDecision: "allowed" });
+      observe(telemetry, "ai.planner.completed", { ...telemetryBase, outcome: "completed", latencyMs: trace.elapsedMs(), toolId: admission.cachedResult.toolId || "cfdi.summary" });
+      return sendJson(res, 200, admission.cachedResult);
+    }
     assertFreshAdmission(admission);
+    observe(telemetry, "ai.admission.allowed", { ...telemetryBase, plan: admission.plan || "unknown", quotaDecision: "reserved" });
+    observe(telemetry, "ai.planner.requested", {
+      requestId: trace.requestId,
+      route: "cfdi_planner",
+      capability: "tools.ai.planner.requests",
+      provider: telemetry.providerFamily(configuredProviders(env).defaultProvider),
+      modelFamily: telemetry.modelFamily(configuredProviders(env).defaultProvider),
+      environment: telemetry.environment,
+    });
   } catch (error) {
+    const errorCode = telemetry.errorCode(error);
+    observe(telemetry, "ai.admission.blocked", { ...telemetryBase, errorCode, quotaDecision: "blocked" });
+    observe(telemetry, "ai.planner.rate_limited", { ...telemetryBase, errorCode });
     return sendAdmissionError(res, error);
   }
   const controller = new AbortController();
@@ -583,13 +628,20 @@ export async function handleCfdiPlanner(req, res, {
   try {
     const plan = await breaker.run((signal) => callCfdiPlanner(input, signal, env, fetchImpl), { signal: timeout.signal });
     await effectiveAdmissionService.complete(admission, plan);
+    observe(telemetry, "ai.planner.completed", { ...telemetryBase, outcome: "completed", latencyMs: trace.elapsedMs(), toolId: plan.toolId });
     return sendJson(res, 200, plan);
   } catch (error) {
     await Promise.allSettled([effectiveAdmissionService.release(admission)]);
-    if (controller.signal.aborted || res.destroyed) return;
+    if (controller.signal.aborted || res.destroyed) {
+      observe(telemetry, "ai.lifecycle.cancelled", { requestId: trace.requestId, errorCode: "ai_request_cancelled", environment: telemetry.environment });
+      return;
+    }
     const safeError = timeout.timedOut()
       ? new AiResilienceError("El planner excedió el tiempo permitido. Conserva las herramientas locales y vuelve a intentarlo.", { code: "ai_gateway_timeout", status: 504, retryAfter: 2 })
       : error;
+    const errorCode = telemetry.errorCode(safeError);
+    const eventName = errorCode === "ai_schema_invalid" ? "ai.planner.invalid_output" : "ai.planner.fallback_local";
+    observe(telemetry, eventName, { requestId: trace.requestId, errorCode, outcome: eventName.endsWith("invalid_output") ? "invalid_output" : "fallback_local", environment: telemetry.environment });
     return sendGatewayError(res, safeError, "El planner no pudo preparar una consulta segura. Conserva las herramientas locales y vuelve a intentarlo.");
   } finally {
     timeout.dispose();
@@ -613,7 +665,10 @@ export async function handleTutorStream(req, res, {
   resolveAccount = resolveAiAccount,
   createClientImpl = createClient,
   circuitBreaker,
+  observability,
 } = {}) {
+  const telemetry = observability || getDefaultAiObservability(env);
+  const trace = telemetry.startRequest();
   if (!applyCors(req, res, env)) return sendJson(res, 403, { error: "Origen no autorizado." });
   if (req.method === "OPTIONS") {
     res.writeHead(204, { "Cache-Control": "no-store" });
@@ -625,12 +680,19 @@ export async function handleTutorStream(req, res, {
   try {
     input = validateTutorInput(await readJson(req), env);
   } catch (error) {
+    if (req.body && typeof req.body === "object" && Object.hasOwn(req.body, "cfdiContext")) {
+      observe(telemetry, "ai.explanation.failed", { requestId: trace.requestId, errorCode: telemetry.errorCode(error), outcome: "failed", environment: telemetry.environment });
+    }
     return sendJson(res, error.status || 400, { error: error.message });
   }
-  if (!withinRateLimit(req)) return sendJson(res, 429, { error: "Hay muchas preguntas desde esta conexión; espera unos minutos y vuelve a intentar." });
+  if (!withinRateLimit(req)) {
+    if (input.cfdiContext) observe(telemetry, "ai.explanation.failed", { requestId: trace.requestId, errorCode: "ai_rate_limited", outcome: "failed", environment: telemetry.environment });
+    return sendJson(res, 429, { error: "Hay muchas preguntas desde esta conexión; espera unos minutos y vuelve a intentar." });
+  }
   const effectiveAdmissionService = admissionService || getDefaultAiAdmissionService(env);
   const admissions = [];
   if (input.cfdiContext) {
+    observe(telemetry, "ai.explanation.sanitized", { requestId: trace.requestId, schemaVersion: "cfdi-summary-v1", environment: telemetry.environment });
     try {
       const { accountId } = await resolveAccount(req, env, { createClientImpl });
       const idempotencyKey = getIdempotencyKey(req);
@@ -642,6 +704,7 @@ export async function handleTutorStream(req, res, {
       });
       assertFreshAdmission(snapshotAdmission);
       admissions.push(snapshotAdmission);
+      observe(telemetry, "ai.admission.allowed", { requestId: trace.requestId, capability: "tools.nora.snapshot.explicit", plan: snapshotAdmission.plan || "unknown", quotaDecision: "reserved", environment: telemetry.environment });
       const explanationAdmission = await effectiveAdmissionService.admit({
         accountId,
         capability: "tools.ai.explanation.requests",
@@ -650,8 +713,13 @@ export async function handleTutorStream(req, res, {
       });
       assertFreshAdmission(explanationAdmission);
       admissions.push(explanationAdmission);
+      observe(telemetry, "ai.admission.allowed", { requestId: trace.requestId, capability: "tools.ai.explanation.requests", plan: explanationAdmission.plan || "unknown", quotaDecision: "reserved", environment: telemetry.environment });
+      observe(telemetry, "ai.explanation.confirmed", { requestId: trace.requestId, schemaVersion: "cfdi-summary-v1", environment: telemetry.environment });
     } catch (error) {
       await Promise.allSettled(admissions.map((admission) => effectiveAdmissionService.release(admission)));
+      const errorCode = telemetry.errorCode(error);
+      observe(telemetry, "ai.admission.blocked", { requestId: trace.requestId, capability: "tools.ai.explanation.requests", errorCode, quotaDecision: "blocked", environment: telemetry.environment });
+      observe(telemetry, "ai.explanation.failed", { requestId: trace.requestId, errorCode, outcome: "failed", environment: telemetry.environment });
       return sendAdmissionError(res, error);
     }
   }
@@ -664,11 +732,17 @@ export async function handleTutorStream(req, res, {
     await Promise.all(admissions.map((admission) => effectiveAdmissionService.complete(admission, { delivered: true })));
   } catch (error) {
     await Promise.allSettled(admissions.map((admission) => effectiveAdmissionService.release(admission)));
-    if (controller.signal.aborted || res.destroyed) return;
+    if (controller.signal.aborted || res.destroyed) {
+      if (input.cfdiContext) observe(telemetry, "ai.lifecycle.cancelled", { requestId: trace.requestId, errorCode: "ai_request_cancelled", environment: telemetry.environment });
+      return;
+    }
     const safeError = timeout.timedOut()
       ? new AiResilienceError("La respuesta excedió el tiempo permitido. Puedes continuar con las herramientas locales y volver a intentarlo.", { code: "ai_gateway_timeout", status: 504, retryAfter: 2 })
       : error;
     const safeMessage = [402, 429, 503, 504].includes(safeError.status) ? safeError.message : "La respuesta se interrumpió. Puedes volver a intentarlo.";
+    if (input.cfdiContext) {
+      observe(telemetry, "ai.explanation.failed", { requestId: trace.requestId, errorCode: telemetry.errorCode(safeError), outcome: "failed", environment: telemetry.environment });
+    }
     if (!res.headersSent) return sendGatewayError(res, safeError, "La respuesta se interrumpió. Puedes volver a intentarlo.");
     sendSse(res, "error", { error: safeMessage });
     res.end();
