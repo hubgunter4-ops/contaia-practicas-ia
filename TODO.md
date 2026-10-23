@@ -733,7 +733,7 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 ---
 ## Fase IA E4 — Observabilidad redacted y métricas agregadas
-**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+**Estado:** terminada, validada y publicada en el commit firmado `f517c92`; Vercel reportó los despliegues de producción como `READY`.
 - [x] Crear el contrato `ai-observability-v1` sobre los eventos E0 existentes, con campos enumerados y sin prompts, cuerpos, headers, XML, RFC, UUID, importes, cookies, tokens ni credenciales.
 - [x] Implementar un registry de métricas en memoria que conserva únicamente contadores y buckets de latencia; no guarda eventos completos ni textos de solicitud.
 - [x] Emitir eventos seguros para admisión permitida/bloqueada, planner solicitado/completado/fallback, explicación CFDI sanitizada/confirmada/fallida y cancelación de lifecycle.

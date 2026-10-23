@@ -1,7 +1,7 @@
 # ContaIA — Contrato técnico E4: observabilidad redacted
 
 **Versión:** `ai-observability-v1`
-**Estado:** implementado localmente y validado; sin commit, push ni despliegue de esta fase.
+**Estado:** implementado, validado y publicado en el commit firmado `f517c92`; Vercel reportó los despliegues de producción como `READY`.
 **Dependencias:** `ai-governance-v1`, `ai-admission-v1`, `ai-rate-store-v1`, `ai-dlp-v1`.
 
 ## Objetivo
