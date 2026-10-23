@@ -1,0 +1,190 @@
+.app-shell--fiscal:has(.tools-page) {
+  --tools-navy: #0b2a55;
+  --tools-navy-deep: #071d3d;
+  --tools-navy-soft: #123f78;
+  --tools-blue: #1266c9;
+  --tools-blue-strong: #0c52a8;
+  --tools-sky: #eaf3ff;
+  --tools-canvas: #f3f6fb;
+  --tools-panel: #ffffff;
+  --tools-ink: #14213d;
+  --tools-muted: #60718a;
+  --tools-line: #d8e2ef;
+  --tools-success: #198f68;
+  --tools-success-soft: #e7f5ef;
+  --tools-warning: #d59c27;
+  --tools-warning-soft: #fff6df;
+  --tools-danger: #bf5a57;
+  --tools-danger-soft: #fff0ef;
+  --fiscal-petroleum: var(--tools-navy);
+  --fiscal-jade: var(--tools-success);
+  --fiscal-jade-ink: #0e6d53;
+  --fiscal-ivory: var(--tools-canvas);
+  --fiscal-sand: #e7eef7;
+  --fiscal-coral: var(--tools-danger);
+  --fiscal-validation: var(--tools-warning);
+  --fiscal-text-secondary: #435a76;
+  --fiscal-muted: var(--tools-muted);
+  --fiscal-line: var(--tools-line);
+  --fiscal-primary: var(--tools-blue);
+  --fiscal-primary-strong: var(--tools-blue-strong);
+  --island-focus-color: var(--tools-navy);
+  --island-focus-accent: var(--tools-blue);
+  --island-focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px var(--tools-blue);
+}
+
+.app-shell--fiscal:has(.tools-page),
+.app-shell--fiscal:has(.tools-page) .main-shell {
+  background: var(--tools-canvas);
+  color: var(--tools-ink);
+}
+
+/* Distribución tipo plataforma contable: barra superior y navegación lateral. */
+.app-shell--fiscal:has(.tools-page) .sidebar {
+  width: 244px;
+  padding: 18px 12px 16px;
+  background: linear-gradient(180deg, var(--tools-navy) 0%, var(--tools-navy-deep) 100%);
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  color: #f4f8ff;
+}
+.app-shell--fiscal:has(.tools-page) .brand-button { padding: 4px 8px 18px; color: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .brand-mark { color: #24a0f4; }
+.app-shell--fiscal:has(.tools-page) .brand-copy strong { color: #bfd8f5; }
+.app-shell--fiscal:has(.tools-page) .brand-copy b { color: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .brand-copy b span { color: #56b9ff; }
+.app-shell--fiscal:has(.tools-page) .sidebar-divider { background: rgba(210, 230, 255, .18); }
+.app-shell--fiscal:has(.tools-page) .nav-item { min-height: 46px; border-radius: 8px; color: #dceafd; }
+.app-shell--fiscal:has(.tools-page) .nav-item:hover { background: rgba(58, 137, 224, .22); color: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .nav-item.is-active { background: linear-gradient(135deg, #145da8, #1a71cf); color: #ffffff; box-shadow: 0 8px 18px rgba(2, 19, 46, .28); }
+.app-shell--fiscal:has(.tools-page) .nav-label { color: #9ec2e8; }
+.app-shell--fiscal:has(.tools-page) .nav-index { color: #84a9d2; }
+.app-shell--fiscal:has(.tools-page) .is-active .nav-index { color: #cfe9ff; }
+.app-shell--fiscal:has(.tools-page) .nav-done { color: #6ee0b2; }
+.app-shell--fiscal:has(.tools-page) .folio-stamp { border-color: rgba(210, 230, 255, .2); background: rgba(4, 22, 49, .32); }
+.app-shell--fiscal:has(.tools-page) .folio-stamp b { color: #9ed3ff; }
+.app-shell--fiscal:has(.tools-page) .folio-stamp small,
+.app-shell--fiscal:has(.tools-page) .data-link { color: #b8cce5; }
+.app-shell--fiscal:has(.tools-page) .stamp-dot { background: #49c997; box-shadow: 0 0 0 3px rgba(73, 201, 151, .18); }
+
+.app-shell--fiscal:has(.tools-page) .main-shell { margin-left: 244px; }
+.app-shell--fiscal:has(.tools-page) .topbar {
+  min-height: 64px;
+  height: 64px;
+  padding-inline: clamp(18px, 3vw, 42px);
+  background: var(--tools-navy);
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+  color: #eef6ff;
+}
+.app-shell--fiscal:has(.tools-page) .breadcrumb,
+.app-shell--fiscal:has(.tools-page) .topbar-right { color: #b9cde6; }
+.app-shell--fiscal:has(.tools-page) .breadcrumb i { color: #6f9bd0; }
+.app-shell--fiscal:has(.tools-page) .breadcrumb strong { color: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .edition-dot { background: #4dd49b; }
+.app-shell--fiscal:has(.tools-page) .section-tab { color: #c4d9f2; border-radius: 7px; }
+.app-shell--fiscal:has(.tools-page) .section-tab b { color: #8fb9e7; }
+.app-shell--fiscal:has(.tools-page) .section-tab:hover { border-color: rgba(145, 199, 255, .35); background: rgba(53, 127, 211, .25); color: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .section-tab.is-active { border-color: #2f82dc; background: var(--tools-blue); color: #ffffff; box-shadow: 0 5px 12px rgba(2, 19, 46, .2); }
+.app-shell--fiscal:has(.tools-page) .section-tab.is-active b { color: #cce8ff; }
+.app-shell--fiscal:has(.tools-page) .tools-menu > summary { color: #e4effd; }
+.app-shell--fiscal:has(.tools-page) .tools-menu > summary i { color: #91c7f2; }
+.app-shell--fiscal:has(.tools-page) .tools-menu-popover { border-color: var(--tools-line); background: #ffffff; box-shadow: 0 18px 38px rgba(9, 34, 70, .18); }
+.app-shell--fiscal:has(.tools-page) .tools-menu-popover .section-tab { color: var(--tools-ink); }
+.app-shell--fiscal:has(.tools-page) .tools-menu-popover .section-tab:hover,
+.app-shell--fiscal:has(.tools-page) .tools-menu-popover .section-tab.is-active { border-color: #b8d4f1; background: var(--tools-sky); color: var(--tools-navy); }
+
+/* Cabecera y tarjetas principales de Herramientas. */
+.app-shell--fiscal:has(.tools-page) .tools-page { width: min(1380px, 100%); padding: 24px clamp(16px, 3vw, 38px) 58px; }
+.app-shell--fiscal:has(.tools-page) .tool-shell-header {
+  border-color: var(--tools-line);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(9, 34, 70, .07);
+}
+.app-shell--fiscal:has(.tools-page) .tool-shell-header::before { background: var(--tools-blue); }
+.app-shell--fiscal:has(.tools-page) .tool-shell-eyebrow,
+.app-shell--fiscal:has(.tools-page) .tools-page-kicker { color: var(--tools-blue-strong); }
+.app-shell--fiscal:has(.tools-page) .tool-shell-header h1,
+.app-shell--fiscal:has(.tools-page) .tools-section-heading h2,
+.app-shell--fiscal:has(.tools-page) .tools-profile-strip h2 { color: var(--tools-navy); }
+.app-shell--fiscal:has(.tools-page) .tool-shell-description,
+.app-shell--fiscal:has(.tools-page) .tools-profile-strip p:last-child,
+.app-shell--fiscal:has(.tools-page) .tools-card-description,
+.app-shell--fiscal:has(.tools-page) .tools-form-privacy,
+.app-shell--fiscal:has(.tools-page) .tools-connections-note { color: #536982; }
+.app-shell--fiscal:has(.tools-page) .tool-shell-status { border-color: var(--tools-line); background: #eef4fb; color: var(--tools-navy); }
+.app-shell--fiscal:has(.tools-page) .tools-overview-card,
+.app-shell--fiscal:has(.tools-page) .tools-card {
+  border-color: var(--tools-line);
+  background: #ffffff;
+  box-shadow: 0 7px 18px rgba(9, 34, 70, .045);
+}
+.app-shell--fiscal:has(.tools-page) .tools-overview-card:hover,
+.app-shell--fiscal:has(.tools-page) .tools-card:hover { border-color: #a8c8e8; box-shadow: 0 12px 26px rgba(9, 34, 70, .1); }
+.app-shell--fiscal:has(.tools-page) .tools-overview-icon,
+.app-shell--fiscal:has(.tools-page) .tools-card-icon,
+.app-shell--fiscal:has(.tools-page) .tools-profile-mark { border-color: #b9d3ef; background: var(--tools-sky); color: var(--tools-blue-strong); }
+.app-shell--fiscal:has(.tools-page) .tools-card h2 { color: var(--tools-navy); }
+.app-shell--fiscal:has(.tools-page) .tools-card-eyebrow,
+.app-shell--fiscal:has(.tools-page) .tools-profile-strip .eyebrow,
+.app-shell--fiscal:has(.tools-page) .tools-card-connection-label,
+.app-shell--fiscal:has(.tools-page) .tools-status-legend-label { color: var(--tools-blue-strong); }
+.app-shell--fiscal:has(.tools-page) .tools-card-action { border-color: #b7d1ee; color: var(--tools-blue-strong); background: #ffffff; }
+.app-shell--fiscal:has(.tools-page) .tools-card-action:hover { border-color: var(--tools-blue); background: var(--tools-sky); }
+.app-shell--fiscal:has(.tools-page) .tools-card-action.button-primary,
+.app-shell--fiscal:has(.tools-page) .button-primary,
+.app-shell--fiscal:has(.tools-page) .island-frame-action.button-primary {
+  border-color: var(--tools-blue);
+  background: var(--tools-blue);
+  color: #ffffff;
+  box-shadow: 0 5px 12px rgba(18, 102, 201, .18);
+}
+.app-shell--fiscal:has(.tools-page) .tools-card-action.button-primary:hover:not(:disabled),
+.app-shell--fiscal:has(.tools-page) .button-primary:hover:not(:disabled),
+.app-shell--fiscal:has(.tools-page) .island-frame-action.button-primary:hover:not(:disabled) { border-color: var(--tools-blue-strong); background: var(--tools-blue-strong); box-shadow: 0 8px 18px rgba(18, 102, 201, .25); }
+.app-shell--fiscal:has(.tools-page) .tools-profile-strip { border-color: #c5dbf2; background: linear-gradient(110deg, #edf5ff, #ffffff); }
+.app-shell--fiscal:has(.tools-page) .tools-profile-select,
+.app-shell--fiscal:has(.tools-page) .tools-data-form input:not([type="checkbox"]):not([type="hidden"]),
+.app-shell--fiscal:has(.tools-page) .tools-data-form select { border-color: #c8d9eb; background: #ffffff; color: var(--tools-ink); }
+.app-shell--fiscal:has(.tools-page) .tools-data-form input:focus-visible,
+.app-shell--fiscal:has(.tools-page) .tools-data-form select:focus-visible,
+.app-shell--fiscal:has(.tools-page) .tools-profile-select:focus-visible,
+.app-shell--fiscal:has(.tools-page) :is(button, input, select, textarea):focus-visible { border-color: var(--tools-blue); outline: 2px solid var(--tools-blue); outline-offset: 3px; box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px var(--tools-blue); }
+.app-shell--fiscal:has(.tools-page) .tools-notice { border-left-color: var(--tools-blue); background: var(--tools-sky); color: #294e78; }
+.app-shell--fiscal:has(.tools-page) .tools-disclaimer { border-color: var(--tools-line); background: #eef4fb; color: #536982; }
+.app-shell--fiscal:has(.tools-page) .tools-disclaimer > span { background: var(--tools-blue); color: #ffffff; }
+
+/* Variante hero heredada y estados de conexión. */
+.app-shell--fiscal:has(.tools-page) .tools-hero { background: linear-gradient(115deg, var(--tools-navy-deep), var(--tools-navy-soft)); }
+.app-shell--fiscal:has(.tools-page) .tools-hero .eyebrow { color: #a8d6ff; }
+.app-shell--fiscal:has(.tools-page) .tools-hero h1 em,
+.app-shell--fiscal:has(.tools-page) .tools-hero-mark { color: #62c2ff; }
+.app-shell--fiscal:has(.tools-page) .tools-hero-mark { border-color: rgba(98, 194, 255, .62); }
+.app-shell--fiscal:has(.tools-page) .tools-hero-mark::before,
+.app-shell--fiscal:has(.tools-page) .tools-hero-mark::after { border-color: rgba(98, 194, 255, .28); }
+.app-shell--fiscal:has(.tools-page) .tools-hero-mark i { background: #55d7a4; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-not-configured { border-color: #cbd7e6; background: #f1f4f8; color: #5f6f82; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-pending { border-color: #ebd38c; background: var(--tools-warning-soft); color: #7b5a12; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-connected { border-color: #b3dcc8; background: var(--tools-success-soft); color: #176547; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-review { border-color: #e9c17f; background: #fff3de; color: #815316; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-error { border-color: #e4b6b4; background: var(--tools-danger-soft); color: #8f3938; }
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-disabled,
+.app-shell--fiscal:has(.tools-page) .tools-connection-status.is-unknown { border-color: #d0d9e4; background: #f0f3f7; color: #667384; }
+
+@media (max-width: 1000px) {
+  .app-shell--fiscal:has(.tools-page) .sidebar { width: 226px; }
+  .app-shell--fiscal:has(.tools-page) .main-shell { margin-left: 226px; }
+}
+
+@media (max-width: 760px) {
+  .app-shell--fiscal:has(.tools-page) .sidebar { width: 100%; padding: 8px 14px; background: var(--tools-navy); border-bottom-color: rgba(255, 255, 255, .12); }
+  .app-shell--fiscal:has(.tools-page) .main-shell { margin-left: 0; }
+  .app-shell--fiscal:has(.tools-page) .topbar { min-height: 50px; height: auto; background: var(--tools-navy-deep); }
+  .app-shell--fiscal:has(.tools-page) .tools-page { padding-inline: 12px; }
+  .app-shell--fiscal:has(.tools-page) .tools-profile-actions { width: 100%; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal:has(.tools-page) *,
+  .app-shell--fiscal:has(.tools-page) *::before,
+  .app-shell--fiscal:has(.tools-page) *::after { animation: none !important; transition: none !important; }
+}

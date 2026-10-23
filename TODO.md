@@ -773,3 +773,18 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [ ] Mantener pendiente el contrato comercial Free/Premium, precios, checkout, entitlements de producción y activación de secretos E3/E5.
 **Contrato entregado:** `contaia-ai-phase-e6-launch-approval.md`.
 **Siguiente fase propuesta:** revisión comercial/operativa de Free/Premium y preparación de activación controlada; requiere autorización explícita.
+
+
+---
+## Refresh visual — ContaIA Herramientas
+**Estado:** implementado y validado localmente; pendiente de autorización para commit, push y despliegue.
+- [x] Añadir `src/app/platform-theme.css` cargado al final de la cascada, con alcance exclusivo a `.app-shell--fiscal:has(.tools-page)`.
+- [x] Aplicar distribución operativa de referencia: barra lateral azul marino, topbar azul profundo, lienzo frío, cabecera blanca, tarjetas con borde suave y CTA azul.
+- [x] Conservar semántica de estados: verde para conectado/listo, amarillo para revisión/pendiente, coral para error y gris para no configurado.
+- [x] Ajustar responsive móvil: sidebar de ancho completo, margen del shell reiniciado y acciones del perfil sin overflow.
+- [x] No modificar portada pública, Aprende, autenticación, lógica fiscal, contratos Free/Premium ni el logo previamente publicado.
+- [x] Validar **324/324 unitarias**, build estático, **4/4 E2E focalizadas** de paleta y `git diff --check`.
+- [x] Regresión completa: **115/116**; el único timeout fue la matriz visual Fase 7 en mobile y aprobó aislada **1/1** con 120 s. No hubo fallos de la nueva paleta.
+- [ ] Mantener pendiente la revisión visual de producción y la autorización de checkpoint.
+**Archivos:** `src/app/platform-theme.css`, `tests/platform-theme.test.js`, `tests/e2e/tools-palette.spec.js`.
+**Siguiente paso propuesto:** generar preview/capturas de Herramientas para revisión visual; después, con autorización, crear commit firmado y hacer push.

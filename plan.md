@@ -1840,3 +1840,13 @@ La fase incorpora `src/cfdi/ai/synthetic-canary.js`, que ejecuta casos ficticios
 La UI conserva Confianza fiscal, navegación responsive, foco y movimiento reducido. La validación alcanzó **320/320 pruebas unitarias**, build estático aprobado, **2/2 E2E focalizadas** en Chromium y mobile Chromium, sintaxis y `git diff --check`. La regresión completa cubrió 112 casos: 111 aprobaron en la corrida completa y el único CTA público intermitente aprobó después en reejecución aislada 2/2; el flujo E6 aprobó en ambas plataformas.
 
 E6 quedó publicada en el commit firmado `97b65ab` y sus despliegues Vercel asociados reportaron `READY`. El contrato comercial Free/Premium, precios, pagos, checkout y entitlements de producción permanecen deliberadamente pendientes, al igual que la activación de secretos E3/E5 y cualquier cambio que convierta el gate de lanzamiento en `approved`.
+
+
+---
+## Refresh visual de ContaIA Herramientas — distribución operativa azul
+
+Se añadió una capa CSS independiente en `src/app/platform-theme.css`, cargada al final de la cascada y limitada mediante `.app-shell--fiscal:has(.tools-page)`. La capa no modifica la portada, Aprende, autenticación, lógica fiscal, contratos Free/Premium ni el logo publicado.
+
+La distribución sigue la referencia entregada: navegación lateral azul marino, barra superior azul profundo, lienzo frío `#F3F6FB`, cabecera blanca, tarjetas blancas con bordes suaves, acciones primarias azules y estados semánticos separados —verde conectado/listo, amarillo pendiente/revisión, coral error y gris sin configurar—. El breakpoint móvil reinicia el margen del shell, hace que la navegación ocupe el ancho disponible y elimina el desborde del bloque de perfil.
+
+La implementación incluye el contrato unitario `tests/platform-theme.test.js` y la E2E `tests/e2e/tools-palette.spec.js`. La validación local quedó en 324/324 unitarias, build estático correcto, 4/4 E2E focalizadas de paleta y `git diff --check`. La regresión completa produjo 115/116 por un timeout conocido de la matriz visual Fase 7 en mobile; el caso aislado aprobó 1/1 con timeout de 120 segundos. El refresh visual queda pendiente de preview, autorización de checkpoint, commit firmado, push y despliegue.
