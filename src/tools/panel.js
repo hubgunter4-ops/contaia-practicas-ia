@@ -1,5 +1,6 @@
 import { TOOL_AVAILABILITY, TOOL_DEFINITIONS, TOOL_GROUPS } from "./catalog.js";
 import { renderNoraContextCard, renderToolHeader } from "./tool-shell.js";
+import { renderPremiumPlanPanel } from "./premium-ux.js";
 
 export { TOOL_DEFINITIONS } from "./catalog.js";
 
@@ -263,6 +264,7 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
     ${currentError ? `<p class="tools-notice is-error" role="alert">${escapeHtml(currentError)}</p>` : ""}${currentNotice ? `<p class="tools-notice" role="status">${escapeHtml(currentNotice)}</p>` : ""}
     ${workspace.loading && !workspace.loaded ? `<p class="tools-load-status" role="status">Conectando con tu espacio privado…</p>` : ""}
     ${forms}
+    ${renderPremiumPlanPanel({ snapshot: workspace.planSnapshot, notice: currentNotice })}
     <section class="tools-connections" aria-labelledby="tools-connections-title"><div class="tools-section-heading"><div><p class="eyebrow">ESTADO POR AMBIENTE</p><h2 id="tools-connections-title">Conexiones por perfil</h2></div><button type="button" class="button button-quiet" data-tools-ui="refresh" ${workspace.loading || workspace.saving ? "disabled" : ""}>Actualizar</button></div><p class="tools-connections-note">El estado es un registro administrativo: solo una verificación externa confirma una conexión. «Pendiente» no significa que exista una conexión real.</p><div class="tools-status-legend" aria-label="Leyenda de estados de conexión"><span class="tools-status-legend-label">Estados:</span>${CONNECTION_LEGEND_STATES.map((status) => renderConnectionStatusBadge(status)).join("")}</div>${renderConnections(workspace)}</section>
     <section class="tools-section-heading tools-modules-heading"><div><p class="eyebrow">HERRAMIENTAS POR OBJETIVO</p><h2>Elige el siguiente paso</h2></div><span class="tools-count">${readyCount} operativa · ${demoCount} demo · ${preparationCount} en preparación</span></section>
     ${renderToolGroups(workspace)}

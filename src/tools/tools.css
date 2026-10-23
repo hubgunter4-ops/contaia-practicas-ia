@@ -426,3 +426,34 @@
 .app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-connection small { display: block; margin-top: 6px; color: var(--fiscal-text-secondary); font-size: 10px; line-height: 1.4; }
 .app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-action { border-color: var(--fiscal-petroleum); background: var(--fiscal-petroleum); color: #fff; }
 .app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-action:hover:not(:disabled) { border-color: #0d3036; background: #0d3036; }
+
+
+/* E6 · UX Free/Premium informativa, sin checkout ni autoridad local */
+.app-shell--fiscal .tools-plan-card { margin: 20px 0 22px; padding: 17px; border: 1px solid #cddbd3; border-radius: 10px; background: linear-gradient(115deg,#f4f8f1 0%,#fff 72%); box-shadow: 0 7px 18px rgba(18,59,67,.04); }
+.tools-plan-head { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+.tools-plan-head > div { min-width: 0; }
+.tools-plan-head .eyebrow { margin: 0 0 5px; color: #687f80; font: 8px/1.4 var(--mono); letter-spacing: .11em; }
+.tools-plan-head h2 { margin: 0; color: var(--fiscal-petroleum); font-size: 22px; letter-spacing: -.025em; }
+.tools-plan-head p:not(.eyebrow) { max-width: 720px; margin: 6px 0 0; color: var(--fiscal-muted); font-size: 12px; line-height: 1.5; }
+.tools-plan-status { flex: none; padding: 6px 9px; border: 1px solid #e7d79b; border-radius: 999px; background: #fbf6df; color: #695516; font-size: 9px; font-weight: 750; white-space: nowrap; }
+.tools-plan-note { margin: 13px 0 11px; padding: 9px 10px; border-left: 3px solid var(--fiscal-validation); background: #fffaf0; color: #5d5c4f; font-size: 11px; line-height: 1.45; }
+.tools-plan-note b { color: var(--fiscal-petroleum); }
+.tools-plan-meters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tools-plan-meter { min-width: 0; display: flex; align-items: start; justify-content: space-between; gap: 9px; padding: 10px; border: 1px solid var(--fiscal-line); border-radius: 7px; background: #fff; }
+.tools-plan-meter span { min-width: 0; display: grid; gap: 3px; }
+.tools-plan-meter b { overflow-wrap: anywhere; color: var(--fiscal-petroleum); font-size: 11px; }
+.tools-plan-meter small { color: var(--fiscal-muted); font-size: 10px; line-height: 1.35; }
+.tools-plan-meter strong { flex: none; color: #687f80; font: 9px/1.35 var(--mono); text-align: right; }
+.tools-plan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tools-plan-actions .button { min-height: 36px; font-size: 10px; }
+.tools-plan-feedback { margin: 10px 0 0; color: var(--fiscal-petroleum); font-size: 11px; line-height: 1.45; }
+.tools-plan-card button:focus-visible { outline: 3px solid var(--fiscal-jade); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .tools-plan-head { flex-direction: column; gap: 10px; }
+  .tools-plan-status { white-space: normal; }
+  .tools-plan-meters { grid-template-columns: 1fr; }
+  .tools-plan-meter { align-items: center; }
+  .tools-plan-actions { flex-direction: column; }
+  .tools-plan-actions .button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .tools-plan-card *, .tools-plan-card *::before, .tools-plan-card *::after { animation: none !important; transition: none !important; } }

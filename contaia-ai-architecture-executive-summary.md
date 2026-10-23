@@ -1,8 +1,8 @@
 # ContaIA — Resumen ejecutivo de arquitectura de IA
 
-**Corte arquitectónico:** Fase IA E2 terminada localmente
+**Corte arquitectónico:** Fase IA E6 terminada y validada localmente
 **Producto:** ContaIA Herramientas · módulo CFDI
-**Estado de publicación:** cambios locales, sin commit, push ni despliegue
+**Estado de publicación:** E0–E5 publicados en checkpoints previos; E6 permanece local, sin commit, push ni despliegue
 **Audiencia:** revisión de arquitectura, seguridad y producto
 
 ## 1. Resumen ejecutivo
@@ -266,3 +266,12 @@ Antes de una publicación productiva del planner se recomienda aprobar explícit
 - [Contrato de gobernanza E0](/home/ubuntu/contaia-practicas-ia/contaia-ai-phase-e0-governance-contract.md)
 - [Contrato de DLP E1](/home/ubuntu/contaia-practicas-ia/contaia-ai-phase-e1-dlp-gate.md)
 - [AiDataLossPreventionGate](/home/ubuntu/contaia-practicas-ia/src/cfdi/ai/ai-dlp-gate.js)
+
+
+## 12. Fase IA E6 — UX Premium y lanzamiento controlado
+
+E6 añade visibilidad sin autoridad comercial local. El centro de Herramientas muestra Free/Premium con medidores informativos, alternativa para continuar con Free y una explicación explícita de que entitlements, cuotas y permisos se resuelven server-side. Un snapshot local o no verificado siempre cae a Free; la UI no contiene checkout, pagos, Stripe, secretos ni persistencia comercial.
+
+El canary sintético (`ai-synthetic-canary-v1`) trabaja con preguntas ficticias y resultados agregados. Rechaza RFC, CURP, UUID, XML, contactos, Bearer, claves y secuencias identificables. El gate (`ai-launch-approval-v1`) exige matriz aprobada, privacidad revisada, configuración de producción, métricas redacted limpias y evidencia; cualquier ausencia deja la decisión en `hold`.
+
+La evidencia de E6 es **320/320 unitarias**, build estático aprobado y **2/2 E2E focalizadas** en escritorio/móvil. La regresión completa cubrió 112 casos: 111 aprobaron en la corrida completa y el único CTA público intermitente aprobó en reejecución aislada 2/2. E6 está terminada localmente, sin commit, push ni despliegue. El contrato comercial Free/Premium, precios, checkout, entitlements de producción y activación de secretos E3/E5 permanecen pendientes.

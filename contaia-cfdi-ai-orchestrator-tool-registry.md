@@ -1,6 +1,6 @@
 # ContaIA CFDI — Diseño de `AiOrchestrator` y `ToolRegistry`
 
-**Estado:** diseño técnico con Fases A, B, C, D y contrato E0 implementados localmente; el registro, router, orquestador, panel CFDI, explicación segura, planner JSON cerrado y gobernanza de datos/cuotas/telemetría están validados. Las herramientas mutantes, entitlements runtime, DLP ampliado, rate limiting distribuido, acceso a fuentes completas, acciones fiscales y publicación siguen fuera de alcance.
+**Estado:** diseño técnico con Fases A–D y E0–E5 implementados/validados; E6 añade UX informativa, canary sintético y gate fail-closed sin ampliar el registro fiscal. Las herramientas mutantes, acceso a fuentes completas, acciones fiscales, pagos y activación comercial siguen fuera de alcance.
 
 **Objetivo:** llevar al módulo CFDI el patrón operativo observado en plataformas contables con IA: petición en lenguaje natural, plan estructurado, consulta sobre fuentes, resultado reutilizable, procedencia visible y revisión humana. La implementación debe conservar el principio local-first de ContaIA.
 
@@ -956,3 +956,9 @@ E4 se validó con 301/301 unitarias, 24/24 E2E focalizadas y 110/110 E2E complet
 `src/cfdi/ai/model-approval.js` implementa `ai-model-approval-v1`. La matriz privada exige coincidencia exacta proveedor/modelo, estado `approved`, capacidades `json_schema_strict`, `structured_output` y `abort_signal`, controles de no logging/no entrenamiento/salida acotada, evidencia de revisión y expiración futura. La ausencia, invalidez o expiración de la matriz produce `ai_provider_unapproved` y no alcanza Gateway.
 
 `configuredProviders()` conserva solo información no secreta y añade `approvalStatus`; el servidor vuelve a validar en `selectProvider()` y el cliente no puede elevar la decisión. El catálogo vivo consultado el 23 de octubre de 2026 se conserva como referencia de candidatos, sin convertir sus IDs en configuración automática del Gateway. E5 cerró con 309/309 unitarias, build, 24/24 E2E focalizadas y 110/110 E2E completas. E6 queda pendiente para UX Premium, canary sintético y lanzamiento controlado.
+
+
+---
+## Cierre E6 — UX Premium, canary y lanzamiento controlado
+
+La Fase IA E6 no amplía el `ToolRegistry` ni añade herramientas mutantes. Solo incorpora UX informativa de Free/Premium, un canary sintético local/injectable y un gate fail-closed de aprobación. El cliente permanece sin autoridad para habilitar Premium; el canary no recibe fuentes fiscales y el gate no cambia a `approved` sin evidencia operativa completa. El contrato comercial, pagos y activación productiva siguen pendientes.

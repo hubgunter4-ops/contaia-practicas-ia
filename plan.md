@@ -1828,3 +1828,15 @@ E5 quedó implementada en `src/cfdi/ai/model-approval.js` con el contrato `ai-mo
 Se consultó el catálogo vivo de Manus el 23 de octubre de 2026 y se separaron candidatos, modelos superseded/deprecated y proveedores fuera de allowlist. Los IDs del catálogo no se copiaron a la configuración del Gateway ni se activó ningún proveedor nuevo. La ausencia o invalidez de `AI_MODEL_APPROVALS_JSON` mantiene bloqueadas las rutas remotas con `ai_provider_unapproved`, mientras CFDI local, planner determinista, herramientas locales y fallback siguen disponibles.
 
 La evidencia final fue **309/309 unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E completas**. E6 queda pendiente para UX Premium, canary sintético, aprobación de lanzamiento y configuración operativa de secretos privados.
+
+
+---
+## Fase IA E6 — UX Premium, canary sintético y aprobación de lanzamiento
+
+E6 añade una capa informativa y reversible sobre ContaIA Herramientas. `src/tools/premium-ux.js` muestra un panel Free/Premium con medidores de referencia, autoridad server-side y fallback a Free ante cualquier snapshot no verificado. Los CTAs solo explican el estado y permiten continuar con Free; no existe checkout, cobro, Stripe, persistencia comercial ni entitlement decidido por el navegador.
+
+La fase incorpora `src/cfdi/ai/synthetic-canary.js`, que ejecuta casos ficticios inyectables y devuelve únicamente conteos, tasa, buckets de duración e IDs sintéticos. Rechaza RFC, CURP, UUID, XML, contactos, Bearer, claves y patrones numéricos identificables. `src/cfdi/ai/launch-approval.js` aplica `ai-launch-approval-v1` y permanece en `hold` si falta matriz E5, revisión de privacidad, configuración operativa, métricas redacted limpias o evidencia de revisión.
+
+La UI conserva Confianza fiscal, navegación responsive, foco y movimiento reducido. La validación alcanzó **320/320 pruebas unitarias**, build estático aprobado, **2/2 E2E focalizadas** en Chromium y mobile Chromium, sintaxis y `git diff --check`. La regresión completa cubrió 112 casos: 111 aprobaron en la corrida completa y el único CTA público intermitente aprobó después en reejecución aislada 2/2; el flujo E6 aprobó en ambas plataformas.
+
+E6 queda localmente terminada y sin commit, push ni despliegue. El contrato comercial Free/Premium, precios, pagos, checkout y entitlements de producción permanecen deliberadamente pendientes, al igual que la activación de secretos E3/E5 y cualquier cambio que convierta el gate de lanzamiento en `approved`.

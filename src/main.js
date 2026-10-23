@@ -2224,6 +2224,8 @@ app.addEventListener("click", (event) => {
     else if (action === "connection-open") openToolConnectionForm(toolsUi.dataset.toolKey, toolsUi.dataset.toolEnvironment);
     else if (action === "cancel") closeToolsForms();
     else if (action === "refresh") void loadToolsWorkspace();
+    else if (action === "premium-info") state.toolsNotice = "Premium aún está en preparación. No se activa ningún cobro ni entitlement desde esta vista; las capacidades efectivas se decidirán server-side.";
+    else if (action === "premium-dismiss") state.toolsNotice = "Continúas con el plan Free. Tus archivos y resultados locales no cambian.";
     render();
     if (action === "profile-new" || action === "profile-edit") app.querySelector("[data-tools-profile-form] [name='legal_name']")?.focus({ preventScroll: true });
     if (action === "connection-open") app.querySelector("[data-tools-connection-form] [name='environment']")?.focus({ preventScroll: true });

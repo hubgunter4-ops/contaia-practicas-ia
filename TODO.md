@@ -747,7 +747,7 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 ---
 ## Fase IA E5 — Matriz y aprobación formal de modelos/proveedores
-**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+**Estado:** terminada, validada y publicada en el checkpoint firmado de E5; E6 permanece local y pendiente de publicación.
 - [x] Registrar el catálogo vivo consultado el 23 de octubre de 2026 como evidencia de candidatos; no usar IDs del catálogo como configuración automática del Gateway.
 - [x] Crear `ai-model-approval-v1` con entradas exactas por proveedor/modelo, estado, capacidades requeridas, política de retención, evidencia de revisión, aprobador y expiración.
 - [x] Rechazar por defecto entradas ausentes, `candidate`, `deprecated`, `superseded`, preview sin aprobación, proveedor no allowlisted o cualquier modelo sin JSON Schema estricto, structured output, abort signal y salida acotada.
@@ -758,3 +758,18 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [x] Validar catálogo vivo, **309/309 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E** completas en serie; no se activó ningún proveedor nuevo automáticamente.
 **Contrato entregado:** `contaia-ai-phase-e5-model-approval.md`.
 **Siguiente fase propuesta tras E5:** E6 — UX Premium, canary sintético y aprobación de lanzamiento, previa confirmación explícita.
+
+
+---
+## Fase IA E6 — UX Premium, canary sintético y aprobación de lanzamiento
+**Estado:** terminada y validada localmente; pendiente de commit, push y despliegue.
+- [x] Añadir panel informativo Free/Premium al centro de Herramientas con medidores de referencia, foco visible, responsive y fallback Free; no activa pagos ni entitlements desde el navegador.
+- [x] Mantener la autoridad de plan en server-side: snapshots locales o no verificados nunca muestran Premium efectivo.
+- [x] Crear `ai-synthetic-canary-v1` con fixtures ficticios, rechazo de datos identificables/XML, resultados agregados y buckets de duración.
+- [x] Crear `ai-launch-approval-v1` fail-closed; la decisión por defecto permanece en `hold` hasta reunir matriz, privacidad, configuración, métricas limpias y evidencia.
+- [x] Añadir CTAs informativos de Premium y alternativa explícita para continuar con Free, sin checkout, cobro, Stripe, tablas ni persistencia comercial.
+- [x] Validar **320/320 pruebas unitarias**, build estático, **2/2 E2E focalizadas** de E6 en escritorio/móvil, sintaxis y `git diff --check`.
+- [x] La regresión completa cubrió 112 casos: **111/112** en la corrida completa; el único CTA público intermitente aprobó en reejecución aislada **2/2**. E6 aprobó en ambas plataformas.
+- [ ] Mantener pendiente el contrato comercial Free/Premium, precios, checkout, entitlements de producción y activación de secretos E3/E5.
+**Contrato entregado:** `contaia-ai-phase-e6-launch-approval.md`.
+**Siguiente fase propuesta:** revisión comercial/operativa de Free/Premium y preparación de activación controlada; requiere autorización explícita.

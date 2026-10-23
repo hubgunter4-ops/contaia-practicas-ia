@@ -1,8 +1,8 @@
 # ContaIA — Riesgos pendientes y contramedidas técnicas para Fase IA E
 
-**Corte:** revisión posterior a Fase IA E4
-**Alcance:** planner JSON CFDI, explicación segura con Nora, cuotas Premium, DLP y observabilidad
-**Estado:** E0, E1, E2, E3 y E4 implementadas localmente; E5–E6 continúan como controles pendientes
+**Corte:** revisión posterior a Fase IA E6
+**Alcance:** planner JSON CFDI, explicación segura con Nora, cuotas Premium, DLP, resiliencia, observabilidad, aprobación de modelos y UX de lanzamiento
+**Estado:** E0–E5 implementadas y E6 validada localmente; la activación operativa, el contrato comercial y la publicación de E6 continúan pendientes
 
 ## 1. Conclusión ejecutiva
 
@@ -602,3 +602,14 @@ Fase IA E debe aprobarse solo como una fase de **control**, no de expansión de 
 Mientras E-01 a E-06 no estén cerrados, el planner puede permanecer deshabilitado en producción sin afectar CFDI local, conciliación, pólizas, auditoría ni DIOT. La degradación correcta es: “planner no disponible; continúa con herramientas locales”, nunca enviar más datos, habilitar Premium por intuición o ejecutar una acción fiscal para compensar el fallo.
 
 **No se realizaron cambios de código, commit, push ni despliegue como parte de este análisis.**
+
+
+## 17. Estado de Fase IA E6 — UX Premium, canary y lanzamiento controlado
+
+E6 quedó implementada y validada localmente. La UX Premium es informativa: el navegador cae a Free ante cualquier snapshot no verificado y no puede convertir DOM, storage, query string o atributos en autoridad de entitlement. El contrato comercial Free/Premium, precios, checkout y pagos siguen pendientes; no se introdujo una ruta de cobro.
+
+El canary `ai-synthetic-canary-v1` usa únicamente fixtures ficticios y rechaza datos identificables, XML, Bearer, claves y patrones numéricos sensibles. Su reporte conserva conteos, buckets y códigos enumerados, sin prompts ni respuestas. El gate `ai-launch-approval-v1` es fail-closed y permanece en `hold` ante cualquier evidencia faltante, matriz no aprobada, métrica redacted sucia o configuración productiva incompleta.
+
+Evidencia: **320/320 unitarias**, build estático aprobado, **2/2 E2E focalizadas** de E6 y cobertura de los 112 casos E2E mediante 111 aprobados en la corrida completa más reejecución 2/2 del único CTA público intermitente. No se configuraron secretos, no se activaron proveedores nuevos y no se hizo commit, push ni despliegue de E6.
+
+La siguiente revisión debe separar contrato comercial, activación operativa de E3/E5, sink/retención de E4 y aprobación formal de lanzamiento. Ningún canary sintético por sí solo autoriza producción.
