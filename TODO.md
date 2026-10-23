@@ -762,7 +762,7 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 ---
 ## Fase IA E6 — UX Premium, canary sintético y aprobación de lanzamiento
-**Estado:** terminada y validada localmente; pendiente de commit, push y despliegue.
+**Estado:** terminada, validada y publicada en el commit firmado `97b65ab`; los despliegues Vercel asociados quedaron `READY`.
 - [x] Añadir panel informativo Free/Premium al centro de Herramientas con medidores de referencia, foco visible, responsive y fallback Free; no activa pagos ni entitlements desde el navegador.
 - [x] Mantener la autoridad de plan en server-side: snapshots locales o no verificados nunca muestran Premium efectivo.
 - [x] Crear `ai-synthetic-canary-v1` con fixtures ficticios, rechazo de datos identificables/XML, resultados agregados y buckets de duración.

@@ -610,6 +610,6 @@ E6 quedó implementada y validada localmente. La UX Premium es informativa: el n
 
 El canary `ai-synthetic-canary-v1` usa únicamente fixtures ficticios y rechaza datos identificables, XML, Bearer, claves y patrones numéricos sensibles. Su reporte conserva conteos, buckets y códigos enumerados, sin prompts ni respuestas. El gate `ai-launch-approval-v1` es fail-closed y permanece en `hold` ante cualquier evidencia faltante, matriz no aprobada, métrica redacted sucia o configuración productiva incompleta.
 
-Evidencia: **320/320 unitarias**, build estático aprobado, **2/2 E2E focalizadas** de E6 y cobertura de los 112 casos E2E mediante 111 aprobados en la corrida completa más reejecución 2/2 del único CTA público intermitente. No se configuraron secretos, no se activaron proveedores nuevos y no se hizo commit, push ni despliegue de E6.
+Evidencia: **320/320 unitarias**, build estático aprobado, **2/2 E2E focalizadas** de E6 y cobertura de los 112 casos E2E mediante 111 aprobados en la corrida completa más reejecución 2/2 del único CTA público intermitente. E6 se publicó en `97b65ab` y sus despliegues quedaron `READY`; no se configuraron secretos ni se activaron proveedores nuevos.
 
 La siguiente revisión debe separar contrato comercial, activación operativa de E3/E5, sink/retención de E4 y aprobación formal de lanzamiento. Ningún canary sintético por sí solo autoriza producción.

@@ -1,6 +1,6 @@
 # ContaIA — Fase IA E6: UX Premium, canary sintético y aprobación de lanzamiento
 
-**Estado:** terminada y validada localmente; pendiente de commit, push y despliegue.
+**Estado:** terminada, validada y publicada en el commit firmado `97b65ab`; los despliegues Vercel asociados quedaron `READY`.
 
 **Alcance:** hacer visibles los límites Free/Premium sin convertir el navegador en autoridad de entitlements, añadir un canary determinista con fixtures sintéticos y congelar la aprobación de lanzamiento detrás de un gate fail-closed.
 
@@ -32,7 +32,7 @@ La salida por defecto es `hold`. El gate no sustituye la revisión humana, la co
 - Build estático `npm run build:vercel` aprobado después de restaurar íntegramente `tools.css` y anexar solo el bloque E6.
 - **2/2 E2E focalizadas de E6** aprobadas: Chromium y mobile Chromium.
 - La regresión completa cubrió 112 casos: **111/112** aprobaron en la corrida completa; el único CTA público intermitente se reejecutó de forma aislada y aprobó en **2/2** proyectos. E6 aprobó en ambas apariciones de la regresión.
-- No se usaron datos fiscales reales, no se activaron proveedores, no se configuró Premium comercial y no se publicó esta fase.
+- No se usaron datos fiscales reales, no se activaron proveedores ni se configuró Premium comercial; la publicación no implica aprobación productiva del gate.
 
 ## Pendientes
 
