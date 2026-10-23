@@ -585,3 +585,88 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [ ] No hacer commit, push ni despliegue sin autorización específica.
 
 **Siguiente fase sugerida:** no iniciar otra fase visual hasta recibir confirmación; la Fase 7 queda lista para revisión del usuario.
+
+---
+## Fase IA A — Contratos puros y router determinista CFDI
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+- [x] Crear `src/cfdi/ai/tool-registry.js` con registro cerrado y versionado, schemas de entrada/salida, allowlist de herramientas locales CFDI, acción explícita y validación de `sessionEpoch`.
+- [x] Bloquear antes de planear o explicar cualquier `File`, `Blob`, `ArrayBuffer`, XML, RFC directo, UUID, folio, contraseña, token, sesión o ruta local; el RFC empresarial se acepta únicamente como parámetro local del reporte fiscal tras acción humana explícita.
+- [x] Crear `src/cfdi/ai/intent-router.js` con intenciones deterministas de resumen, alertas, pagos, impuestos, siguiente paso y explicación; las peticiones ambiguas muestran opciones y las no admitidas no inventan herramientas.
+- [x] Crear `src/cfdi/ai/cfdi-tools.js` con herramientas locales de resumen, alertas, relaciones de pagos, reporte de impuestos, siguiente paso y contexto seguro, reutilizando `buildCfdiAnalysis`, `buildCfdiTaxReport` y `buildNoraCfdiContext` sin duplicar lógica fiscal.
+- [x] Crear `src/cfdi/ai/cfdi-ai-orchestrator.js` para separar petición, enrutamiento, plan, ejecución local, artefacto, evidencia y explicación no solicitada; no llama a Nora, Gateway ni a un modelo en esta fase.
+- [x] Integrar cancelación y desmontaje mediante `AbortController` y `CleanupScope`; los cambios de sesión invalidan resultados tardíos y la cancelación limpia operaciones pendientes.
+- [x] Añadir `tests/cfdi-ai-orchestrator.test.js` con 11 casos de contratos, privacidad, allowlist, router, ejecución, contexto seguro, sesión y limpieza.
+- [x] Validación final: **240 pruebas unitarias** aprobadas, compilación ESM focalizada y build estático aprobado.
+- [x] La Fase A mantuvo fuera UI, proveedor/modelo, Gateway, pagos, cuotas Premium, handoffs automáticos y transmisión de archivos o datos sensibles; la integración posterior quedó delimitada a la Fase B autorizada.
+**Fase IA B:** terminada localmente y documentada abajo; no realizar commit, push ni despliegue sin autorización específica.
+
+---
+## Fase IA B — Integración del orquestador local en la isla CFDI
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+- [x] Montar `ToolRegistry` y `AiOrchestrator` dentro de `src/cfdi/island.js`, tomando el análisis mediante la capacidad ya existente y registrando el orquestador con `CleanupScope`.
+- [x] Añadir al workspace un panel de consulta local con cuatro acciones rápidas: resumen, alertas, pagos y siguiente paso; el formulario acepta hasta 2,000 caracteres y requiere una acción explícita.
+- [x] Mostrar artefactos agregados y evidencia (`schemaVersion`, cálculo, revisión humana y estado) sin renderizar XML, RFC, UUID, folios, nombres de archivo ni el análisis completo en el resultado del panel.
+- [x] Mantener las acciones de Nora, handoff y otras operaciones fuera del panel de Fase B; las únicas acciones posteriores visibles son navegación local a alertas/pagos, apertura del reporte local y exportación local.
+- [x] Invalidar consultas previas al iniciar, cargar o quitar un análisis; destruir el orquestador, cerrar el registro y limpiar consulta, resultado, error y estado ocupado al desmontar la isla.
+- [x] Añadir `tests/e2e/cfdi-ai-panel.spec.js` para Chromium y Pixel 5, cubriendo montaje real de la isla, consulta de alertas, consulta de pagos, ausencia de identificadores en el artefacto visible y limpieza.
+- [x] Validación final: **240 pruebas unitarias**, compilación ESM/CSS, build estático aprobado y **104 pruebas E2E** aprobadas en serie en escritorio y Pixel 5.
+- [x] Mantener fuera de Fase B proveedor/modelo, Gateway, cuotas Premium, persistencia de artefactos, handoffs automáticos y datos adjuntos; Fase C solo reutiliza el adaptador existente con contexto depurado y dos acciones humanas.
+
+---
+## Fase IA C — Explicación segura opcional con Nora
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+- [x] Añadir `AiOrchestrator.explain()` con destino único `nora-advisor`, modo `explain_safe_summary`, época de sesión y cancelación efímera.
+- [x] Ejecutar `cfdi.safe_context` antes del adaptador y entregar únicamente `cfdi-summary-v1`; la respuesta del orquestador no devuelve el contexto seguro al workspace.
+- [x] Implementar primera confirmación visible en CFDI: resumen numérico, sin XML, archivos, RFC, UUID, folios, nombres ni movimientos originales.
+- [x] Reutilizar el adaptador existente `onAskNora`; tras la primera confirmación se abre Asistente abierto con un borrador revisable y el envío a Nora permanece detrás del botón Enviar como segunda acción humana.
+- [x] Mantener disponible el resultado local si Nora no está configurada, falla el adaptador o cambia la sesión; no convertir la explicación en resultado fiscal.
+- [x] Añadir pruebas unitarias de allowlist, explicit action, doble sanitización y salida sin `safeContext`, más E2E en Chromium y Pixel 5 para confirmación, payload depurado y limpieza.
+- [x] Validación final: **241 pruebas unitarias**, compilación ESM/CSS, build estático aprobado y **104 pruebas E2E** aprobadas en serie en escritorio y Pixel 5.
+- [x] Mantener fuera de Fase C nuevas cuotas Premium, persistencia de conversaciones, envío automático, handoffs y acciones fiscales; el planner posterior queda limitado a selección de herramientas read-only.
+
+---
+## Fase IA D — Planner JSON cerrado y controlado
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+- [x] Crear `src/cfdi/ai/planner.js` con schema cerrado `cfdi-planner-v1`, cuatro intenciones permitidas y catálogo derivado solo de herramientas `modelCallable`.
+- [x] Excluir `analysisRef`, XML, archivos, RFC, UUID, folios y fuentes completas del request enviado al planner; la petición textual se normaliza y se rechazan patrones identificables antes de red.
+- [x] Ejecutar el planner únicamente cuando el router determinista devuelve `unsupported`; las peticiones ambiguas siguen mostrando opciones y no llaman al planner.
+- [x] Añadir `validatePlannerPlan()` al `ToolRegistry`: rechaza propiedades extra, versiones inválidas, herramientas mutantes/no allowlisted, argumentos extra, `analysisRef`, revisión humana falsa y discrepancias entre intención y herramienta.
+- [x] Añadir `POST /api/cfdi/planner`; usa el modelo configurado en el Gateway existente, solicita `json_schema` estricto y vuelve a validar la salida en servidor antes de responder.
+- [x] Conectar el cliente solo con `{ message }`; la ejecución posterior inyecta `analysisRef` localmente después de validar el plan y conserva el cálculo en navegador.
+- [x] Añadir pruebas de prompt injection, salida manipulada hacia `cfdi.tax_report`, rechazo de identificadores, contrato cliente/servidor y E2E de ejecución local del plan.
+- [x] Validación final: **249 pruebas unitarias**, compilación focalizada, build estático aprobado y **106 pruebas E2E** aprobadas en serie en escritorio y Pixel 5.
+- [ ] No agregar todavía planner con herramientas mutantes, acceso a fuentes completas, persistencia de prompts, nuevas cuotas Premium ni acciones fiscales; requieren otra fase y autorización.
+**Fases IA E0 y E1:** contrato de gobernanza y DLP local completados; la siguiente propuesta es E2, previa autorización explícita.
+
+---
+## Fase IA E0 — Contrato de gobernanza IA
+**Estado:** terminada localmente y validada; no activa runtime, sin commit, push ni despliegue.
+- [x] Crear `AI_GOVERNANCE_CONTRACT_VERSION = ai-governance-v1` y clases `local_sensitive`, `local_derived`, `safe_summary`, `planner_text`, `telemetry_aggregate` y `entitlement_aggregate`.
+- [x] Declarar políticas por endpoint para planner CFDI, Nora, futura admisión comercial y observabilidad; el planner solo permite `message` y la telemetría no permite prompts, bodies, headers ni datos fiscales.
+- [x] Fijar cuotas arquitectónicas iniciales: planner Free/Premium 20/200 por mes, explicación 10/100, snapshot Nora 0/50, concurrencia 1/2 y 2,000 caracteres por petición.
+- [x] Crear `AI_MODEL_CAPABILITIES_V1` con estado inicial `unapproved`, proveedores permitidos y requisitos de JSON Schema estricto, structured output, cancelación y política de retención.
+- [x] Registrar amenazas E-01 a E-12, códigos de error canónicos y eventos `ai.*` de observabilidad redacted.
+- [x] Validar que los eventos solo admitan escalares y referencias opacas; se rechazan campos como `message`, `prompt`, `body`, `content`, `xml`, `rfc`, `uuid`, `cfdiContext`, `safeContext`, tokens y API keys.
+- [x] Añadir `tests/cfdi-ai-governance-contract.test.js`: **8/8 pruebas unitarias** aprobadas.
+- [x] Confirmar que E0 no añade `fetch`, persistencia, logging real, endpoints, entitlements ni rate limiting distribuido.
+- [x] E1 implementada por separado: DLP runtime local, modo planner estricto, bloqueo antes de Gateway y pruebas de redacción.
+- [ ] Mantener E2+ pendientes: identidad/entitlements, cuotas server-side, rate limit distribuido, circuit breaker, telemetría real, revisión de proveedores y UI Premium.
+
+**Contrato entregado:** `contaia-ai-phase-e0-governance-contract.md` y `src/cfdi/ai/ai-governance-contract.js`.
+**Siguiente fase sugerida:** Fase IA E2 — admisión, identidad, entitlements y cuotas server-side, previa autorización explícita.
+
+---
+## Fase IA E1 — `AiDataLossPreventionGate` local
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+- [x] Crear `src/cfdi/ai/ai-dlp-gate.js` con política `ai-dlp-v1`, normalización Unicode NFKC, eliminación controlada de zero-width, control de caracteres y límite de 2,000 caracteres.
+- [x] Detectar y clasificar XML/CFDI, UUID, RFC, CURP, NSS, CLABE/cuenta, tarjetas, correo, teléfono, nombres/domicilios etiquetados, URLs con query, tablas, JSON y bloques codificados.
+- [x] Emitir decisiones `allow`, `confirm` o `block`; el planner opera en modo estricto y detiene tanto señales medias como altas antes de `fetchImpl`.
+- [x] Generar preview local redacted sin conservar texto sensible en `normalizedMessage` cuando la petición no es permitida; errores y previews no incluyen el valor original.
+- [x] Integrar el gate en `src/cfdi/ai/planner.js`, de modo que la validación se repita en la frontera server-side antes de llamar al Gateway.
+- [x] Mantener diferenciados `planner_input_invalid`, `planner_input_sensitive` y `planner_input_confirmation_required`.
+- [x] Añadir `tests/cfdi-ai-dlp-gate.test.js` y ampliar `tests/tutor-server.test.js` para probar que XML, identificadores, contactos y tablas no alcanzan Gateway.
+- [x] Validación final: **265/265 pruebas unitarias**, **21/21 pruebas focalizadas** de DLP/servidor, **4/4 E2E focalizadas** del panel CFDI, compilación focalizada y build estático aprobados.
+- [ ] Mantener fuera de E1 DLP semántico para imágenes/audio/archivos, UI de confirmación para señales medias, autenticación, entitlements, cuotas distribuidas y telemetría conectada.
+
+**Contrato entregado:** `contaia-ai-phase-e1-dlp-gate.md` y `src/cfdi/ai/ai-dlp-gate.js`.
+**Siguiente fase sugerida:** Fase IA E2 — implementar `AiAdmissionService`, identidad, entitlements y cuotas server-side, previa autorización explícita.

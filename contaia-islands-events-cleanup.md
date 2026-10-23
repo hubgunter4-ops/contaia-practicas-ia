@@ -885,3 +885,51 @@ El marco común apila sus encabezados desde `840px` para que el grupo de accione
 La métrica de overflow exige que el documento no exceda el viewport y permite únicamente desplazadores horizontales declarados por la interfaz, como tabs. Se generaron 24 capturas y un manifiesto externo en `/home/ubuntu/contaia-visual7-evidencia.zip`; no contiene XML, CFDI, extractos bancarios ni respuestas de Nora reales. No se tocaron contratos de eventos, capacidades, workers, limpieza ni datos fiscales.
 
 Validación focalizada: **7 unitarias visuales**, CSS compilado y matriz responsive aprobada en Chromium. La regresión final aprobó **229 pruebas unitarias**, build estático y **102 E2E** en serie en escritorio y Pixel 5. La fase queda lista para revisión del usuario y no autoriza publicación.
+
+---
+## Fase IA A — AiOrchestrator y ToolRegistry CFDI
+**Terminada localmente, sin commit, push ni despliegue.**
+
+La primera capa de consultas CFDI queda aislada en `src/cfdi/ai/`. `ToolRegistry` permite solamente herramientas locales, versionadas y de solo lectura: resumen, alertas, relaciones de pagos, reporte fiscal con RFC aportado localmente, siguiente paso y constructor de contexto seguro. El registro valida schema, acción humana explícita cuando aplica, `analysisRef` y `sessionEpoch` antes y después de cada ejecución. Ninguna herramienta de Fase A aprueba, contabiliza, timbra, cancela, guarda remotamente, crea handoff ni hace solicitudes de red.
+
+`AiOrchestrator` es local y efímero. Se conecta de manera opcional con `CleanupScope`; su destrucción aborta solicitudes pendientes, elimina controladores y evita resultados tardíos. Una época de sesión distinta devuelve cancelación y no conserva la operación. El router determinista no llama a modelos: reconoce un conjunto cerrado de intenciones y, ante ambigüedad, entrega opciones para que la persona decida.
+
+La frontera de plan/contexto rechaza XML, archivos, blobs, buffers, RFC directo, UUID, folios, rutas locales, credenciales, tokens y sesión. El constructor `cfdi.safe_context` reutiliza el resumen ya depurado `cfdi-summary-v1`; no entrega fuentes originales. La explicación con Nora/Gateway, UI, permisos Premium y cualquier handoff permanecen fuera de esta fase y requerirán una acción explícita más una fase posterior.
+
+Validación reproducible: **240 pruebas unitarias aprobadas**, compilación ESM focalizada y build estático aprobado. Las 11 pruebas nuevas cubren allowlist, schemas, reducción de contexto, sesión y cleanup.
+
+---
+## Fase IA B — Panel local dentro de la isla CFDI
+**Terminada localmente, sin commit, push ni despliegue.**
+
+La isla CFDI monta el `ToolRegistry` y `AiOrchestrator` locales con `analysis:current`, sin colocar el análisis en el EventBus ni en un estado global nuevo. La UI del workspace presenta una consulta determinista con acciones rápidas y texto libre limitado a 2,000 caracteres. El panel solo recibe la respuesta estructurada del orquestador y muestra un artefacto resumido con evidencia, cálculo y revisión humana requerida.
+
+El panel no renderiza ni transfiere XML, `File`, `Blob`, `ArrayBuffer`, RFC, UUID, folios, nombres de archivos o el análisis completo en el resultado de consulta. Las acciones `open_alerts`, `open_payments`, `generate_tax_report` y `export_local` continúan siendo gestos locales visibles. Nora, handoff a Pólizas/DIOT, proveedores, Gateway y cualquier capacidad de transmisión permanecen fuera del panel de esta fase.
+
+Cada consulta se invalida con un contador efímero de petición; cargar otro análisis, recuperar historial o resetear el workspace limpia el resultado. Al desmontar, `CleanupScope` aborta el orquestador, se cierran las herramientas registradas y `disposeCfdiIsland()` vacía el estado de consulta. Un resultado tardío no puede repoblar la isla reemplazada.
+
+Validación reproducible: **240 pruebas unitarias aprobadas**, compilación ESM/CSS, build estático aprobado y **104 E2E** aprobadas en serie en escritorio y Pixel 5. La prueba nueva cubre el montaje real, alertas, pagos, ausencia de identificadores en el panel y cleanup.
+
+---
+## Fase IA C — Explicación segura opcional con Nora
+**Terminada localmente, sin commit, push ni despliegue.**
+
+`AiOrchestrator.explain()` es la única frontera de preparación para Nora desde CFDI. Acepta únicamente el destino `nora-advisor`, exige `explicitUserAction: true`, valida la época de sesión y ejecuta `cfdi.safe_context` antes de invocar el callback `onAskNora`. El contexto seguro vive solo durante la operación y no se publica en EventBus, capacidades ni estado global de la isla.
+
+La interfaz exige dos acciones humanas: primero, marcar la confirmación visible de que se compartirá únicamente un resumen `cfdi-summary-v1`; después, revisar el borrador en Asistente abierto y pulsar Enviar. El primer paso no envía una solicitud remota. El callback de Nora recibe solo conteos, checks, totales agregados y muestras numéricas depuradas; nunca recibe XML, archivos, RFC, UUID, folios, nombres o movimientos bancarios originales. El servidor de Nora conserva su segunda sanitización existente.
+
+Si la persona cancela, cambia de sesión, desmonta CFDI o el adaptador no está disponible, se invalida la operación y el resultado local permanece independiente. Un error de Nora no elimina ni convierte en fallido el artefacto fiscal local. `CleanupScope` aborta la ejecución del orquestador y el workspace limpia confirmación, errores y estados efímeros al desmontarse.
+
+Validación reproducible: **241 pruebas unitarias aprobadas**, compilación ESM/CSS, build estático aprobado y **104 E2E** aprobadas en serie en escritorio y Pixel 5. La E2E cubre que no exista llamada al adaptador antes del checkbox y que el payload capturado no contenga identificadores.
+
+---
+## Fase IA D — Planner JSON cerrado dentro de la isla CFDI
+**Terminada localmente, sin commit, push ni despliegue.**
+
+El planner se invoca solo cuando `routeCfdiIntent()` devuelve `unsupported`. La ambigüedad determinista no se delega al modelo. `buildCfdiPlannerRequest()` genera un catálogo de herramientas `modelCallable` read-only y elimina `analysisRef` de sus schemas; el request contiene únicamente la petición textual normalizada, la instrucción de salida y ese catálogo. La isla no coloca análisis CFDI, fuentes, `File`, `Blob`, `ArrayBuffer` ni capacidades efímeras dentro del request.
+
+El cliente envía exclusivamente `{ message }` a `POST /api/cfdi/planner`. La entrada se bloquea si incluye XML o patrones de RFC/UUID, y el servidor repite la validación antes de Gateway. El handler solicita JSON Schema estricto usando el proveedor/modelo configurado en el Gateway existente, no guarda prompts y aplica la segunda validación mediante `validateCfdiPlannerOutput()` y `ToolRegistry.validatePlannerPlan()`.
+
+La salida aceptada solo puede seleccionar resumen, alertas, relaciones de pago o siguiente paso. Se rechazan herramientas no `modelCallable` como `cfdi.tax_report`, campos extra, `analysisRef`, argumentos fuera de schema, `humanReviewRequired: false`, intención/herramienta discrepantes y respuestas no JSON. Solo después de validar se añade la referencia de análisis local y se ejecuta una herramienta read-only en el navegador. Un error remoto, plan inválido, cancelación o cambio de sesión conserva las fuentes y no ejecuta una operación propuesta.
+
+La integración registra el adapter en `CleanupScope` a través del orquestador; la señal de la isla cancela el fetch y los planes tardíos se descartan por la época de sesión. Validación reproducible: **249 pruebas unitarias aprobadas**, compilación focalizada, build estático aprobado y **106 E2E** aprobadas en serie en escritorio y Pixel 5. La E2E cubre la ejecución local del plan y la ausencia de `analysisRef`/identificadores en el request construido.

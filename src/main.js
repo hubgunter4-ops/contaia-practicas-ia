@@ -9,6 +9,7 @@ import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
 import { openStudyDatabase, searchStudyItems } from "./study-db.js";
 import { KNOWLEDGE_ITEMS } from "./knowledge-data.js";
 import { cfdiState, resetCfdiWorkspace } from "./cfdi/workspace.js";
+import { requestCfdiPlanner } from "./cfdi/ai/planner-api.js";
 import { resetReconciliationWorkspace } from "./reconciliation/workspace.js";
 import { journalState, resetJournalWorkspace } from "./journal/workspace.js";
 import { diotState, resetDiotWorkspace } from "./diot/workspace.js";
@@ -184,6 +185,7 @@ async function syncCfdiIsland() {
       onAskNora: handleCfdiAskNora,
       onHandoffSources: handleCfdiSourceHandoff,
       getAnalysis: () => cfdiState.analysis,
+      onCfdiPlanner: (request, context) => requestCfdiPlanner({ message: request.untrustedMessage, signal: context.signal }),
       registerSourceProvider: (owner, provider) => sourceCapabilityBroker.registerSourceProvider(owner, provider),
     }),
   });

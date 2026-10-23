@@ -10,6 +10,7 @@ export const cfdiState = {
   client: null, user: null, authBusy: false, email: "", authMessage: "", authError: false,
   analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "", taxReportOpen: false, taxReport: null, taxReportBusinessRfc: "", exportBusy: false, exportNotice: "", exportError: false,
   savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false,
+  aiQuery: "", aiBusy: false, aiResult: null, aiError: "", aiRequestId: 0, aiConfirmOpen: false, aiConfirmChecked: false, aiExplainBusy: false, aiExplainError: "",
 };
 
 let cfdiParseEpoch = 0;
@@ -51,6 +52,19 @@ export function resetCfdiWorkspace() {
   cfdiState.exportBusy = false;
   cfdiState.exportNotice = "";
   cfdiState.exportError = false;
+  resetCfdiAiState();
+}
+
+function resetCfdiAiState() {
+  cfdiState.aiRequestId += 1;
+  cfdiState.aiQuery = "";
+  cfdiState.aiBusy = false;
+  cfdiState.aiResult = null;
+  cfdiState.aiError = "";
+  cfdiState.aiConfirmOpen = false;
+  cfdiState.aiConfirmChecked = false;
+  cfdiState.aiExplainBusy = false;
+  cfdiState.aiExplainError = "";
 }
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -105,6 +119,62 @@ function renderTaxReport(analysis) {
 function renderWorkbookExport(analysis) {
   const buttonLabel = cfdiState.exportBusy ? "Preparando libro local…" : "Descargar hoja fiscal avanzada (.xlsx)";
   return `<section class="cfdi-workbook-export" aria-labelledby="cfdi-workbook-title"><div class="cfdi-section-title"><div><span>EXPORTACIÓN LOCAL · XLSX</span><h2 id="cfdi-workbook-title">Hoja de cálculo fiscal avanzada</h2><p>Organiza el análisis en pestañas separadas para revisión y trabajo posterior.</p></div><span class="cfdi-workbook-badge">${cfdiState.exportBusy ? "Preparando" : "7 hojas"}</span></div><div class="cfdi-workbook-grid"><div><b>Incluye</b><span>Resumen · comprobantes · ventas · compras · impuestos · pagos · conceptos</span></div><div><b>Origen</b><span>Datos extraídos y cálculos de esta sesión; sin XML incrustado</span></div><div><b>Alcance</b><span>Hoja de trabajo local; no es declaración, envío ni acuse del SAT</span></div></div><div class="cfdi-workbook-actions"><button type="button" class="button button-primary" data-cfdi-export-xlsx ${cfdiState.exportBusy ? "disabled" : ""}>${buttonLabel} <span aria-hidden="true">↓</span></button><small>La descarga se genera en este navegador. ${cfdiState.taxReportBusinessRfc ? `Ventas y compras usan el RFC ${escapeHtml(cfdiState.taxReportBusinessRfc)}.` : "Sin RFC de empresa, las hojas Ventas y Compras quedarán sin atribución."}</small></div>${cfdiState.exportNotice ? `<p class="cfdi-workbook-message ${cfdiState.exportError ? "is-error" : "is-success"}" role="status">${escapeHtml(cfdiState.exportNotice)}</p>` : ""}</section>`;
+}
+
+const cfdiAiQuickQueries = [
+  ["summary", "Ver resumen", "Dame un resumen del análisis"],
+  ["alerts", "Ver alertas", "Muéstrame las alertas del análisis"],
+  ["payments", "Revisar pagos", "Revisa los pagos y complementos"],
+  ["next-step", "Siguiente paso", "¿Qué debo hacer ahora?"],
+];
+
+function renderCfdiAiArtifact(result) {
+  const artifact = result?.artifact;
+  if (!artifact) {
+    const warnings = result?.evidence?.warnings || [];
+    return warnings.length ? `<ul class="cfdi-ai-warnings">${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : `<p class="cfdi-ai-empty">Elige una consulta local para revisar este análisis.</p>`;
+  }
+  if (artifact.schemaVersion === "cfdi-summary-result-v1") {
+    const counts = artifact.counts || {};
+    return `<dl class="cfdi-ai-stat-grid"><div><dt>Facturas</dt><dd>${counts.invoices ?? 0}</dd></div><div><dt>Pagos</dt><dd>${counts.payments ?? 0}</dd></div><div><dt>Relacionados</dt><dd>${counts.matchedPayments ?? 0}</dd></div><div><dt>Alertas</dt><dd>${artifact.quality?.alerts ?? 0}</dd></div></dl>`;
+  }
+  if (artifact.schemaVersion === "cfdi-alert-summary-v1") {
+    const labels = { duplicate_uuid: "UUID de factura repetido", payment_without_invoice: "Pago sin factura relacionada", payment_balance_difference: "Diferencia de saldo en pago", payment_exceeds_invoice: "Pago mayor al total de factura", estimated_tax_unmatched: "IVA estimado sin factura vinculada", payment_tax_missing: "Impuestos de complemento no disponibles", amount_missing: "Importe original faltante" };
+    return artifact.alerts?.length ? `<ul class="cfdi-ai-alert-list">${artifact.alerts.map((alert) => `<li><b>${escapeHtml(labels[alert.code] || "Resultado para revisar")}</b><span>${alert.count} registro(s) · ${alert.severity === "caution" ? "atención" : "revisión"}</span></li>`).join("")}</ul>` : `<p class="cfdi-ai-empty">No se encontraron alertas en las comprobaciones disponibles.</p>`;
+  }
+  if (artifact.schemaVersion === "cfdi-payment-links-v1") {
+    return `<dl class="cfdi-ai-stat-grid"><div><dt>Relacionados</dt><dd>${artifact.matched}</dd></div><div><dt>Sin vínculo</dt><dd>${artifact.unmatched}</dd></div><div><dt>Diferencias</dt><dd>${artifact.balanceDifferences}</dd></div><div><dt>Referencias faltantes</dt><dd>${artifact.missingInvoiceReferences}</dd></div></dl>`;
+  }
+  if (artifact.schemaVersion === "cfdi-tax-report-v1") {
+    return `<dl class="cfdi-ai-stat-grid"><div><dt>Ventas</dt><dd>${artifact.sales?.invoiceCount ?? 0}</dd></div><div><dt>Compras</dt><dd>${artifact.purchases?.invoiceCount ?? 0}</dd></div><div><dt>Sin atribución</dt><dd>${artifact.unclassifiedCount ?? 0}</dd></div></dl><p class="cfdi-ai-note">El reporte conserva la separación por RFC indicada localmente y requiere revisión humana.</p>`;
+  }
+  if (artifact.schemaVersion === "cfdi-next-step-v1") return `<p class="cfdi-ai-next-step"><b>${escapeHtml(artifact.label || "Revisa el resultado local.")}</b></p>`;
+  return `<p class="cfdi-ai-empty">El resultado local no tiene una vista resumida disponible.</p>`;
+}
+
+function renderCfdiAiResult() {
+  const result = cfdiState.aiResult;
+  if (!result) return "";
+  const statusCopy = {
+    completed: "Resultado listo para revisión.",
+    needs_review: "Resultado listo; requiere revisión humana.",
+    needs_input: "Falta una decisión o dato para continuar.",
+    cancelled: "La operación fue cancelada y los datos temporales se limpiaron.",
+    failed: "No se pudo completar la consulta local.",
+  }[result.status] || "Consulta local procesada.";
+  const localActions = (result.nextActions || []).filter(({ id }) => ["open_alerts", "open_payments", "generate_tax_report", "export_local"].includes(id));
+  const canExplain = Boolean(result.artifact) && ["completed", "needs_review"].includes(result.status);
+  const explainAction = canExplain ? `<button type="button" class="button button-primary" data-cfdi-ai-explain ${cfdiState.aiExplainBusy ? "disabled" : ""}>Pedir explicación segura a Nora</button>` : "";
+  return `<section class="cfdi-ai-result" aria-labelledby="cfdi-ai-result-title" aria-live="polite"><div class="cfdi-ai-result-head"><div><span>ARTEFACTO TRAZABLE · ${escapeHtml(result.intent?.id || "consulta")}</span><h3 id="cfdi-ai-result-title">${escapeHtml(statusCopy)}</h3></div><button type="button" class="cfdi-ai-clear" data-cfdi-ai-clear>Limpiar resultado</button></div><p class="cfdi-ai-evidence">${escapeHtml(result.evidence?.calculation || "Router determinista local")} · revisión humana requerida · sin cambiar el análisis original.</p>${result.error ? `<p class="cfdi-ai-error" role="alert">${escapeHtml(result.error.message || "Error local")}</p>` : renderCfdiAiArtifact(result)}${localActions.length || explainAction ? `<div class="cfdi-ai-actions">${explainAction}${localActions.map(({ id, label }) => `<button type="button" class="button button-quiet" data-cfdi-ai-action="${escapeHtml(id)}">${escapeHtml(label)}</button>`).join("")}</div>` : ""}${cfdiState.aiConfirmOpen ? renderCfdiAiConfirmation() : ""}</section>`;
+}
+
+function renderCfdiAiConfirmation() {
+  return `<section class="cfdi-ai-confirm" aria-labelledby="cfdi-ai-confirm-title"><div><span>PRIMERA CONFIRMACIÓN · RESUMEN DEPURADO</span><h4 id="cfdi-ai-confirm-title">¿Quieres preparar esta explicación con Nora?</h4><p>Solo se compartirá un resumen numérico <b>cfdi-summary-v1</b> con conteos, revisiones, monedas y diferencias agregadas. No se compartirán XML, archivos, RFC, UUID, folios, nombres ni movimientos originales.</p></div><ul><li>El análisis local permanece intacto.</li><li>Nora no recalcula desde el XML.</li><li>El envío todavía no ocurre: se abrirá Asistente abierto para que revises el borrador y pulses Enviar.</li></ul><form data-cfdi-ai-explain-form><label class="cfdi-ai-consent"><input type="checkbox" name="confirmSafeContext" ${cfdiState.aiConfirmChecked ? "checked" : ""} ${cfdiState.aiExplainBusy ? "disabled" : ""}/><span>Confirmo compartir únicamente este resumen depurado con Nora.</span></label><div class="cfdi-ai-form-actions"><button type="button" class="button button-quiet" data-cfdi-ai-cancel ${cfdiState.aiExplainBusy ? "disabled" : ""}>Cancelar</button><button type="submit" class="button button-primary" ${!cfdiState.aiConfirmChecked || cfdiState.aiExplainBusy ? "disabled" : ""}>${cfdiState.aiExplainBusy ? "Preparando…" : "Continuar con Nora"}</button></div>${cfdiState.aiExplainError ? `<p class="cfdi-ai-error" role="alert">${escapeHtml(cfdiState.aiExplainError)}</p>` : ""}</form></section>`;
+}
+
+function renderCfdiLocalAssistant() {
+  const submitLabel = cfdiState.aiBusy ? "Revisando localmente…" : "Consultar análisis";
+  return `<section class="cfdi-ai-query" aria-labelledby="cfdi-ai-title"><div class="cfdi-section-title"><div><span>CONSULTA LOCAL · SIN IA REMOTA</span><h2 id="cfdi-ai-title">Revisa el análisis con una pregunta</h2><p>El router determinista ejecuta reglas ya calculadas en este navegador. No se envía el XML, el RFC ni el análisis completo.</p></div><span class="cfdi-ai-badge">Fase B</span></div><div class="cfdi-ai-quick-actions" aria-label="Consultas rápidas">${cfdiAiQuickQueries.map(([id, label, prompt]) => `<button type="button" class="button button-quiet" data-cfdi-ai-quick="${escapeHtml(prompt)}" data-cfdi-ai-quick-id="${id}" ${cfdiState.aiBusy ? "disabled" : ""}>${escapeHtml(label)}</button>`).join("")}</div><form class="cfdi-ai-form" data-cfdi-ai-form><label for="cfdi-ai-message">Consulta permitida</label><textarea id="cfdi-ai-message" name="message" rows="2" maxlength="2000" placeholder="Ej. Muéstrame las alertas del análisis" ${cfdiState.aiBusy ? "disabled" : ""}>${escapeHtml(cfdiState.aiQuery)}</textarea><div class="cfdi-ai-form-actions"><small>Las respuestas son señales de revisión, no un dictamen fiscal.</small><button type="submit" class="button button-primary" ${cfdiState.aiBusy ? "disabled" : ""}>${submitLabel}</button></div>${cfdiState.aiError ? `<p class="cfdi-ai-error" role="alert">${escapeHtml(cfdiState.aiError)}</p>` : ""}</form>${cfdiState.aiBusy ? `<p class="cfdi-ai-progress" role="status">Revisando el análisis local…</p>` : ""}${renderCfdiAiResult()}</section>`;
 }
 
 function renderSourceHandoff() {
@@ -180,7 +250,7 @@ export function renderCfdiWorkspace() {
   const currentTab = cfdiState.activeTab;
   const body = !analysis
     ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>${cfdiState.queuedFiles.length ? "Lote listo para analizar" : "El análisis empieza aquí"}</b><p>${cfdiState.queuedFiles.length ? "Confirma la revisión del lote para analizarlo localmente; los resultados aparecerán aquí." : "Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador."}</p></div>`
-    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderTaxReport(analysis)}${renderWorkbookExport(analysis)}${renderSourceHandoff()}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
+    : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderCfdiLocalAssistant()}${renderTaxReport(analysis)}${renderWorkbookExport(analysis)}${renderSourceHandoff()}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
   const pending = cfdiState.pendingRequest ? `<aside class="cfdi-origin-request"><div><span>DERIVADO DESDE ASISTENTE ABIERTO</span><p>${escapeHtml(cfdiState.pendingRequest)}</p></div><button type="button" data-cfdi-dismiss-request aria-label="Quitar solicitud de origen">×</button></aside>` : "";
   const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
   const statusLabel = cfdiState.status === "processing" ? "Analizando localmente" : cfdiState.error ? "Requiere revisión" : cfdiState.analysis ? "Análisis listo" : cfdiState.queuedFiles.length ? "Lote en revisión" : "Disponible · análisis local";
@@ -296,6 +366,7 @@ async function analyzeFiles(files) {
   cfdiState.taxReportBusinessRfc = "";
   cfdiState.exportNotice = "";
   cfdiState.exportError = false;
+  resetCfdiAiState();
   document.dispatchEvent(new CustomEvent("contaia:cfdi-updated"));
   try {
     const workerFiles = await buildCfdiWorkerFiles(files, controller.signal);
@@ -428,15 +499,102 @@ async function downloadAdvancedWorkbook(onUpdate) {
   }
 }
 
-export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => {}, onHandoffSources = () => {}, cleanupScope = null } = {}) {
+async function runLocalAiQuery(message, onUpdate, onRunLocalAi) {
+  const query = String(message || "").trim().replace(/\s+/g, " ");
+  if (!query) {
+    cfdiState.aiError = "Escribe una consulta para revisar el análisis.";
+    onUpdate();
+    return;
+  }
+  if (cfdiState.aiBusy) return;
+  const requestId = ++cfdiState.aiRequestId;
+  cfdiState.aiQuery = query;
+  cfdiState.aiBusy = true;
+  cfdiState.aiResult = null;
+  cfdiState.aiError = "";
+  onUpdate();
+  if (typeof onRunLocalAi !== "function") {
+    cfdiState.aiBusy = false;
+    cfdiState.aiError = "La consulta local no está conectada a esta isla.";
+    onUpdate();
+    return;
+  }
+  try {
+    const result = await onRunLocalAi({
+      message: query,
+      analysisRef: "analysis:current",
+      mode: "plan_and_local",
+      explicitUserAction: true,
+    });
+    if (requestId !== cfdiState.aiRequestId) return;
+    cfdiState.aiResult = result || null;
+  } catch (error) {
+    if (requestId !== cfdiState.aiRequestId) return;
+    cfdiState.aiResult = null;
+    cfdiState.aiError = error instanceof Error ? error.message : "No se pudo completar la consulta local.";
+  } finally {
+    if (requestId === cfdiState.aiRequestId) {
+      cfdiState.aiBusy = false;
+      onUpdate();
+    }
+  }
+}
+
+async function runSafeExplanation(onUpdate, onExplainSafe) {
+  if (!cfdiState.aiConfirmChecked || cfdiState.aiExplainBusy) return;
+  const requestId = ++cfdiState.aiRequestId;
+  cfdiState.aiExplainBusy = true;
+  cfdiState.aiExplainError = "";
+  onUpdate();
+  if (typeof onExplainSafe !== "function") {
+    cfdiState.aiExplainBusy = false;
+    cfdiState.aiExplainError = "La explicación segura no está conectada a esta isla.";
+    onUpdate();
+    return;
+  }
+  try {
+    const result = await onExplainSafe({
+      message: "Ayúdame a interpretar este resultado del análisis CFDI y dime qué debo revisar primero. No cambies el cálculo local.",
+      analysisRef: "analysis:current",
+      mode: "explain_safe_summary",
+      destination: "nora-advisor",
+      explicitUserAction: true,
+    });
+    if (requestId !== cfdiState.aiRequestId) return;
+    if (!result || result.status !== "completed") {
+      cfdiState.aiExplainError = result?.error?.message || "La explicación no está disponible; conserva el resultado local y revisa sus alertas.";
+      cfdiState.aiExplainBusy = false;
+      onUpdate();
+    } else {
+      cfdiState.aiConfirmOpen = false;
+      cfdiState.aiConfirmChecked = false;
+      cfdiState.aiExplainBusy = false;
+      cfdiState.aiExplainError = "";
+      onUpdate();
+    }
+  } catch (error) {
+    if (requestId !== cfdiState.aiRequestId) return;
+    cfdiState.aiExplainBusy = false;
+    cfdiState.aiExplainError = error instanceof Error ? error.message : "La explicación no está disponible; conserva el resultado local.";
+    onUpdate();
+  }
+}
+
+export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => {}, onHandoffSources = () => {}, onRunLocalAi = null, onExplainSafe = null, cleanupScope = null } = {}) {
   const listenerController = cleanupScope?.addAbortController();
   const listenerOptions = listenerController ? { signal: listenerController.signal } : undefined;
   document.addEventListener("contaia:cfdi-updated", onUpdate, listenerOptions);
   app.addEventListener("change", (event) => {
-    if (!event.target.matches("[data-cfdi-files]")) return;
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-    if (files.length) stageCfdiFiles(files);
+    if (event.target.matches("[data-cfdi-files]")) {
+      const files = Array.from(event.target.files || []);
+      event.target.value = "";
+      if (files.length) stageCfdiFiles(files);
+      return;
+    }
+    if (event.target.matches('[name="confirmSafeContext"]')) {
+      cfdiState.aiConfirmChecked = event.target.checked;
+      onUpdate();
+    }
   }, listenerOptions);
   app.addEventListener("dragover", (event) => {
     if (!event.target.closest("[data-cfdi-drop]")) return;
@@ -461,6 +619,21 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     if (event.target.closest("[data-cfdi-open-tax-report]")) { cfdiState.taxReportOpen = true; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-close-tax-report]")) { cfdiState.taxReportOpen = false; cfdiState.taxReport = null; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-export-xlsx]")) { void downloadAdvancedWorkbook(onUpdate); return; }
+    const quickAi = event.target.closest("[data-cfdi-ai-quick]");
+    if (quickAi) { void runLocalAiQuery(quickAi.dataset.cfdiAiQuick, onUpdate, onRunLocalAi); return; }
+    if (event.target.closest("[data-cfdi-ai-clear]")) { resetCfdiAiState(); onUpdate(); return; }
+    if (event.target.closest("[data-cfdi-ai-explain]")) { cfdiState.aiConfirmOpen = true; cfdiState.aiConfirmChecked = false; cfdiState.aiExplainError = ""; onUpdate(); return; }
+    if (event.target.closest("[data-cfdi-ai-cancel]")) { cfdiState.aiConfirmOpen = false; cfdiState.aiConfirmChecked = false; cfdiState.aiExplainError = ""; onUpdate(); return; }
+    const aiAction = event.target.closest("[data-cfdi-ai-action]");
+    if (aiAction) {
+      const action = aiAction.dataset.cfdiAiAction;
+      if (action === "open_alerts") cfdiState.activeTab = "overview";
+      if (action === "open_payments") cfdiState.activeTab = "payments";
+      if (action === "generate_tax_report") cfdiState.taxReportOpen = true;
+      if (action === "export_local") void downloadAdvancedWorkbook(onUpdate);
+      if (action !== "export_local") onUpdate();
+      return;
+    }
     const handoff = event.target.closest("[data-cfdi-handoff]");
     if (handoff) { onHandoffSources(handoff.dataset.cfdiHandoff); return; }
     const analyzeBatch = event.target.closest("[data-cfdi-analyze-batch]");
@@ -520,6 +693,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
         cfdiState.taxReportBusinessRfc = "";
         cfdiState.exportNotice = "";
         cfdiState.exportError = false;
+        resetCfdiAiState();
         cfdiState.operationMessage = "Análisis recuperado de tu historial. El XML original no está guardado.";
         cfdiState.operationError = false;
       } catch {
@@ -539,8 +713,21 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
   }, listenerOptions);
   app.addEventListener("input", (event) => {
     if (event.target.matches("#cfdi-email")) cfdiState.email = event.target.value;
+    if (event.target.matches("#cfdi-ai-message")) cfdiState.aiQuery = event.target.value;
   }, listenerOptions);
   app.addEventListener("submit", (event) => {
+    const explainForm = event.target.closest("[data-cfdi-ai-explain-form]");
+    if (explainForm) {
+      event.preventDefault();
+      void runSafeExplanation(onUpdate, onExplainSafe);
+      return;
+    }
+    const aiForm = event.target.closest("[data-cfdi-ai-form]");
+    if (aiForm) {
+      event.preventDefault();
+      void runLocalAiQuery(new FormData(aiForm).get("message"), onUpdate, onRunLocalAi);
+      return;
+    }
     const taxForm = event.target.closest("[data-cfdi-tax-report]");
     if (taxForm) {
       event.preventDefault();

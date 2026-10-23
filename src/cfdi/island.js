@@ -7,6 +7,8 @@ import {
   renderCfdiWorkspace,
 } from "./workspace.js";
 import { buildCfdiSourceSnapshot } from "../app/source-capabilities.js";
+import { createCfdiAiOrchestrator } from "./ai/cfdi-ai-orchestrator.js";
+import { createCfdiToolRegistry } from "./ai/cfdi-tools.js";
 
 function abortError(reason = "island-transition") {
   if (reason instanceof Error) return reason;
@@ -28,6 +30,18 @@ export async function mountIsland({ host, islandId = "cfdi", session = {}, signa
   const onAskNora = typeof capabilities.onAskNora === "function" ? capabilities.onAskNora : () => {};
   const onHandoffSources = typeof capabilities.onHandoffSources === "function" ? capabilities.onHandoffSources : () => {};
   const getAnalysis = typeof capabilities.getAnalysis === "function" ? capabilities.getAnalysis : () => null;
+  const plannerAdapter = typeof capabilities.onCfdiPlanner === "function" ? capabilities.onCfdiPlanner : null;
+  const toolRegistry = createCfdiToolRegistry({
+    getAnalysis: (analysisRef) => analysisRef === "analysis:current" ? getAnalysis() : null,
+  });
+  const aiOrchestrator = createCfdiAiOrchestrator({
+    toolRegistry,
+    epochProvider: () => session.epoch ?? 0,
+    cleanupScope: scope,
+    explainAdapter: ({ safeContext, message }) => onAskNora(safeContext, message),
+    plannerAdapter,
+  });
+  scope.add(() => toolRegistry.dispose());
   const render = () => {
     if (destroyed || localAbort.signal.aborted) return;
     host.innerHTML = renderCfdiWorkspace();
@@ -38,7 +52,14 @@ export async function mountIsland({ host, islandId = "cfdi", session = {}, signa
     ? capabilities.registerSourceProvider("cfdi", ({ target, sourceIds }) => buildCfdiSourceSnapshot(getAnalysis(), target, { sourceIds }))
     : null;
   if (unregisterSourceProvider) scope.add(unregisterSourceProvider);
-  bindCfdiWorkspace(host, { onUpdate: render, onAskNora, onHandoffSources, cleanupScope: scope });
+  bindCfdiWorkspace(host, {
+    onUpdate: render,
+    onAskNora,
+    onHandoffSources,
+    cleanupScope: scope,
+    onRunLocalAi: (request) => aiOrchestrator.run({ ...request, sessionEpoch: session.epoch ?? 0 }),
+    onExplainSafe: (request) => aiOrchestrator.explain({ ...request, sessionEpoch: session.epoch ?? 0 }),
+  });
   scope.add(() => disposeCfdiIsland());
   scope.add(() => host.replaceChildren());
   render();

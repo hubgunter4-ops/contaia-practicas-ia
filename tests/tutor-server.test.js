@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { handleTutorConfig, handleTutorStream, validateTutorInput } from "../src/tutor/server.js";
+import { handleCfdiPlanner, handleTutorConfig, handleTutorStream, validateTutorInput } from "../src/tutor/server.js";
 import { exercises } from "../src/exercises.js";
 import { courseModules } from "../src/course.js";
 
@@ -70,6 +70,70 @@ test("GET config publica solo proveedores/modelos de Gateway, sin claves", async
   assert.equal(response.body.includes("gateway-openai-secret"), false);
   assert.equal(response.body.includes("gateway-anthropic-secret"), false);
   assert.equal(response.headers["cache-control"], "no-store");
+});
+
+test("el planner CFDI usa el modelo configurado, envía solo texto no sensible y devuelve JSON cerrado", async () => {
+  let plannerRequest;
+  const response = new MockResponse();
+  const plan = { intent: "cfdi.summary", toolId: "cfdi.summary", arguments: { scope: "all" }, missing: [], requiresExplicitUserAction: false, humanReviewRequired: true };
+  await handleCfdiPlanner(request({ message: "¿Qué consulta local me ayuda a revisar el estado general?" }, { ip: "127.0.6.1" }), response, {
+    env: gatewayEnv,
+    fetchImpl: async (_url, options) => {
+      plannerRequest = options;
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(plan) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(JSON.parse(response.body), { ...plan, toolVersion: "1" });
+  const body = JSON.parse(plannerRequest.body);
+  assert.equal(body.model, gatewayEnv.AI_GATEWAY_OPENAI_MODEL);
+  assert.equal(body.stream, false);
+  assert.equal(body.response_format.type, "json_schema");
+  assert.equal(body.response_format.json_schema.strict, true);
+  assert.equal(body.messages.some(({ content }) => content.includes("analysisRef")), false);
+  assert.equal(JSON.stringify(body).includes("gateway-openai-secret-test"), false);
+  assert.equal(plannerRequest.headers.Authorization, `Bearer ${gatewayEnv.AI_GATEWAY_OPENAI_API_KEY}`);
+});
+
+test("el endpoint planner rechaza XML o identificadores antes de llamar al Gateway", async () => {
+  for (const [index, message] of [
+    "Analiza <cfdi:Comprobante> y dime qué hacer",
+    "Revisa el RFC AAA010101AAA y el UUID 11111111-1111-4111-8111-111111111111",
+    "Mi correo es contabilidad@example.com; revisa las alertas",
+    "Llama al 55 1234 5678 para confirmar la diferencia",
+    "Fecha,Referencia,Importe\n2026-01-01,ABC,100\n2026-01-02,DEF,200",
+  ].entries()) {
+    const response = new MockResponse();
+    let called = false;
+    await handleCfdiPlanner(request({ message }, { ip: `127.0.6.${index + 2}` }), response, {
+      env: gatewayEnv,
+      fetchImpl: async () => { called = true; return new Response("should not run"); },
+    });
+    assert.equal(response.statusCode, 400);
+    assert.equal(called, false);
+    assert.match(response.body, /planner|XML|identific|petición/i);
+    assert.equal(response.body.includes("AAA010101AAA"), false);
+    assert.equal(response.body.includes("contabilidad@example.com"), false);
+  }
+});
+
+test("el endpoint planner rechaza una salida que intenta seleccionar una herramienta no callable", async () => {
+  const response = new MockResponse();
+  const malicious = {
+    intent: "cfdi.tax_report",
+    toolId: "cfdi.tax_report",
+    arguments: { businessRfc: "AAA010101AAA" },
+    missing: [],
+    requiresExplicitUserAction: false,
+    humanReviewRequired: true,
+  };
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.4" }), response, {
+    env: gatewayEnv,
+    fetchImpl: async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(malicious) } }] }), { status: 200 }),
+  });
+  assert.equal(response.statusCode, 502);
+  assert.match(response.body, /consulta segura/i);
+  assert.equal(response.body.includes("AAA010101AAA"), false);
 });
 
 test("cada proveedor usa el endpoint, modelo y clave Gateway que le corresponden", async () => {
