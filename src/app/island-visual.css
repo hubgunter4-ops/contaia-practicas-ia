@@ -1,0 +1,785 @@
+/* Fase visual 2: jerarquía interna, distribución y movimiento sutil. */
+
+.app-shell--fiscal .content :is(
+  .recon-step-card,
+  .journal-source-stage,
+  .journal-rule-stage,
+  .journal-review-stage,
+  .journal-config-stage,
+  .journal-audit-stage,
+  .journal-adjustment-stage,
+  .diot-stage,
+  .diot-review-stage,
+  .diot-download-stage
+) {
+  position: relative;
+  isolation: isolate;
+  transition: border-color var(--island-motion-standard) var(--island-motion-ease), box-shadow var(--island-motion-standard) var(--island-motion-ease), transform var(--island-motion-standard) var(--island-motion-ease);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-step-card,
+  .journal-source-stage,
+  .journal-rule-stage,
+  .journal-review-stage,
+  .journal-config-stage,
+  .journal-audit-stage,
+  .journal-adjustment-stage,
+  .diot-stage,
+  .diot-review-stage,
+  .diot-download-stage
+)::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 3px;
+  border-radius: inherit;
+  content: "";
+  background: var(--fiscal-jade);
+  opacity: .8;
+  transition: opacity var(--island-motion-standard) var(--island-motion-ease), width var(--island-motion-standard) var(--island-motion-ease);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-step-card,
+  .journal-source-stage,
+  .journal-rule-stage,
+  .journal-review-stage,
+  .journal-config-stage,
+  .journal-audit-stage,
+  .journal-adjustment-stage,
+  .diot-stage,
+  .diot-review-stage,
+  .diot-download-stage
+):hover {
+  border-color: #b8d1c4;
+  box-shadow: var(--island-shadow);
+  transform: translateY(-1px);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-step-card,
+  .journal-source-stage,
+  .journal-rule-stage,
+  .journal-review-stage,
+  .journal-config-stage,
+  .journal-audit-stage,
+  .journal-adjustment-stage,
+  .diot-stage,
+  .diot-review-stage,
+  .diot-download-stage
+):hover::before {
+  width: 5px;
+  opacity: 1;
+}
+
+.app-shell--fiscal .content :is(
+  .recon-section-title,
+  .recon-results-heading,
+  .journal-section-heading,
+  .diot-section-heading,
+  .cfdi-upload-heading,
+  .cfdi-section-title,
+  .cfdi-history-head
+) {
+  min-width: 0;
+}
+
+.app-shell--fiscal .content :is(
+  .recon-section-title h2,
+  .recon-results-heading h2,
+  .journal-section-heading h2,
+  .diot-section-heading h2,
+  .cfdi-upload-heading h2,
+  .cfdi-section-title h2,
+  .cfdi-history-head h2
+) {
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.app-shell--fiscal .content :is(
+  .recon-section-title .eyebrow,
+  .recon-results-heading .eyebrow,
+  .journal-section-heading .eyebrow,
+  .diot-section-heading .eyebrow,
+  .cfdi-upload-heading > div > span,
+  .cfdi-section-title > div > span,
+  .cfdi-history-head > div > span
+) {
+  text-wrap: balance;
+}
+
+.app-shell--fiscal .content :is(.recon-summary, .journal-source-grid, .journal-draft-list, .journal-rules-list, .journal-audit-summary, .journal-credit-notes, .diot-source-grid, .diot-rows, .diot-aggregate-list, .cfdi-overview-grid, .cfdi-currency-grid) {
+  gap: var(--island-space-3);
+}
+
+.app-shell--fiscal .content :is(.recon-summary-card, .journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-summary article, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row, .diot-aggregate, .cfdi-currency-grid article) {
+  transition: border-color var(--island-motion-fast) var(--island-motion-ease), box-shadow var(--island-motion-fast) var(--island-motion-ease), background-color var(--island-motion-fast) var(--island-motion-ease), transform var(--island-motion-fast) var(--island-motion-ease);
+}
+
+.app-shell--fiscal .content :is(.recon-summary-card, .journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row, .diot-aggregate, .cfdi-currency-grid article):hover {
+  box-shadow: var(--island-shadow);
+  transform: translateY(-2px);
+}
+
+.app-shell--fiscal .content :is(.journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row):focus-within {
+  box-shadow: var(--island-focus-ring);
+}
+
+.app-shell--fiscal .content :is(.journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row):active {
+  transform: translateY(0) scale(.995);
+}
+
+.app-shell--fiscal .content :is(.journal-tabs button, .diot-stepper button, .cfdi-result-tabs button, .diot-filter) {
+  transition: color var(--island-motion-fast) var(--island-motion-ease), background-color var(--island-motion-fast) var(--island-motion-ease), border-color var(--island-motion-fast) var(--island-motion-ease), transform var(--island-motion-fast) var(--island-motion-ease);
+}
+
+.app-shell--fiscal .content :is(.journal-tabs button, .diot-stepper button, .cfdi-result-tabs button, .diot-filter):active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.app-shell--fiscal .content :is(.recon-table-wrap, .journal-lines-wrap, .journal-account-table, .cfdi-table-wrap) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .48);
+}
+
+.app-shell--fiscal .content :is(.recon-table th, .journal-lines th, .journal-account-table th, .cfdi-table th) {
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.app-shell--fiscal .content :is(.recon-results-heading, .journal-section-heading, .diot-section-heading) > :last-child,
+.app-shell--fiscal .content :is(.journal-audit-actions, .recon-results-actions, .diot-download-actions) {
+  flex-shrink: 0;
+}
+
+.app-shell--fiscal .content :is(.journal-audit-summary article, .recon-summary-card, .diot-preview-grid > div) {
+  min-height: 76px;
+}
+
+.app-shell--fiscal .content :is(.journal-audit-summary article, .recon-summary-card, .diot-preview-grid > div) > b {
+  line-height: 1.05;
+}
+
+@keyframes island-surface-enter {
+  from { opacity: .84; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes island-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 184, 76, .08); }
+  50% { box-shadow: 0 0 0 5px rgba(217, 184, 76, .14); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
+    animation: island-surface-enter var(--island-motion-slow) var(--island-motion-ease) both;
+  }
+
+  .app-shell--fiscal .content .island-frame-status.is-pending > span:first-child {
+    animation: island-status-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage) {
+    padding: var(--island-space-4);
+  }
+
+  .app-shell--fiscal .content :is(.recon-summary, .journal-audit-summary, .diot-preview-grid) {
+    gap: var(--island-space-2);
+  }
+
+  .app-shell--fiscal .content :is(.recon-summary-card, .journal-audit-summary article, .diot-preview-grid > div) {
+    min-height: 68px;
+  }
+
+  .app-shell--fiscal .content :is(.journal-section-heading, .recon-section-title, .recon-results-heading, .diot-section-heading) {
+    gap: var(--island-space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .app-shell--fiscal .content :is(.recon-summary-card, .journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row, .diot-aggregate, .cfdi-currency-grid article):hover,
+  .app-shell--fiscal .content :is(.journal-source-card, .journal-draft-item, .journal-rule-card, .journal-audit-finding, .journal-credit-note, .diot-source-card, .diot-row):active {
+    transform: none !important;
+  }
+
+  .app-shell--fiscal .content .island-frame-status.is-pending > span:first-child {
+    animation: none !important;
+  }
+}
+
+/* Fase visual 3: correcciones basadas en capturas comparativas. */
+@media (min-width: 981px) {
+  .app-shell--fiscal .content .journal-audit-layout {
+    grid-template-columns: minmax(300px, .92fr) minmax(380px, 1.08fr);
+    align-items: stretch;
+    gap: var(--island-space-4);
+  }
+
+  .app-shell--fiscal .content .journal-audit-layout > div:last-child {
+    display: grid;
+    min-width: 0;
+  }
+
+  .app-shell--fiscal .content .journal-audit-detail-empty {
+    display: grid;
+    min-height: 100%;
+    box-sizing: border-box;
+    align-content: center;
+    justify-items: center;
+    padding: var(--island-space-6);
+    text-align: center;
+  }
+
+  .app-shell--fiscal .content .journal-audit-detail-empty p {
+    max-width: 34ch;
+  }
+
+  .app-shell--fiscal .content .recon-summary {
+    gap: var(--island-space-4);
+    margin-bottom: var(--island-space-5);
+  }
+
+  .app-shell--fiscal .content .recon-summary-card {
+    min-height: 82px;
+    padding: var(--island-space-4);
+  }
+
+  .app-shell--fiscal .content .recon-table td {
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell--fiscal .content .journal-audit-detail-empty {
+    min-height: 150px;
+    padding: var(--island-space-5) var(--island-space-4);
+    text-align: left;
+  }
+
+  .app-shell--fiscal .content .diot-stepper {
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .app-shell--fiscal .content .diot-stepper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-shell--fiscal .content .diot-stepper button {
+    scroll-snap-align: start;
+  }
+
+  .app-shell--fiscal .content .recon-table td {
+    line-height: 1.4;
+  }
+}
+
+
+/* Fase visual 4: estados vacíos y jerarquía de siguiente acción. */
+.app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--island-space-2);
+  min-height: 148px;
+  padding: var(--island-space-6);
+  border: 1px dashed var(--fiscal-line-strong, #cbd7cd);
+  border-radius: var(--island-radius-md, 10px);
+  background: var(--island-surface-muted, #f8faf5);
+  color: var(--fiscal-muted);
+  line-height: 1.5;
+}
+
+.app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty)::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: inherit;
+  content: "";
+  background: var(--fiscal-jade);
+  opacity: .7;
+}
+
+.app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) > :is(b, h2, h3) {
+  margin: 0;
+  color: var(--fiscal-petroleum);
+  font-weight: 750;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) > p {
+  max-width: 65ch;
+  margin: 0;
+  color: var(--fiscal-muted);
+  font-size: 12px;
+}
+
+.app-shell--fiscal .content .cfdi-empty-state {
+  min-height: 240px;
+  background: #f8f9f5;
+}
+
+.app-shell--fiscal .content .cfdi-empty-state > span,
+.app-shell--fiscal .content .recon-empty-mark,
+.app-shell--fiscal .content .journal-empty-drafts > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #b7d9ce;
+  border-radius: 50%;
+  color: #126a57;
+  background: #eaf5f0;
+  font: 700 11px var(--mono);
+}
+
+.app-shell--fiscal .content .journal-empty-drafts > span {
+  border-radius: 10px;
+  color: var(--fiscal-validation-ink, #80661b);
+  border-color: #e4d48f;
+  background: #fff9df;
+}
+
+.app-shell--fiscal .content .island-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--island-space-2);
+  margin-top: var(--island-space-2);
+}
+
+.app-shell--fiscal .content .island-empty-actions .button {
+  min-height: 40px;
+}
+
+.app-shell--fiscal .content .island-empty-actions .button-primary {
+  box-shadow: 0 5px 14px rgba(22, 134, 111, .12);
+}
+
+.app-shell--fiscal .content :is(.journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty) {
+  background: #f8faf5;
+}
+
+.app-shell--fiscal .content :is(.journal-empty-source, .journal-empty-drafts) {
+  min-height: 170px;
+}
+
+.app-shell--fiscal .content .journal-detail-empty,
+.app-shell--fiscal .content .journal-audit-detail-empty {
+  min-height: 180px;
+  justify-items: center;
+  text-align: center;
+}
+
+.app-shell--fiscal .content .recon-results-empty {
+  min-height: 176px;
+  margin: var(--island-space-5) 0;
+}
+
+.app-shell--fiscal .content .diot-empty {
+  min-height: 156px;
+}
+
+.app-shell--fiscal .content :is(.cfdi-preflight, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .diot-empty) {
+  container-type: inline-size;
+}
+
+@keyframes island-empty-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) {
+    animation: island-empty-reveal var(--island-motion-standard) var(--island-motion-ease) both;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) {
+    min-height: 132px;
+    padding: var(--island-space-5) var(--island-space-4);
+  }
+
+  .app-shell--fiscal .content .cfdi-empty-state {
+    min-height: 210px;
+  }
+
+  .app-shell--fiscal .content .journal-detail-empty,
+  .app-shell--fiscal .content .journal-audit-detail-empty {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .app-shell--fiscal .content .island-empty-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-shell--fiscal .content .island-empty-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal .content :is(.cfdi-empty-state, .recon-results-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .journal-audit-empty, .journal-audit-detail-empty, .diot-empty) {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* Fase visual 5: feedback explícito de carga, error y confirmación. */
+.app-shell--fiscal .content :is(.cfdi-processing, .recon-notice, .recon-error, .recon-source-ok, .recon-source-warning, .cfdi-parse-error, .cfdi-workbook-message, .journal-inline-note[role="status"], .journal-inline-error, .journal-validation--error, .journal-validation--warning, .diot-source-note[role="status"], .diot-issue, .diot-export-notice) {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-shell--fiscal .content :is(.recon-notice, .recon-source-ok, .cfdi-workbook-message.is-success, .journal-inline-note[role="status"], .diot-source-note[role="status"], .diot-export-notice) {
+  border: 1px solid #b7d9ce;
+  border-left: 4px solid var(--fiscal-jade);
+  border-radius: var(--island-radius-sm, 8px);
+  background: #edf7f1;
+  color: #215c4b;
+  box-shadow: 0 3px 10px rgba(18, 59, 67, .04);
+}
+
+.app-shell--fiscal .content :is(.recon-error, .recon-source-warning, .cfdi-parse-error, .cfdi-workbook-message.is-error, .journal-inline-error, .journal-validation--error, .diot-issue.is-error) {
+  border-color: #e3b5a8;
+  border-left: 4px solid var(--fiscal-coral);
+  border-radius: var(--island-radius-sm, 8px);
+  background: #fff2ed;
+  color: #78392e;
+  box-shadow: 0 3px 10px rgba(126, 55, 42, .05);
+}
+
+.app-shell--fiscal .content :is(.recon-notice, .recon-error, .recon-source-ok, .recon-source-warning, .cfdi-workbook-message, .journal-inline-note[role="status"], .journal-inline-error, .diot-source-note[role="status"], .diot-issue, .diot-export-notice) {
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.app-shell--fiscal .content :is(.recon-notice, .recon-error, .recon-source-ok, .recon-source-warning, .cfdi-workbook-message, .journal-inline-note[role="status"], .journal-inline-error, .diot-source-note[role="status"], .diot-issue, .diot-export-notice) > :is(b, strong) {
+  color: inherit;
+}
+
+.app-shell--fiscal .content .cfdi-parse-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--island-space-3);
+  padding: 12px;
+}
+
+.app-shell--fiscal .content .cfdi-parse-error > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-shell--fiscal .content .cfdi-processing {
+  overflow: hidden;
+  border-color: #cbd7cd;
+  border-left: 4px solid var(--fiscal-validation);
+  background: #fffdf3;
+  box-shadow: 0 3px 10px rgba(114, 91, 20, .05);
+}
+
+.app-shell--fiscal .content .cfdi-processing-head b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.app-shell--fiscal .content .cfdi-processing-head b::before {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #e4d48f;
+  border-top-color: var(--fiscal-petroleum);
+  border-radius: 50%;
+  content: "";
+}
+
+.app-shell--fiscal .content :is(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: .62;
+}
+
+.app-shell--fiscal .content :is(button, input, select, textarea):focus-visible {
+  outline: 3px solid rgba(22, 134, 111, .22);
+  outline-offset: 2px;
+}
+
+@keyframes island-feedback-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes island-feedback-settle {
+  from { opacity: .35; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell--fiscal .content .cfdi-processing-head b::before {
+    animation: island-feedback-spin .85s linear infinite;
+  }
+
+  .app-shell--fiscal .content :is(.recon-notice, .recon-error, .cfdi-workbook-message, .journal-inline-note[role="status"], .journal-inline-error, .diot-source-note[role="status"], .diot-issue, .diot-export-notice) {
+    animation: island-feedback-settle var(--island-motion-fast) var(--island-motion-ease) both;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell--fiscal .content .cfdi-parse-error {
+    flex-direction: column;
+  }
+
+  .app-shell--fiscal .content .cfdi-parse-error button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal .content :is(.cfdi-processing-head b::before, .recon-notice, .recon-error, .cfdi-workbook-message, .journal-inline-note[role="status"], .journal-inline-error, .diot-source-note[role="status"], .diot-issue, .diot-export-notice) {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* Fase visual 6: contraste, foco de teclado y densidad tipográfica legible. */
+.app-shell--fiscal .content {
+  --island-jade-ink: var(--fiscal-jade-ink, #126A57);
+  --island-text-secondary: var(--fiscal-text-secondary, #355A5B);
+  --island-body-size: var(--island-type-body-size, 13px);
+  --island-body-leading: var(--island-type-body-leading, 1.5);
+  --island-meta-size: var(--island-type-meta-size, 11px);
+  --island-meta-leading: var(--island-type-meta-leading, 1.35);
+}
+
+.app-shell--fiscal .content :is(
+  .cfdi-page .tool-shell-eyebrow,
+  .cfdi-upload-heading > div > span,
+  .cfdi-section-title > div > span,
+  .cfdi-history-head > span,
+  .cfdi-batch-review-head > div > span,
+  .recon-section-title .eyebrow,
+  .recon-results-heading .eyebrow,
+  .journal-section-heading .eyebrow,
+  .journal-detail-heading .eyebrow,
+  .diot-section-heading .eyebrow,
+  .diot-stepper b,
+  .journal-assistant-message b,
+  .diot-assistant-message b
+) {
+  color: var(--island-jade-ink);
+}
+
+.app-shell--fiscal .content :is(
+  .cfdi-dropzone small,
+  .cfdi-file-count,
+  .cfdi-privacy-note,
+  .cfdi-db-status,
+  .cfdi-auth-form > small,
+  .cfdi-consent,
+  .cfdi-history-list article small,
+  .cfdi-history-empty,
+  .cfdi-success-text,
+  .cfdi-error,
+  .cfdi-empty-state > p,
+  .cfdi-metrics article > span,
+  .cfdi-metrics article > small,
+  .cfdi-total-block .cfdi-section-title small,
+  .cfdi-currency-grid article > div,
+  .cfdi-table td small,
+  .cfdi-processing li,
+  .cfdi-batch-review-head p,
+  .cfdi-batch-actions p,
+  .cfdi-batch-file small,
+  .cfdi-batch-file-status,
+  .recon-dropzone label small,
+  .recon-field small,
+  .recon-inline-note,
+  .recon-inline-error,
+  .recon-error,
+  .recon-notice,
+  .recon-source-ok,
+  .recon-source-warning,
+  .recon-run-actions > span,
+  .recon-results-heading p:last-child,
+  .recon-summary-card > span,
+  .recon-candidate > span,
+  .recon-candidate > small,
+  .recon-evidence,
+  .recon-confidence,
+  .recon-confidence-note,
+  .recon-no-candidate,
+  .recon-no-results,
+  .recon-original dt,
+  .recon-original dd,
+  .journal-context-id,
+  .journal-source-toolbar,
+  .journal-source-copy small,
+  .journal-rule-description small,
+  .journal-inline-note,
+  .journal-detail-heading p,
+  .journal-draft-item small,
+  .journal-detail-disclaimer,
+  .journal-rule-card-head span,
+  .journal-rule-card-head small,
+  .journal-rule-enabled,
+  .journal-assistant-toggle small,
+  .journal-assistant-privacy,
+  .journal-assistant-disclaimer,
+  .journal-audit-summary small,
+  .journal-audit-finding p,
+  .journal-finding-related,
+  .journal-disclaimer,
+  .diot-inline-note,
+  .diot-source-note,
+  .diot-source-copy small,
+  .diot-row-heading small,
+  .diot-suggestion,
+  .diot-row-issues,
+  .diot-exclude,
+  .diot-aggregate small,
+  .diot-global-card p,
+  .diot-acknowledge,
+  .diot-preview-grid span,
+  .diot-export-notice,
+  .diot-assistant-toggle small,
+  .diot-assistant-disclaimer,
+  .diot-assistant-privacy
+) {
+  color: var(--island-text-secondary);
+  font-size: var(--island-body-size);
+  line-height: var(--island-body-leading);
+}
+
+.app-shell--fiscal .content :is(
+  .cfdi-format-pill,
+  .cfdi-lock,
+  .cfdi-history-head,
+  .cfdi-processing-head span,
+  .cfdi-workbook-badge,
+  .recon-section-title .recon-formats,
+  .recon-row-pill,
+  .recon-required-hint,
+  .journal-count-pill,
+  .journal-rule-version,
+  .journal-status,
+  .diot-count-pill,
+  .diot-status
+) {
+  font-size: var(--island-meta-size);
+  line-height: var(--island-meta-leading);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-table th,
+  .journal-lines th,
+  .journal-account-table th,
+  .cfdi-table th
+) {
+  font-size: 10px;
+  line-height: var(--island-meta-leading);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-table td,
+  .journal-lines td,
+  .journal-account-table td,
+  .cfdi-table td
+) {
+  font-size: var(--island-body-size);
+  line-height: 1.45;
+}
+
+.app-shell--fiscal .content :is(
+  .recon-table td small,
+  .journal-lines td small,
+  .journal-account-table td small,
+  .cfdi-table td small
+) {
+  font-size: var(--island-meta-size);
+  line-height: var(--island-meta-leading);
+}
+
+.app-shell--fiscal .content :is(
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  summary,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid var(--island-focus-accent);
+  outline-offset: 3px;
+  box-shadow: var(--island-focus-ring);
+}
+
+.app-shell--fiscal .content :is(
+  .recon-dropzone input[type="file"],
+  .cfdi-dropzone input[type="file"]
+):focus-visible + label {
+  outline: 2px solid var(--island-focus-accent);
+  outline-offset: 3px;
+  box-shadow: var(--island-focus-ring);
+}
+
+.app-shell--fiscal .content :is(
+  .journal-source-card,
+  .journal-draft-item,
+  .journal-rule-card,
+  .journal-audit-finding,
+  .journal-credit-note,
+  .diot-source-card,
+  .diot-row
+):focus-within {
+  box-shadow: var(--island-focus-ring);
+}
+
+.app-shell--fiscal .content :is(
+  .cfdi-result-tabs button.is-active,
+  .recon-filter label,
+  .diot-filter.is-active
+) {
+  color: var(--island-jade-ink);
+}
+
+@media (max-width: 700px) {
+  .app-shell--fiscal .content :is(
+    .recon-table td,
+    .journal-lines td,
+    .journal-account-table td,
+    .cfdi-table td
+  ) {
+    font-size: var(--island-meta-size);
+    line-height: 1.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal .content :is(
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    summary,
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+    transition: none !important;
+  }
+}

@@ -2431,10 +2431,12 @@ select { appearance: none; padding-right: 28px !important; background-image: lin
   color-scheme: light;
   --fiscal-petroleum: #123B43;
   --fiscal-jade: #16866F;
+  --fiscal-jade-ink: #126A57;
   --fiscal-ivory: #F5F4EC;
   --fiscal-sand: #E4E6D8;
   --fiscal-coral: #E98268;
   --fiscal-validation: #D9B84C;
+  --fiscal-text-secondary: #355A5B;
   --fiscal-muted: #587075;
   --fiscal-line: #d8ded5;
   background: var(--fiscal-ivory);

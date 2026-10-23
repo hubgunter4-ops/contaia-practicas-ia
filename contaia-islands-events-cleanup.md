@@ -1,6 +1,6 @@
 # ContaIA — Contrato exacto de eventos y limpieza para Arquitectura de Islas
 
-**Estado:** Fases 1–8 implementadas localmente y validadas. La infraestructura base, Conciliación como isla real, CFDI como isla real, las capacidades explícitas entre fuentes, Pólizas + Auditoría, DIOT, Aprende/Estudio y la recuperación de contraseña con destino seguro ya funcionan; no se agrega persistencia nueva ni se autoriza commit, push o despliegue por este documento.
+**Estado:** Fases 1–9 y las Fases visuales 1–3 implementadas localmente y validadas. La infraestructura base, Conciliación como isla real, CFDI como isla real, las capacidades explícitas entre fuentes, Pólizas + Auditoría, DIOT, Aprende/Estudio, la recuperación de contraseña con destino seguro, el marco visual común, la jerarquía/movimiento internos y la revisión comparativa específica por isla ya funcionan; no se agrega persistencia nueva ni se autoriza commit, push o despliegue por este documento.
 
 **Objetivo:** aislar Aprende, Herramientas y Nora sin permitir que CFDI, extractos bancarios, pólizas, auditorías o conversaciones sobrevivan al desmontaje de una isla, al cambio de usuario o a una transición de sección.
 
@@ -820,3 +820,68 @@ La eliminación no alteró el almacenamiento de progreso educativo ni `study-db`
 Se añadió `tests/e2e/learning-performance.spec.js` con presupuestos de montaje menor a 2,500 ms, actualización menor a 500 ms y navegación menor a 2,500 ms, además de una comprobación de que el host estable no se reemplaza durante una actualización. Las mediciones observadas fueron: Chromium, montaje **391.9 ms**, actualización **259.5 ms**, navegación **225.6 ms**; Pixel 5, montaje **267.1 ms**, actualización **238.4 ms**, navegación **248.7 ms**.
 
 La validación final aprobó **211 pruebas unitarias**, el build estático y **92 pruebas E2E** en serie en escritorio y móvil. Esta fase no autoriza optimizaciones de infraestructura, cambios de Auth, cambios en el esquema educativo, backend, pagos, integración remota, commit, push ni despliegue.
+
+
+---
+
+## 15. Fase visual 3 — revisión comparativa y densidad
+
+La Fase visual 3 conserva la separación funcional de las islas y modifica únicamente la capa CSS compartida. Las capturas de referencia se generan con datos ficticios locales mediante `tests/e2e/visual-phase3.spec.js`; no contienen XML, extractos bancarios, cuentas de usuario ni resultados persistidos.
+
+El ajuste principal de Auditoría centra el estado vacío de evidencia en escritorio y le da una densidad equivalente a la lista de hallazgos. Conciliación recibe más separación entre métricas y resultados, además de line-height estable en la tabla. DIOT incorpora desplazamiento con snap en el stepper móvil. CFDI se conserva sin ajuste específico porque la comparación no mostró un problema de densidad que justificara cambiar su tratamiento.
+
+La fase quedó validada con 225 unitarias, build estático y 94 E2E en escritorio y móvil. El paquete de capturas comparativas se mantiene fuera de Git. No se autoriza por este contrato ninguna publicación, integración remota, persistencia nueva o cambio funcional.
+
+
+---
+
+## Fase visual 4 — Estados vacíos y jerarquía de acciones
+
+**Terminada localmente, sin commit, push ni despliegue.**
+
+La Fase visual 4 revisó estados sin fuentes o sin resultados de CFDI, Conciliación, Pólizas/Auditoría y DIOT mediante fixtures ficticios. Cada estado explica el motivo, mantiene la identidad de la isla y presenta una acción primaria visible; las alternativas conservan prioridad secundaria.
+
+Se añadió el grupo visual `.island-empty-actions` y el movimiento opcional `island-empty-reveal` en `src/app/island-visual.css`. Los botones no cambian sus destinos ni sus contratos de eventos. El tratamiento responsive apila las acciones a ancho completo en móvil, mantiene foco visible y desactiva animación/transformación bajo `prefers-reduced-motion: reduce`.
+
+Se elevaron a acción primaria las rutas locales hacia Analizador CFDI, Conciliación o Contexto y pólizas. No se añadieron APIs, persistencia, capacidades, fuentes fiscales, consultas a Nora ni cambios de backend. Se generaron capturas comparativas externas en `/home/ubuntu/contaia-visual4-comparativa.zip`.
+
+**Validación:** 226 pruebas unitarias, build estático y 96 pruebas E2E aprobadas en serie en escritorio y móvil. La siguiente fase visual sugerida es revisar estados de carga/error y el feedback de acciones, previa confirmación.
+
+
+---
+
+## Fase visual 5 — Feedback operativo
+
+**Terminada localmente, sin commit, push ni despliegue.**
+
+La capa compartida de islas ahora diferencia carga, error y confirmación usando los hooks existentes de CFDI, Conciliación, Pólizas/Auditoría y DIOT. La carga usa amarillo de validación y un spinner discreto; los errores usan coral y conservan `role="alert"`; las confirmaciones locales usan jade y conservan `role="status"`. El foco común y los controles deshabilitados tienen un tratamiento visible, y los errores de CFDI se apilan en móvil.
+
+La animación solo se activa cuando `prefers-reduced-motion` permite movimiento; con reducción de movimiento se desactivan spinner, entrada y transformaciones. La fase no introduce listeners, datos, capacidades, persistencia, APIs, backend, pagos o cambios de publicación.
+
+Validación reproducible: **227 unitarias**, CSS/build estático y **98 E2E** aprobadas en serie en escritorio y Pixel 5. La siguiente fase sugerida es una auditoría específica de contraste, foco y densidad tipográfica.
+
+
+---
+
+## Fase visual 6 — Contraste, foco y densidad
+
+**Terminada localmente, sin commit, push ni despliegue.**
+
+La capa visual común añade tinta jade accesible (`#126A57`) separada del jade de marca (`#16866F`), texto secundario accesible (`#355A5B`) y un foco dual marfil/petróleo para controles y tarjetas navegables. La auditoría incluye CFDI, Conciliación, Pólizas/Auditoría y DIOT, sin cambiar EventBus, CleanupScope, IslandManager, WorkerBridge, capacidades efímeras ni limpieza de datos sensibles.
+
+Las etiquetas y ayudas se elevan a 11 px de meta, el cuerpo común a 13 px con interlineado 1.5 y las tablas conservan una densidad controlada. `prefers-reduced-motion` sigue desactivando transiciones y transformaciones no esenciales. Los fixtures E2E no contienen CFDI, XML ni movimientos bancarios reales.
+
+Validación reproducible: **228 unitarias**, CSS/build estático y **100 E2E** aprobadas en serie en escritorio y Pixel 5. No se publicaron cambios. La siguiente fase visual sugerida es una revisión final de consistencia responsive y evidencia visual, previa confirmación.
+
+
+---
+
+## Fase visual 7 — Consistencia responsive y evidencia
+
+**Terminada localmente, sin commit, push ni despliegue.**
+
+El marco común apila sus encabezados desde `840px` para que el grupo de acciones tenga una distribución consistente en tablet y móvil. Los breakpoints específicos de cada isla continúan controlando formularios, tablas, stepper y paneles. La prueba `tests/e2e/visual-phase7.spec.js` cubre CFDI, Conciliación, Pólizas/Auditoría y DIOT con fixtures locales ficticios en 1280, 820 y 390 px.
+
+La métrica de overflow exige que el documento no exceda el viewport y permite únicamente desplazadores horizontales declarados por la interfaz, como tabs. Se generaron 24 capturas y un manifiesto externo en `/home/ubuntu/contaia-visual7-evidencia.zip`; no contiene XML, CFDI, extractos bancarios ni respuestas de Nora reales. No se tocaron contratos de eventos, capacidades, workers, limpieza ni datos fiscales.
+
+Validación focalizada: **7 unitarias visuales**, CSS compilado y matriz responsive aprobada en Chromium. La regresión final aprobó **229 pruebas unitarias**, build estático y **102 E2E** en serie en escritorio y Pixel 5. La fase queda lista para revisión del usuario y no autoriza publicación.

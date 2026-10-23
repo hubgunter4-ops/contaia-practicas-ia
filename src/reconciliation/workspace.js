@@ -140,7 +140,7 @@ function renderResults() {
   const { results, filter, visibleRows } = reconciliationState;
   if (!reconciliationState.analyzed) {
     const analysis = reconciliationState.analysisPresent;
-    return `<section class="recon-results-empty" aria-label="Tabla de coincidencias"><div class="recon-empty-mark" aria-hidden="true">↔</div><h2>La tabla se llena con sugerencias revisables</h2><p>${analysis ? "Completa los campos requeridos y genera sugerencias. Los candidatos solo se calculan en este navegador." : "Carga primero un análisis CFDI en esta pestaña y vuelve aquí. Sin fuente válida, no se calcula ni se muestra un cero engañoso."}</p>${analysis ? "" : `<button type="button" class="button button-quiet" data-section="cfdi">Abrir Analizador CFDI</button>`}</section>`;
+    return `<section class="recon-results-empty" aria-label="Tabla de coincidencias"><div class="recon-empty-mark" aria-hidden="true">↔</div><h2>La tabla se llena con sugerencias revisables</h2><p>${analysis ? "Completa los campos requeridos y genera sugerencias. Los candidatos solo se calculan en este navegador." : "Carga primero un análisis CFDI en esta pestaña y vuelve aquí. Sin fuente válida, no se calcula ni se muestra un cero engañoso."}</p>${analysis ? "" : `<div class="island-empty-actions"><button type="button" class="button button-primary" data-section="cfdi">Abrir Analizador CFDI <span aria-hidden="true">→</span></button></div>`}</section>`;
   }
   const summary = summarizeReconciliationRows(results);
   const filtered = filter === "all" ? results : results.filter((row) => row.result === filter);

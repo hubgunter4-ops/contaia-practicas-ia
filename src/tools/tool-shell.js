@@ -35,15 +35,15 @@ export function renderToolHeader({
   const safeTitleId = /^[a-z][a-z0-9_-]*$/i.test(titleId) ? ` id="${escapeHtml(titleId)}"` : "";
   const headingTag = `h${safeHeadingLevel}`;
   const actionMarkup = actions.map(renderAction).join("");
-  return `<header class="tool-shell-header ${safeClass}" data-tool-shell="${escapeHtml(id)}">
-    <div class="tool-shell-copy">
+  return `<header class="tool-shell-header ${safeClass}" data-tool-shell="${escapeHtml(id)}" data-island-frame="header">
+    <div class="tool-shell-copy island-frame-copy">
       <p class="tool-shell-eyebrow">${escapeHtml(eyebrow)}</p>
       <${headingTag}${safeTitleId}>${escapeHtml(title)}</${headingTag}>
       <p class="tool-shell-description">${escapeHtml(description)}</p>
     </div>
-    <div class="tool-shell-actions">
-      ${statusLabel ? `<span class="tool-shell-status is-${safeKind}"><span aria-hidden="true">${safeKind === "ready" ? "✓" : safeKind === "error" ? "×" : safeKind === "attention" ? "!" : "i"}</span>${escapeHtml(statusLabel)}</span>` : ""}
-      ${actionMarkup}
+    <div class="tool-shell-actions island-frame-actions">
+      ${statusLabel ? `<span class="tool-shell-status island-frame-status is-${safeKind}" data-island-status="${safeKind}"><span aria-hidden="true">${safeKind === "ready" ? "✓" : safeKind === "error" ? "×" : safeKind === "attention" ? "!" : "i"}</span>${escapeHtml(statusLabel)}</span>` : ""}
+      ${actionMarkup.replaceAll("tool-shell-action", "tool-shell-action island-frame-action")}
     </div>
   </header>`;
 }

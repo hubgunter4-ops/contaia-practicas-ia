@@ -491,3 +491,97 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [ ] No añadir backend, pagos, integración remota, commit, push ni despliegue sin autorización específica.
 
 **Siguiente fase sugerida:** revisión de rendimiento fiscal y auditoría de listeners en islas, previa confirmación del usuario.
+
+---
+
+## Fases visuales 1–4 — Marco, jerarquía, densidad y vacíos
+
+**Estado general:** Fases visuales 1–4 terminadas localmente y validadas; sin commit, push ni despliegue.
+
+### Fase visual 1 — Tokens compartidos y marco común
+
+- [x] `src/app/island-frame.css` define tokens compartidos de espaciado, gutters, ancho máximo, radios, sombras, foco, duración y curva de movimiento.
+- [x] CFDI, Conciliación, Pólizas/Auditoría y DIOT usan `data-island-frame="header"` sin romper clases históricas.
+- [x] El encabezado común conserva jerarquía de eyebrow, título petróleo, descripción muted, estado semántico y acciones táctiles.
+- [x] `prefers-reduced-motion` y foco visible quedan incluidos en el marco común.
+
+### Fase visual 2 — Jerarquía interna, distribución y movimiento
+
+- [x] `src/app/island-visual.css` normaliza agrupación interna, grids, tarjetas, separadores y distribución mobile-first por isla.
+- [x] Las microanimaciones de entrada/interacción son sutiles, no bloquean acciones y se desactivan con `prefers-reduced-motion: reduce`.
+- [x] Las pruebas de contrato cubren las cuatro islas y la carga ordenada del CSS común.
+
+### Fase visual 3 — Revisión comparativa específica
+
+- [x] Capturas ficticias comparables de CFDI, Conciliación, Pólizas/Auditoría y DIOT en Chromium de escritorio y Pixel 5.
+- [x] Auditoría centra el panel vacío; Conciliación mejora separación de resumen, métricas y tabla; DIOT obtiene stepper móvil con scroll-snap; CFDI conserva su tratamiento.
+- [x] Validación reproducible del corte: 225 pruebas unitarias, build estático y 94 pruebas E2E en serie.
+- [x] Evidencia externa: `/home/ubuntu/contaia-visual3-comparativa.zip`.
+
+### Fase visual 4 — Estados vacíos y jerarquía de acciones
+
+- [x] Estados sin fuentes o resultados de CFDI, Conciliación, Pólizas/Auditoría y DIOT explican el motivo y muestran el siguiente paso.
+- [x] `.island-empty-actions` establece un CTA primario; las rutas alternativas permanecen secundarias y no cambian su contrato de eventos.
+- [x] La superficie muted, borde discontinuo y acento jade distinguen el vacío operativo sin convertir pendientes en éxito.
+- [x] `island-empty-reveal` solo se activa con movimiento permitido; móvil apila acciones a ancho completo y conserva controles mínimos de 40 px.
+- [x] Validación reproducible del corte: 226 pruebas unitarias, build estático y 96 pruebas E2E en serie en escritorio y móvil.
+- [x] Evidencia externa: `/home/ubuntu/contaia-visual4-comparativa.zip`.
+
+- [x] Fase visual 5: estados de carga/error y feedback de acciones; el resultado queda documentado abajo.
+- [ ] No hacer commit, push ni despliegue sin autorización específica.
+
+
+---
+
+## Fase visual 5 — Feedback de carga, error y confirmación
+
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Unificar visualmente estados reales de CFDI, Conciliación, Pólizas/Auditoría y DIOT sin modificar lógica ni contratos de eventos.
+- [x] Diferenciar carga con superficie de atención, borde amarillo de validación y spinner de baja amplitud en `.cfdi-processing`.
+- [x] Diferenciar errores bloqueantes con coral, fondo marfil rosado, borde izquierdo y acción de recuperación conservando `role="alert"`.
+- [x] Diferenciar confirmaciones locales con jade, `role="status"`, borde y entrada suave sin afirmar cumplimiento fiscal ni envío remoto.
+- [x] Añadir foco visible común y feedback de controles deshabilitados; en móvil los errores de CFDI apilan su acción a ancho completo.
+- [x] Respetar `prefers-reduced-motion`: se desactivan spinner, entrada y transformaciones cuando la persona lo solicita.
+- [x] Añadir `tests/e2e/visual-phase5.spec.js` para capturar carga, error y confirmación en las cuatro islas en Chromium y Pixel 5.
+- [x] Validación final: **227 pruebas unitarias**, CSS compilado, build estático aprobado y **98 pruebas E2E** aprobadas en serie en escritorio y móvil.
+- [x] Fase visual 6: revisar accesibilidad visual de contraste, foco y densidad tipográfica con auditoría específica; el resultado queda documentado abajo.
+- [ ] No hacer commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase sugerida:** Fase visual 7 — revisión final de consistencia responsive y evidencia visual.
+
+
+---
+
+## Fase visual 6 — Auditoría de contraste, foco y densidad tipográfica
+
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Separar el jade de marca `#16866F` de la tinta accesible `#126A57`, manteniendo la paleta Confianza fiscal y asegurando contraste AA en usos textuales.
+- [x] Añadir `--fiscal-text-secondary: #355A5B` y tokens compartidos de cuerpo/meta para texto secundario y etiquetas fiscales.
+- [x] Sustituir el foco tenue por un anillo dual jade/petróleo con borde interior marfil para botones, enlaces, pestañas, stepper, filtros, tarjetas interactivas, formularios y acciones de las islas.
+- [x] Elevar la densidad mínima de metadatos a 11 px, cuerpo a 13 px y el interlineado común a 1.5; conservar tablas compactas con encabezados de 10 px y celdas legibles.
+- [x] Mantener `prefers-reduced-motion` sin transiciones adicionales ni transformaciones para personas que solicitan reducción de movimiento.
+- [x] Añadir contrato unitario WCAG determinista y `tests/e2e/visual-phase6.spec.js` para contraste computado, foco real por teclado, interlineado y overflow en CFDI, Conciliación, Pólizas/Auditoría y DIOT.
+- [x] Validación final: **228 pruebas unitarias**, CSS compilado, build estático aprobado y **100 pruebas E2E** aprobadas en serie en escritorio y Pixel 5.
+- [ ] No hacer commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase sugerida:** Fase visual 7 — revisión final de consistencia responsive y evidencia visual, previa confirmación.
+
+
+---
+
+## Fase visual 7 — Consistencia responsive y evidencia visual
+
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue.
+
+- [x] Añadir un breakpoint tablet común a 840 px para apilar el encabezado compartido y mantener las acciones de CFDI, Conciliación, Pólizas/Auditoría y DIOT en un patrón consistente.
+- [x] Crear `tests/e2e/visual-phase7.spec.js` con fixtures ficticios de estados vacíos y feedback en los cuatro workspaces.
+- [x] Auditar tres viewports explícitos: escritorio de 1280 px, tablet de 820 px y móvil de 390 px.
+- [x] Verificar ancho global, elementos visibles fuera del viewport, límites del encabezado y del grupo de acciones; los scrollers horizontales intencionales quedan excluidos de la métrica global.
+- [x] Generar evidencia visual externa de 24 capturas y manifiesto en `/home/ubuntu/contaia-visual7-evidencia.zip`.
+- [x] Validación focalizada: **7 pruebas unitarias visuales**, CSS compilado y matriz responsive aprobada en Chromium.
+- [x] Regresión final: **229 pruebas unitarias**, build estático aprobado y **102 pruebas E2E** aprobadas en serie en escritorio y Pixel 5.
+- [ ] No hacer commit, push ni despliegue sin autorización específica.
+
+**Siguiente fase sugerida:** no iniciar otra fase visual hasta recibir confirmación; la Fase 7 queda lista para revisión del usuario.

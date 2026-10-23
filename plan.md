@@ -1600,3 +1600,63 @@ La frontera de datos no cambia: el progreso educativo autorizado y `study-db` se
 `tests/e2e/learning-performance.spec.js` mide la transición completa desde la acción hasta la vista lista y verifica que el host `[data-learning-island-host]` conserva su identidad durante `update()`. Los presupuestos son montaje menor a 2,500 ms, actualización menor a 500 ms y navegación menor a 2,500 ms. Las mediciones observadas fueron: Chromium **391.9/259.5/225.6 ms** para montaje/actualización/navegación y Pixel 5 **267.1/238.4/248.7 ms**.
 
 La validación final aprobó **211 pruebas unitarias**, `npm run build:vercel` y **92 pruebas E2E** en serie en escritorio y móvil. La fase permanece local: no autoriza cambios adicionales de infraestructura, Auth o progreso educativo, commit, push, despliegue, backend, pagos o integración remota. La siguiente fase propuesta es revisar rendimiento fiscal y auditar listeners de las islas, previa confirmación.
+
+---
+
+## Fases visuales 1–4 — Diseño y estado de implementación
+
+Las Fases visuales 1–4 refinan las islas fiscales sin cambiar sus contratos de datos, privacidad, navegación o publicación. El estilo elegido sigue siendo **Confianza fiscal editorial**: petróleo para estructura y jerarquía, jade para acciones y avance, marfil para lectura, arena para separación, coral para error y amarillo de validación para atención.
+
+### Decisiones de diseño
+
+- `src/app/island-frame.css` concentra tokens de espaciado, gutters, ancho máximo, radios, sombras, foco y movimiento; `data-island-frame` permite aplicar el marco sin romper clases históricas.
+- `src/app/island-visual.css` concentra jerarquía interna, distribución de tarjetas, reglas mobile-first, microanimaciones y estados vacíos. No se añadió una paleta paralela ni se modificaron reglas fiscales.
+- La estructura mantiene una lectura de arriba abajo: identidad de isla, estado, acción principal, contexto/entrada, revisión y ayuda. Los vacíos explican la causa antes de mostrar la acción siguiente.
+- Las acciones vacías usan `.island-empty-actions`: el primer botón es `button-primary` y los caminos alternativos son `button-quiet`. CFDI conserva su CTA principal en el encabezado; Conciliación, DIOT y Pólizas elevan sus acciones internas.
+- Las animaciones `island-empty-reveal` son de baja amplitud y solo se ejecutan con `prefers-reduced-motion: no-preference`; con reducción de movimiento se eliminan transformación y animación.
+- En móvil las acciones se apilan a ancho completo; en escritorio pueden envolver sin alterar la prioridad. No hay overflow horizontal global.
+
+### Estado validado
+
+La Fase visual 1 estableció el marco y tokens. La Fase visual 2 aplicó jerarquía interna, distribución y microanimaciones. La Fase visual 3 hizo una revisión comparativa por isla y corrigió densidad de Auditoría, Conciliación y DIOT, conservando CFDI. La Fase visual 4 revisó estados vacíos, ordenó CTAs y añadió feedback de entrada accesible.
+
+El alcance de implementación se limita a CSS, markup de acciones y pruebas/capturas locales. No se añadieron APIs, persistencia, capacidades entre islas, fuentes fiscales, consultas a Nora, backend, pagos o integraciones externas. La validación final de la Fase visual 4 aprobó 226 pruebas unitarias, el build estático y 96 pruebas E2E en serie. Las capturas comparativas permanecen fuera del repositorio en `/home/ubuntu/contaia-visual4-comparativa.zip`; no se realizó commit, push ni despliegue.
+
+**Siguiente fase propuesta:** estados de carga/error y feedback de acciones, previa confirmación.
+
+
+---
+
+## Fase visual 5 — Feedback operativo de las islas
+
+La quinta fase visual cierra el sistema de feedback sin introducir un componente JavaScript adicional: `src/app/island-visual.css` reutiliza los hooks de markup ya emitidos por cada workspace (`.cfdi-processing`, `.cfdi-parse-error`, `.recon-error`, `.recon-notice`, `.journal-inline-error`, `.journal-inline-note[role=status]`, `.diot-issue` y `.diot-source-note[role=status]`).
+
+La jerarquía semántica queda separada en tres estados: amarillo para trabajo pendiente/carga, coral para bloqueo que requiere acción y jade para confirmación local. Los mensajes conservan sus roles accesibles; la interfaz no convierte una preparación local en una validación SAT, una aprobación contable o un envío remoto. El foco común usa `:focus-visible`, los controles deshabilitados explican su estado mediante opacidad/cursor y los errores de CFDI apilan su acción en móvil.
+
+El movimiento se limita a un spinner de lectura y una entrada suave de mensajes. Ambos se activan solo con `prefers-reduced-motion: no-preference`; con reducción de movimiento se eliminan animación y transformación. No se añadieron APIs, persistencia, listeners, datos fiscales, capacidades entre islas ni cambios de backend.
+
+La prueba `tests/e2e/visual-phase5.spec.js` captura estados ficticios de carga, error y confirmación para CFDI, Conciliación, Pólizas y DIOT. La validación final aprobó **227 pruebas unitarias**, CSS compilado, build estático y **98 pruebas E2E** en serie en escritorio y móvil. Esta fase permanece local y no autoriza commit, push ni despliegue. La siguiente fase propuesta es auditar contraste, foco y densidad tipográfica.
+
+
+---
+
+## Fase visual 6 — Auditoría de contraste, foco y densidad tipográfica
+
+La sexta fase visual conserva la paleta Confianza fiscal y separa usos semánticos: `--fiscal-jade` (`#16866F`) permanece como color de marca para superficies, bordes y progreso, mientras `--fiscal-jade-ink` (`#126A57`) se usa cuando el jade aparece como texto. El nuevo `--fiscal-text-secondary` (`#355A5B`) evita depender de grises de baja legibilidad en metadatos y ayudas. Los pares auditados para texto normal cumplen al menos 4.5:1 sobre sus superficies fiscales.
+
+El foco de teclado usa un anillo dual de alto contraste: borde interior marfil y borde exterior petróleo, con offset constante. La regla cubre enlaces, botones, inputs, selects, textareas, summaries, pestañas, stepper, filtros y elementos con `tabindex`. Las tarjetas con controles internos reflejan `:focus-within`; no se elimina el foco sin sustituto.
+
+La densidad tipográfica compartida fija 11 px como mínimo para metadatos y 13 px para cuerpo de ayudas/estados, con interlineado de 1.5. Las tablas permanecen compactas, pero elevan encabezados a 10 px y celdas a 13 px en escritorio, 11 px en móvil, sin alterar columnas, datos ni reglas fiscales.
+
+La prueba unitaria añade cálculo WCAG determinista y el E2E `tests/e2e/visual-phase6.spec.js` verifica los cuatro workspaces con fixtures ficticios: contraste computado, foco mediante Tab, interlineado y ausencia de overflow en escritorio y Pixel 5. La validación final aprobó **228 unitarias**, CSS compilado, build estático y **100 E2E** en serie. No se añadieron APIs, persistencia, backend, datos fiscales, capacidades entre islas ni publicación. Esta fase permanece local y la siguiente revisión visual queda pendiente de confirmación.
+
+
+---
+
+## Fase visual 7 — Consistencia responsive y evidencia visual
+
+La séptima fase visual cierra la revisión responsive del marco común. El encabezado compartido de las islas fiscales ahora cambia a una sola columna desde `840px`, antes del límite móvil de `760px`; así, en tablet las acciones ya no quedan comprimidas en una columna lateral ni forman agrupaciones distintas entre CFDI, Conciliación, Pólizas/Auditoría y DIOT. El contenido de cada isla conserva sus propios breakpoints para formularios, tablas, stepper y paneles.
+
+Se añadió `tests/e2e/visual-phase7.spec.js`, que monta fixtures ficticios de estados vacíos y feedback, prueba 1280 px, 820 px y 390 px, verifica ausencia de overflow global y registra límites del encabezado y acciones. Los descendientes de scrollers horizontales intencionales, como pestañas navegables, no se clasifican como overflow global. La evidencia visual externa contiene 24 capturas —dos estados por isla en cada viewport— y `manifest.json` en `/home/ubuntu/contaia-visual7-evidencia.zip`.
+
+La matriz aprobó todos los viewports: document width igual al client width, ningún elemento no desplazable fuera del viewport y acciones contenidas dentro del marco. La regresión final aprobó **229 pruebas unitarias**, build estático y **102 pruebas E2E** en serie en escritorio y Pixel 5. No se modificó lógica fiscal, markup de datos sensibles, EventBus, CleanupScope, IslandManager, WorkerBridge, backend ni publicación. Esta fase permanece local y lista para revisión del usuario.
