@@ -57,6 +57,28 @@ test("bloquea el análisis de lotes con archivos inválidos", () => {
   assert.equal(review.canAnalyze, false);
 });
 
+test("hace visible el Asistente IA CFDI y cambia su estado al terminar el análisis", () => {
+  try {
+    resetCfdiState();
+    let html = renderCfdiWorkspace();
+    assert.match(html, /Asistente IA para CFDI/);
+    assert.match(html, /Disponible después del análisis/);
+    assert.doesNotMatch(html, /data-cfdi-ai-scroll/);
+
+    cfdiState.analysis = {
+      summary: { invoiceCount: 1, matchedPayments: 0, paymentCount: 0, conceptCount: 0, alerts: [], totalsByCurrency: [] },
+      facturas: [], pagos: [], conceptos: [],
+    };
+    html = renderCfdiWorkspace();
+    assert.match(html, /Listo para consultar/);
+    assert.match(html, /data-cfdi-ai-scroll/);
+    assert.match(html, /ASISTENTE IA CFDI · CONSULTA LOCAL/);
+    assert.match(html, /LOCAL-FIRST/);
+  } finally {
+    resetCfdiState();
+  }
+});
+
 test("seleccionar un archivo lo agrega a revisión local sin analizarlo automáticamente", () => {
   const previousDocument = globalThis.document;
   const previousCustomEvent = globalThis.CustomEvent;

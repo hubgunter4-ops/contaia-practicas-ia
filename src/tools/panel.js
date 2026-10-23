@@ -17,6 +17,8 @@ const TOOL_ICON_PATHS = Object.freeze({
   payroll: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5a5 5 0 0 1 4.5 5.2"/>',
   diot: '<path d="M6 3h12v18l-2-1.4L14 21l-2-1.4L10 21l-2-1.4L6 21z"/><path d="M9 8h6M9 12h3"/><circle cx="9" cy="16.5" r=".9"/><circle cx="15" cy="14.5" r=".9"/><path d="m9.7 15.8 4.6-3.1"/>',
   monitor: '<path d="M12 3 20 6v5c0 5-3.4 8-8 10-4.6-2-8-5-8-10V6z"/><path d="m8.5 12.3 2.2 2.2 4.8-5"/>',
+  workpapers: '<path d="M5 3.5h14v17H5z"/><path d="M8 7.5h8M8 11h8M8 14.5h3M13 14.5h3M8 18h3M13 18h3"/>',
+  "cfdi-ai": '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/>',
 });
 
 function toolIcon(id) {
@@ -55,6 +57,12 @@ function renderConnectionStatusBadge(status, environment = "") {
 }
 
 function renderToolConnectionSummary(tool, workspace = {}) {
+  if (tool.id === "cfdi-ai") {
+    return `<div class="tools-card-connection tools-card-connection--local tools-card-connection--ai"><span class="tools-card-connection-label">MODELO OPERATIVO</span><span class="tools-connection-status is-connected" data-connection-status="connected" aria-label="Asistente local-first con planner opcional"><span class="tools-connection-status-icon" aria-hidden="true">✓</span><span class="tools-connection-status-label">Local-first · después del análisis</span></span><small>Las reglas y resultados permanecen en el navegador; el planner remoto solo interpreta preguntas depuradas.</small></div>`;
+  }
+  if (tool.id === "workpapers") {
+    return `<div class="tools-card-connection tools-card-connection--local"><span class="tools-card-connection-label">ALCANCE DE LA DEMO</span><span class="tools-connection-status is-not-configured" data-connection-status="not_configured" aria-label="Demo local con datos ficticios"><span class="tools-connection-status-icon" aria-hidden="true">○</span><span class="tools-connection-status-label">Demo local · datos ficticios</span></span><small>No consulta una contabilidad, no genera un archivo y no utiliza créditos de IA.</small></div>`;
+  }
   if (tool.id === "reconciliation") {
     return `<div class="tools-card-connection tools-card-connection--local"><span class="tools-card-connection-label">CONEXIÓN BANCARIA</span><span class="tools-connection-status is-not-configured" data-connection-status="not_configured" aria-label="Sin conexión bancaria"><span class="tools-connection-status-icon" aria-hidden="true">○</span><span class="tools-connection-status-label">Sin conexión · archivos locales</span></span><small>Este módulo no solicita credenciales ni accede a cuentas bancarias.</small></div>`;
   }
@@ -77,7 +85,7 @@ function renderToolConnectionSummary(tool, workspace = {}) {
 
 function renderToolCard(tool, workspace = {}) {
   const availability = TOOL_AVAILABILITY[tool.availability] ?? TOOL_AVAILABILITY.preparation;
-  const isReady = tool.availability === "ready";
+  const isReady = ["ready", "demo"].includes(tool.availability);
   return `<article class="tools-card ${availability.className}" data-tool-card="${escapeHtml(tool.id)}">
     <div class="tools-card-head"><span class="tools-card-icon" role="img" aria-label="${escapeHtml(tool.title)}">${toolIcon(tool.id)}</span><span class="tools-card-status ${availability.className}" title="Disponibilidad funcional del módulo">${escapeHtml(availability.label)}</span></div>
     <p class="tools-card-eyebrow">${escapeHtml(tool.eyebrow)}</p>
@@ -170,7 +178,7 @@ function renderConnections(workspace) {
   if (!workspace.selectedProfileId) return `<p class="tools-empty-state">Crea o selecciona un perfil fiscal para consultar sus conexiones.</p>`;
   if (workspace.connectionsLoading) return `<p class="tools-empty-state" role="status">Cargando conexiones de este perfil…</p>`;
   const connections = Array.isArray(workspace.connections) ? workspace.connections : [];
-  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.filter((tool) => !["reconciliation", "diot"].includes(tool.id)).map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
+  return `<div class="tools-connection-list">${TOOL_DEFINITIONS.filter((tool) => !["reconciliation", "diot", "workpapers", "cfdi-ai"].includes(tool.id)).map((tool) => CONNECTION_ENVIRONMENTS.map(({ key, label }) => {
     const connection = connections.find((item) => item.tool_key === tool.id && item.environment === key);
     return `<article class="tools-connection-row" data-tool-key="${escapeHtml(tool.id)}" data-environment="${key}"><div><b>${escapeHtml(tool.title)}</b><span class="tools-connection-row-environment">${label}</span></div>${renderConnectionStatusBadge(connection?.status ?? "not_configured")}<button type="button" class="button button-quiet" data-tools-ui="connection-open" data-tool-key="${escapeHtml(tool.id)}" data-tool-environment="${key}">${connection ? "Actualizar registro" : "Registrar pendiente"}</button></article>`;
   }).join("")).join("")}</div>`;
@@ -223,7 +231,8 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
   const profiles = Array.isArray(workspace.profiles) ? workspace.profiles : [];
   const selectedProfile = profiles.find((profile) => profile.id === workspace.selectedProfileId) || null;
   const readyCount = TOOL_DEFINITIONS.filter((tool) => tool.availability === "ready").length;
-  const preparationCount = TOOL_DEFINITIONS.length - readyCount;
+  const demoCount = TOOL_DEFINITIONS.filter((tool) => tool.availability === "demo").length;
+  const preparationCount = TOOL_DEFINITIONS.length - readyCount - demoCount;
   const currentNotice = workspace.notice || notice;
   const currentError = workspace.error || "";
   const profileSelect = profiles.length
@@ -238,7 +247,7 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
     eyebrow: "CONTAIA HERRAMIENTAS · CENTRO OPERATIVO",
     title: "Herramientas fiscales con claridad.",
     description: "Configura tu perfil, revisa el estado de cada herramienta y decide el siguiente paso. Las operaciones sensibles requieren aprobación.",
-    statusLabel: `${readyCount} lista · ${preparationCount} en preparación`,
+    statusLabel: `${readyCount} lista · ${demoCount} demo · ${preparationCount} en preparación`,
     statusKind: "info",
     className: "tools-dashboard-header",
     actions: [
@@ -255,7 +264,7 @@ export function renderToolsPanel({ notice = "", workspace = {} } = {}) {
     ${workspace.loading && !workspace.loaded ? `<p class="tools-load-status" role="status">Conectando con tu espacio privado…</p>` : ""}
     ${forms}
     <section class="tools-connections" aria-labelledby="tools-connections-title"><div class="tools-section-heading"><div><p class="eyebrow">ESTADO POR AMBIENTE</p><h2 id="tools-connections-title">Conexiones por perfil</h2></div><button type="button" class="button button-quiet" data-tools-ui="refresh" ${workspace.loading || workspace.saving ? "disabled" : ""}>Actualizar</button></div><p class="tools-connections-note">El estado es un registro administrativo: solo una verificación externa confirma una conexión. «Pendiente» no significa que exista una conexión real.</p><div class="tools-status-legend" aria-label="Leyenda de estados de conexión"><span class="tools-status-legend-label">Estados:</span>${CONNECTION_LEGEND_STATES.map((status) => renderConnectionStatusBadge(status)).join("")}</div>${renderConnections(workspace)}</section>
-    <section class="tools-section-heading tools-modules-heading"><div><p class="eyebrow">HERRAMIENTAS POR OBJETIVO</p><h2>Elige el siguiente paso</h2></div><span class="tools-count">${readyCount} operativa · ${preparationCount} en preparación</span></section>
+    <section class="tools-section-heading tools-modules-heading"><div><p class="eyebrow">HERRAMIENTAS POR OBJETIVO</p><h2>Elige el siguiente paso</h2></div><span class="tools-count">${readyCount} operativa · ${demoCount} demo · ${preparationCount} en preparación</span></section>
     ${renderToolGroups(workspace)}
     <section class="tools-resources" aria-label="Acompañamiento y estudio"><article class="tools-resource-card"><span class="tools-resource-mark" aria-hidden="true">${toolIcon("diot")}</span><div><p class="eyebrow">BASE DE ESTUDIO</p><h2>Repasa antes de actuar</h2><p>Consulta conceptos, procedimientos y materiales educativos disponibles.</p></div><button type="button" class="button button-quiet" data-section="study">Abrir estudio <span aria-hidden="true">→</span></button></article><article class="tools-resource-card"><span class="tools-resource-mark" aria-hidden="true">${toolIcon("folder")}</span><div><p class="eyebrow">DOCUMENTOS CON NORA</p><h2>Leer archivos de apoyo</h2><p>Desde el asistente puedes adjuntar XML, CSV, XLSX, PDF, DOCX o TXT. Evita compartir datos fiscales identificables; el archivo solo se envía a la ruta documental cuando la instrucción solicita una operación.</p></div><button type="button" class="button button-quiet" data-section="advisor">Abrir documentos <span aria-hidden="true">→</span></button></article>${renderNoraContextCard({ title: "Nora te acompaña con contexto", description: "Pregunta sobre el uso de ContaIA o pide orientación educativa. No se comparte el perfil ni los archivos al abrir el asistente.", actionLabel: "Abrir Nora", avatarState: "ready", className: "tools-nora-card" })}</section>
     <footer class="tools-disclaimer"><span aria-hidden="true">!</span><p><b>Control antes de enviar.</b> Las herramientas pueden preparar, validar y explicar información. El timbrado, la cancelación, la nómina y cualquier presentación fiscal requieren conexión autorizada y confirmación humana.</p></footer>

@@ -13,6 +13,7 @@ import { requestCfdiPlanner } from "./cfdi/ai/planner-api.js";
 import { resetReconciliationWorkspace } from "./reconciliation/workspace.js";
 import { journalState, resetJournalWorkspace } from "./journal/workspace.js";
 import { diotState, resetDiotWorkspace } from "./diot/workspace.js";
+import { resetWorkpapersWorkspace } from "./workpapers/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
@@ -40,6 +41,10 @@ const diotIslandRegistry = createIslandRegistry({ diot: () => import("./diot/isl
 let diotIslandManager = null;
 let diotIslandHost = null;
 let diotIslandSyncId = 0;
+const workpapersIslandRegistry = createIslandRegistry({ workpapers: () => import("./workpapers/island.js") });
+let workpapersIslandManager = null;
+let workpapersIslandHost = null;
+let workpapersIslandSyncId = 0;
 const learningIslandRegistry = createIslandRegistry({
   course: () => import("./learn/island.js"),
   lab: () => import("./learn/island.js"),
@@ -318,6 +323,43 @@ async function syncDiotIsland() {
       diotIslandManager = null;
       diotIslandHost = null;
       host.innerHTML = `<p class="diot-issue is-error" role="alert">No se pudo montar la isla DIOT: ${escapeHtml(error?.message || "error de montaje")}</p>`;
+      manager.dispose();
+    }
+  }
+}
+
+async function syncWorkpapersIsland() {
+  const syncId = ++workpapersIslandSyncId;
+  const host = app.querySelector("[data-workpapers-island-host]");
+  if (!host) {
+    const previousManager = workpapersIslandManager;
+    workpapersIslandManager = null;
+    workpapersIslandHost = null;
+    if (previousManager) {
+      await previousManager.clearSession("route-change");
+      previousManager.dispose();
+    }
+    return;
+  }
+  if (workpapersIslandManager && workpapersIslandHost === host) return;
+  const previousManager = workpapersIslandManager;
+  workpapersIslandManager = null;
+  workpapersIslandHost = null;
+  if (previousManager) {
+    await previousManager.clearSession("host-replaced");
+    previousManager.dispose();
+  }
+  if (syncId !== workpapersIslandSyncId || !app.contains(host)) return;
+  const manager = createIslandManager({ host, registry: workpapersIslandRegistry, initialSessionEpoch: 0, capabilitiesFor: () => ({}) });
+  workpapersIslandManager = manager;
+  workpapersIslandHost = host;
+  try {
+    await manager.navigate("workpapers", { reason: "navigation" });
+  } catch (error) {
+    if (workpapersIslandManager === manager) {
+      workpapersIslandManager = null;
+      workpapersIslandHost = null;
+      host.innerHTML = `<p class="workpapers-notice" role="alert">No se pudo montar la demo de Papeles de trabajo: ${escapeHtml(error?.message || "error de montaje")}</p>`;
       manager.dispose();
     }
   }
@@ -1289,14 +1331,14 @@ function mobileNavigation() {
     <button type="button" class="mobile-nav-item ${state.section === "lab" ? "is-active" : ""}" data-nav="home" aria-current="${state.section === "lab" ? "page" : "false"}">${uiIcon("home")}<small>Inicio</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "course" ? "is-active" : ""}" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}">${uiIcon("book")}<small>Aprende</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "study" ? "is-active" : ""}" data-section="study" aria-current="${state.section === "study" ? "page" : "false"}">${uiIcon("book")}<small>Estudio</small></button>
-    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "reconciliation", "journal", "diot"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi", "reconciliation", "journal", "diot"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
+    <button type="button" class="mobile-nav-item ${["tools", "cfdi", "reconciliation", "journal", "diot", "workpapers"].includes(state.section) ? "is-active" : ""}" data-section="tools" aria-current="${["tools", "cfdi", "reconciliation", "journal", "diot", "workpapers"].includes(state.section) ? "page" : "false"}">${uiIcon("grid")}<small>Herramientas</small></button>
     <button type="button" class="mobile-nav-item ${state.section === "advisor" ? "is-active" : ""}" data-section="advisor" aria-current="${state.section === "advisor" ? "page" : "false"}">${uiIcon("nora")}<small>Nora</small></button>
   </nav>`;
 }
 
 function topbar() {
   const done = state.completed.size;
-  const pageLabel = state.section === "course" ? "ContaIA Aprende · Aula" : state.section === "advisor" ? "Nora · Asistente abierto" : state.section === "cfdi" ? "ContaIA Herramientas · CFDI" : state.section === "reconciliation" ? "ContaIA Herramientas · Conciliación" : state.section === "journal" ? "ContaIA Herramientas · Pólizas sugeridas" : state.section === "diot" ? "ContaIA Herramientas · DIOT asistida" : state.section === "tools" ? "ContaIA Herramientas" : state.section === "study" ? "Aprende · Base de estudio" : state.current === "home" ? "Aprende · Inicio" : "Aprende · Ejercicio";
+  const pageLabel = state.section === "course" ? "ContaIA Aprende · Aula" : state.section === "advisor" ? "Nora · Asistente abierto" : state.section === "cfdi" ? "ContaIA Herramientas · CFDI" : state.section === "reconciliation" ? "ContaIA Herramientas · Conciliación" : state.section === "journal" ? "ContaIA Herramientas · Pólizas sugeridas" : state.section === "diot" ? "ContaIA Herramientas · DIOT asistida" : state.section === "workpapers" ? "ContaIA Herramientas · Papeles de trabajo IA" : state.section === "tools" ? "ContaIA Herramientas" : state.section === "study" ? "Aprende · Base de estudio" : state.current === "home" ? "Aprende · Inicio" : "Aprende · Ejercicio";
   const activeClassIndex = Math.max(0, courseModules.findIndex(({ id }) => id === state.activeModuleId));
   const activeClassComplete = state.completedModules.has(courseModules[activeClassIndex]?.id);
   const nextClassIndex = activeClassComplete
@@ -1309,8 +1351,8 @@ function topbar() {
     const actionLabel = isActive ? isComplete ? "Revisar clase" : "Continuar clase" : "Abrir";
     return `<button type="button" class="class-menu-item ${isActive ? "is-active" : ""} ${isComplete ? "is-complete" : ""} ${index === nextClassIndex ? "is-next" : ""}" data-class-module="${escapeHtml(module.id)}" aria-current="${isActive ? "step" : "false"}"><span>${String(index + 1).padStart(2, "0")}</span><b>${escapeHtml(module.title)}</b><small class="class-menu-status">${status}</small><small class="class-menu-action">${actionLabel}</small><i aria-hidden="true">${isComplete ? "✓" : index === nextClassIndex ? "→" : ""}</i></button>`;
   }).join("");
-  const toolsActive = ["tools", "advisor", "cfdi", "reconciliation", "journal", "diot", "lab", "study"].includes(state.section);
-  const isToolsProduct = ["tools", "cfdi", "reconciliation", "journal", "diot"].includes(state.section);
+  const toolsActive = ["tools", "advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "lab", "study"].includes(state.section);
+  const isToolsProduct = ["tools", "cfdi", "reconciliation", "journal", "diot", "workpapers"].includes(state.section);
   const tools = [
     ["tools", "ContaIA Herramientas", "grid"],
     ["advisor", "Asistente abierto", "nora"],
@@ -1318,6 +1360,7 @@ function topbar() {
     ["reconciliation", "Conciliación bancaria", "grid"],
     ["journal", "Pólizas sugeridas", "check"],
     ["diot", "DIOT asistida", "file"],
+    ["workpapers", "Papeles de trabajo IA", "file"],
     ["lab", "Laboratorio práctico", "check"],
     ["study", "Base de estudio", "book"],
   ].map(([section, label, icon]) => `<button class="section-tab ${state.section === section ? "is-active" : ""}" type="button" data-section="${section}" aria-current="${state.section === section ? "page" : "false"}">${uiIcon(icon)}<span>${label}</span></button>`);
@@ -1326,7 +1369,7 @@ function topbar() {
     <nav class="section-tabs" aria-label="Secciones principales">
       <button class="section-tab ${state.section === "course" ? "is-active" : ""}" type="button" data-section="course" aria-current="${state.section === "course" ? "page" : "false"}"><b>01</b>${uiIcon("book")}<span>ContaIA Aprende</span></button>
       <details class="class-menu"><summary class="section-tab ${state.section === "course" ? "is-active" : ""}" aria-label="Abrir lista de clases"><b>02</b>${uiIcon("menu")}<span>Clases</span>${uiIcon("chevron")}</summary><div class="class-menu-popover" role="group" aria-label="Ruta de las ${courseModules.length} clases">${classOptions}<p>${state.completedModules.size} de ${courseModules.length} clases completadas · clase actual ${String(activeClassIndex + 1).padStart(2, "0")} · avance guardado localmente</p></div></details>
-      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 6).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(6).join("")}${advisorToggle}</section></div></details>
+      <details class="tools-menu"><summary class="section-tab ${toolsActive ? "is-active" : ""}" aria-label="${toolsActive ? `Abrir herramientas; sección actual: ${pageLabel}` : "Abrir herramientas"}" aria-controls="section-tools"><b>03</b>${uiIcon("grid")}<span>Herramientas</span>${uiIcon("chevron")}</summary><div class="tools-menu-popover" id="section-tools" aria-label="Secciones de ContaIA"><section class="tools-menu-group" role="group" aria-label="Herramientas de ContaIA"><p class="tools-menu-label">HERRAMIENTAS DE CONTAIA</p>${tools.slice(0, 7).join("")}</section><section class="tools-menu-group" role="group" aria-label="Práctica y estudio"><p class="tools-menu-label">PRÁCTICA Y ESTUDIO</p>${tools.slice(7).join("")}${advisorToggle}</section></div></details>
     </nav>
     <div class="topbar-right"><span class="edition"><span class="edition-dot"></span>${isToolsProduct ? "ContaIA Herramientas" : state.section === "advisor" ? "Nora · apoyo transversal" : "ContaIA Aprende"}</span>${state.section === "lab" ? `<span class="progress-mini"><b>${done}</b> / ${exercises.length} prácticas</span>` : ""}<span class="auth-controls">${renderAuthControls()}</span></div>
   </header>`;
@@ -1400,7 +1443,7 @@ function renderPublicLanding() {
           <div class="public-card-top"><span class="public-card-icon" aria-hidden="true">${uiIcon("file")}</span><span class="public-card-label">PRODUCTO 01 · OPERACIÓN</span></div>
           <p class="public-product-name">ContaIA</p><h2>Herramientas</h2>
           <p class="public-card-copy">Analiza CFDI XML y ZIP en tu navegador, revisa relaciones de pagos y consulta hallazgos para decidir qué verificar.</p>
-          <p class="public-card-note"><span aria-hidden="true">◈</span> CFDI disponible; Contabilidad requiere conexión y Nómina, DIOT y Monitor fiscal siguen en preparación.</p>
+          <p class="public-card-note"><span aria-hidden="true">◈</span> CFDI y su Asistente IA local-first están disponibles después del análisis; Contabilidad requiere conexión y Nómina, DIOT y Monitor fiscal siguen en preparación.</p>
           <a class="public-card-cta" href="/descripcion/cfdi">Explorar ContaIA Herramientas <span aria-hidden="true">→</span></a>
         </article>
         <article id="aprende" class="public-card public-card-course public-product-card">
@@ -1453,7 +1496,7 @@ const PUBLIC_FEATURES = Object.freeze({
     title: "Revisa tus comprobantes con más claridad y control.",
     summary: "Lee archivos XML o ZIP, relaciona complementos de pago con facturas y localiza diferencias para revisar. El análisis se realiza localmente en tu navegador.",
     icon: "file",
-    bullets: ["Analiza uno o varios XML, o un archivo ZIP, localmente en el navegador.", "Consulta resúmenes de facturas, pagos y conceptos.", "Revisa alertas aritméticas y relaciones entre documentos; otros módulos se habilitarán cuando estén listos."],
+    bullets: ["Analiza uno o varios XML, o un archivo ZIP, localmente en el navegador.", "Consulta resúmenes de facturas, pagos y conceptos.", "Usa el Asistente IA CFDI después del análisis para revisar alertas y siguientes pasos; otros módulos se habilitarán cuando estén listos."],
     note: "No es una validación ante el SAT ni un dictamen profesional. El XML no se envía al servidor; si eliges guardar un resultado, algunos datos identificatorios pueden quedar en tu cuenta privada.",
     cta: "Crear cuenta y explorar Herramientas",
   },
@@ -1733,6 +1776,7 @@ function render() {
   void syncDiotIsland();
   void syncCfdiIsland();
   void syncReconciliationIsland();
+  void syncWorkpapersIsland();
   if (pageChanged && !reduceMotion) {
     const page = app.querySelector("#contenido, .auth-gate") || app.firstElementChild;
     if (page) {
@@ -1790,12 +1834,13 @@ function renderView() {
       : state.section === "reconciliation" ? '<div data-reconciliation-island-host aria-live="polite"></div>'
       : state.section === "journal" ? '<div data-journal-island-host aria-live="polite"></div>'
       : state.section === "diot" ? '<div data-diot-island-host aria-live="polite"></div>'
+      : state.section === "workpapers" ? '<div data-workpapers-island-host aria-live="polite"></div>'
       : state.section === "tools" ? renderToolsPanel({ notice: state.toolsNotice, workspace: toolsWorkspace })
       : state.section === "study" ? renderStudy()
         : exercise ? renderExercise(exercise) : renderHome();
   const showSidebar = ["lab", "study"].includes(state.section);
-  const tutorPanel = ["advisor", "cfdi", "reconciliation", "journal", "diot", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
-  const fiscalTheme = ["tools", "cfdi", "reconciliation", "journal", "diot"].includes(state.section) ? "app-shell--fiscal" : "";
+  const tutorPanel = ["advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
+  const fiscalTheme = ["tools", "cfdi", "reconciliation", "journal", "diot", "workpapers"].includes(state.section) ? "app-shell--fiscal" : "";
   app.innerHTML = `<div class="app-shell ${fiscalTheme}">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
@@ -2136,7 +2181,7 @@ app.addEventListener("click", (event) => {
   }
   const section = event.target.closest("[data-section]");
   if (section) {
-    state.section = ["course", "lab", "study", "advisor", "cfdi", "reconciliation", "journal", "diot", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
+    state.section = ["course", "lab", "study", "advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "tools"].includes(section.dataset.section) ? section.dataset.section : "course";
     resetTutor(state.section === "lab" ? "home" : null);
     if (state.section === "lab") state.current = "home";
     if (state.section !== "tools") state.toolsNotice = "";
@@ -2165,6 +2210,9 @@ app.addEventListener("click", (event) => {
     if (tool === "cfdi") {
       state.section = "cfdi";
       state.toolsNotice = "";
+    } else if (tool === "cfdi-ai") {
+      state.section = "cfdi";
+      state.toolsNotice = "El Asistente IA CFDI se habilita después de analizar un lote local.";
     } else if (tool === "reconciliation") {
       state.section = "reconciliation";
       state.toolsNotice = "";
@@ -2173,6 +2221,9 @@ app.addEventListener("click", (event) => {
       state.toolsNotice = "";
     } else if (tool === "diot") {
       state.section = "diot";
+      state.toolsNotice = "";
+    } else if (tool === "workpapers") {
+      state.section = "workpapers";
       state.toolsNotice = "";
     } else if (tool === "fiscal-profile") {
       state.section = "tools";
@@ -2449,6 +2500,7 @@ document.addEventListener("contaia:auth-updated", (event) => {
     resetReconciliationWorkspace();
     resetJournalWorkspace();
     resetDiotWorkspace();
+    resetWorkpapersWorkspace();
   }
   activeStorageScope = nextStorageScope;
   if (!userId) resetToolsWorkspace();

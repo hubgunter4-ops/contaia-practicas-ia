@@ -933,3 +933,53 @@ El cliente envía exclusivamente `{ message }` a `POST /api/cfdi/planner`. La en
 La salida aceptada solo puede seleccionar resumen, alertas, relaciones de pago o siguiente paso. Se rechazan herramientas no `modelCallable` como `cfdi.tax_report`, campos extra, `analysisRef`, argumentos fuera de schema, `humanReviewRequired: false`, intención/herramienta discrepantes y respuestas no JSON. Solo después de validar se añade la referencia de análisis local y se ejecuta una herramienta read-only en el navegador. Un error remoto, plan inválido, cancelación o cambio de sesión conserva las fuentes y no ejecuta una operación propuesta.
 
 La integración registra el adapter en `CleanupScope` a través del orquestador; la señal de la isla cancela el fetch y los planes tardíos se descartan por la época de sesión. Validación reproducible: **249 pruebas unitarias aprobadas**, compilación focalizada, build estático aprobado y **106 E2E** aprobadas en serie en escritorio y Pixel 5. La E2E cubre la ejecución local del plan y la ausencia de `analysisRef`/identificadores en el request construido.
+
+
+---
+## Papeles de trabajo IA — WP0/WP1: isla de demostración sin fuentes
+
+### Alcance y montaje
+
+`workpapers` es una isla de ContaIA Herramientas registrada por `workpapersIslandRegistry` en `src/main.js`. Su host `data-workpapers-island-host` se monta mediante `IslandManager`, sin capacidades entregadas por el shell. La tarjeta de Herramientas y el menú de escritorio solo solicitan navegación a la demo; no solicitan una conexión, perfil, handoff ni fuente fiscal.
+
+La isla ejecuta `mountIsland()` en `src/workpapers/island.js`, crea un `CleanupScope`, reenvía abortos de transición, liga listeners delegados de click/change al host y renderiza `src/workpapers/workspace.js`. No crea Worker, temporizador, URL temporal, petición de red ni almacenamiento. La entrada visible ofrece solo datos ficticios definidos de forma determinista por `src/workpapers/demo-data.js`.
+
+### Estado y limpieza
+
+El estado efímero contiene únicamente `periodId`, `activeTab`, `stageIndex`, `ruleState`, `refreshCount`, `saved` y `notice`. Aunque no contiene información real, se limpia por el mismo estándar fiscal. `CleanupScope.run()` elimina listeners, llama `resetWorkpapersWorkspace()` y vacía el host; la destrucción explícita repite un reset idempotente. `main.js` también invoca ese reset cuando Auth cambia de alcance, junto con CFDI, Conciliación, Pólizas y DIOT.
+
+Al navegar fuera, reemplazar el host, cerrar sesión o cambiar de cuenta, `syncWorkpapersIsland()` invoca `clearSession()` y `dispose()` del manager anterior. Por tanto no queda una regla aceptada, confirmación de guardado simulada, periodo o mensaje de la demo disponible para una sesión posterior.
+
+### Frontera de datos WP1
+
+- La demo no recibe snapshots CFDI, extractos, pólizas, perfiles ni archivos; solo usa fixtures agregadas inventadas.
+- No existe capacidad CFDI→Papeles, Conciliación→Papeles o Pólizas→Papeles en WP1.
+- No hay `fetch`, endpoint, IA remota, Nora contextual con adjunto, DLP adicional, crédito, plan aplicado, persistencia, descarga XLSX ni escritura contable.
+- Los botones “aceptar regla” y “confirmar demostración” solo cambian estado de memoria de la isla y declaran explícitamente ese límite.
+- La procedencia visible es una muestra estática de fuente/corte/conteo/fórmula; no es evidencia fiscal de una empresa.
+
+WP2 deberá declarar capacidades de solo lectura y solicitudes de autorización independientes para cada snapshot local. El snapshot mínimo debe ser opaco, de vida efímera y compatible con `SourceCapabilityBroker`; ninguna capacidad futura autoriza transmisión automática a Nora/modelo/backend.
+
+### Evidencia
+
+`tests/workpapers-demo.test.js` valida fixtures sin identificadores fiscales, estructura de fórmulas/procedencia, render y reset. `tests/e2e/workpapers-island.spec.js` prueba el recorrido en Chromium y móvil, cambia periodo, acepta regla, muestra póliza/hoja/procedencia, confirma la demo, aplica el tema fiscal, verifica ausencia de overflow y destruye la isla. WP0/WP1 aprobaron **269/269 pruebas unitarias**, **2/2 E2E focalizadas**, build estático y **108/108 E2E** completos. No se hizo commit, push ni despliegue.
+
+
+---
+## Anexo — visibilidad híbrida IA y publicación de WP0/WP1
+
+### Asistente IA CFDI
+
+La tarjeta `cfdi-ai` no crea una isla adicional. Su acción normaliza la navegación hacia la isla CFDI existente; por tanto, `IslandManager`, `CleanupScope`, `SessionEpoch`, `WorkerBridge` y las capacidades efímeras conservan un único ciclo de montaje y desmontaje.
+
+La banda visual `Asistente IA para CFDI` solo refleja si existe un análisis local en memoria. Antes del análisis muestra `Disponible después del análisis`; después muestra `Listo para consultar` y permite saltar a la sección ya montada. El CTA no transmite archivos, no crea persistencia y no modifica reglas fiscales.
+
+El router y las herramientas CFDI ejecutan primero en local. Solo la petición textual depurada que no cubra el router puede usar el endpoint planner existente; el planner no recibe XML, archivos, RFC, UUID, folios, bancos, pólizas ni el análisis completo. El plan JSON se valida antes de ejecutarse localmente y cualquier explicación con Nora mantiene la doble confirmación y el borrador revisable.
+
+### Papeles de trabajo IA WP0/WP1
+
+`workpapers` continúa siendo una isla independiente con datos ficticios y `CleanupScope`. Al desmontar se eliminan listeners, timers, estado de periodo, regla, pestaña, procedencia, confirmación y avisos de la demo. La tarjeta publicada solo abre la demo; no habilita snapshots fiscales reales, exportación XLSX, créditos IA, persistencia ni planes comerciales.
+
+### Evidencia
+
+El checkpoint de publicación se preparó con 270/270 pruebas unitarias, build estático aprobado y 108/108 E2E validadas: 107 casos aprobados en la regresión completa y el único timeout de navegación responsive aprobado en reejecución aislada con timeout ampliado. Free/Premium permanece fuera de runtime.

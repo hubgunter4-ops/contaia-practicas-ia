@@ -670,3 +670,33 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 **Contrato entregado:** `contaia-ai-phase-e1-dlp-gate.md` y `src/cfdi/ai/ai-dlp-gate.js`.
 **Siguiente fase sugerida:** Fase IA E2 — implementar `AiAdmissionService`, identidad, entitlements y cuotas server-side, previa autorización explícita.
+
+---
+## Papeles de trabajo IA — WP0/WP1
+**Estado:** terminadas, validadas e incluidas en el checkpoint de publicación autorizado en esta tarea.
+- [x] Definir `contaia-workpapers-ia-contract.md`: límites de solo lectura, snapshots autorizados futuros, modelo de libro, estados de fuente, procedencia por rango, capacidades Free/Premium y roadmap WP2–WP5.
+- [x] Crear la isla `workpapers` con `CleanupScope`, estado efímero y sin capacidades, handoffs, `fetch`, endpoints, IA remota, créditos, persistencia, Workers ni lectura de fuentes reales.
+- [x] Integrar una tarjeta **Demo disponible** en ContaIA Herramientas, menú de escritorio y tema fiscal; la barra inferior móvil mantiene sus cinco destinos y resalta Herramientas.
+- [x] Implementar demo con tres periodos ficticios, métricas/tendencia, cinco pasos (fuentes, regla, póliza, hoja y confirmación), pestañas de procedencia/planes, fórmulas visibles y aceptación o descarte simulado de reglas.
+- [x] Mostrar en cada vista que no se consultan CFDI, bancos, perfiles ni pólizas reales; no se genera XLSX, no se modifica contabilidad y no se guardan decisiones al salir.
+- [x] Añadir `tests/workpapers-demo.test.js` y `tests/e2e/workpapers-island.spec.js`; validan fixtures sin identificadores fiscales, render, reset, navegación, cambio de periodo, procedencia, foco/contención en tema fiscal y limpieza al desmontar.
+- [x] Validación final: **270/270 pruebas unitarias**, **2/2 E2E focalizadas** en Chromium y móvil, build estático y **108/108 E2E validadas**; el caso responsive restante se aprobó en reejecución aislada con timeout ampliado.
+- [ ] Mantener fuera de WP0/WP1: snapshots locales reales y autorización por fuente (WP2), motor de fórmulas/XLSX y descarga local (WP3), sugerencias IA controladas (WP4), dashboard/proyección y auditoría de rendimiento (WP5), además de E2–E6 para IA remota y controles comerciales.
+
+**Entregable:** `contaia-workpapers-ia-contract.md`, `src/workpapers/` y la tarjeta de demo en Herramientas.
+**Siguiente fase sugerida:** WP2 — `WorkpaperEngine` local con selección explícita de snapshots CFDI/Conciliación/Pólizas y recálculo por periodo; requiere autorización específica.
+
+---
+## Visibilidad híbrida y producto IA — Asistente IA CFDI + WP0/WP1
+**Estado:** implementado localmente, validado e incluido en el checkpoint de publicación autorizado en esta tarea; Free/Premium permanece pendiente.
+- [x] Añadir `Asistente IA CFDI` al catálogo de ContaIA Herramientas con estado `Listo`, CTA propio y descripción de la frontera local-first.
+- [x] Mostrar en la tarjeta el modelo operativo: reglas y resultados locales, planner remoto opcional solo para preguntas depuradas y revisión humana obligatoria.
+- [x] Conectar la tarjeta con el workspace CFDI existente; no se creó una isla duplicada ni se cambió el ciclo fiscal.
+- [x] Mostrar un bloque visible `Asistente IA para CFDI` antes del análisis con estado `Disponible después del análisis` y después del análisis con estado `Listo para consultar` y CTA hacia la consulta.
+- [x] Actualizar el panel interno a `ASISTENTE IA CFDI · CONSULTA LOCAL`, `LOCAL-FIRST` y copy explícito de la ruta híbrida.
+- [x] Actualizar la landing pública para explicar que el Asistente IA CFDI está disponible después del análisis local.
+- [x] Mantener el contrato Free/Premium sin activar: no se agregaron planes, créditos, bloqueos, upgrade, pagos ni entitlements comerciales.
+- [x] Conservar WP0/WP1 como demo local con datos ficticios, fórmulas y procedencia visible; la demo no consulta fuentes reales, no llama IA, no genera XLSX ni persiste información.
+- [x] Validación: **270 pruebas unitarias**, build estático aprobado, **107/108 E2E** aprobadas en la regresión completa y el único caso restante de navegación responsive aprobado en reejecución aislada con timeout ampliado (**108/108 validadas**).
+- [x] Privacidad: la tarjeta y los cambios visuales no agregan endpoints, persistencia ni transmisión automática de XML, bancos, pólizas o datos fiscales.
+**Siguiente propuesta:** mantener Free/Premium pendiente y decidir después si se autoriza una fase comercial; no iniciar nuevas fases automáticamente.

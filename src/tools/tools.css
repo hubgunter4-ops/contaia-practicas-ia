@@ -416,3 +416,13 @@
   .app-shell--fiscal .tools-module-header .tool-shell-action { flex: 0 1 auto; }
   .tools-module-summary { gap: 8px; padding: 10px; }
 }
+
+
+/* Asistente IA CFDI · capacidad híbrida visible */
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] { border-top-color: var(--fiscal-petroleum); background: linear-gradient(145deg, #fff, #f4f8f2); }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-icon { background: #eaf5f0; color: var(--fiscal-petroleum); }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-status { border-color: #b7d9ce; background: #eaf5f0; color: #126a57; }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-connection { border-color: #cddbd3; background: #f0f6f1; }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-connection small { display: block; margin-top: 6px; color: var(--fiscal-text-secondary); font-size: 10px; line-height: 1.4; }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-action { border-color: var(--fiscal-petroleum); background: var(--fiscal-petroleum); color: #fff; }
+.app-shell--fiscal .tools-card[data-tool-card="cfdi-ai"] .tools-card-action:hover:not(:disabled) { border-color: #0d3036; background: #0d3036; }

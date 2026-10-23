@@ -1720,3 +1720,39 @@ La clasificación distingue `allow`, `confirm` y `block`. Se detectan XML/CFDI, 
 `src/cfdi/ai/planner.js` usa el gate antes de construir el request, y `validateCfdiPlannerInput()` lo vuelve a ejecutar en la frontera server-side. Por eso el cliente no es la única defensa: las entradas sensibles no alcanzan `fetchImpl` ni `callCfdiPlanner()`. `redactedPreview` solo se queda en memoria local y los errores no contienen los valores originales. E1 no modifica las herramientas fiscales locales, no añade DLP para imágenes/audio/archivos, no implementa UI de confirmación media, autenticación, entitlements, cuotas distribuidas, observabilidad conectada ni persistencia.
 
 La validación aprobó **265/265 pruebas unitarias**, **21/21 pruebas focalizadas** de DLP/servidor, **4/4 E2E focalizadas** del panel CFDI, compilación focalizada y build estático. La siguiente propuesta es Fase IA E2 — `AiAdmissionService`, identidad, entitlements y cuotas server-side — previa autorización.
+
+
+---
+## Papeles de trabajo IA — WP0 contrato y WP1 demo interactiva
+WP0 define Papeles de trabajo IA como una nueva isla de ContaIA Herramientas, destinada a convertir una revisión contable en un libro repetible con encabezados, formatos, fórmulas, totales, advertencias y procedencia verificable. El contrato `contaia-workpapers-ia-contract.md` fija la frontera: solo lectura, autorización explícita por fuente, snapshots efímeros, revisión humana y ninguna acción contable o fiscal mutante. El modelo futuro `workpaper-book-v1` diferencia libro, fuente, regla, hoja, procedencia, advertencia y estado de calidad; referencias de fuente opacas deben expirar al salir o cambiar de sesión.
+
+WP1 entrega `src/workpapers/` como demo local aislada. La tarjeta **Papeles de trabajo IA** se encuentra bajo “Reportes y trazabilidad” del centro de Herramientas y se identifica honestamente como **Demo disponible**. El menú de escritorio permite llegar a ella; en móvil se conserva la estructura de cinco destinos y Herramientas permanece activa. La isla emplea `CleanupScope`, no solicita capacidades y borra periodo, pestaña, regla aceptada/rechazada, confirmación y aviso al desmontar.
+
+La experiencia ofrece tres periodos ficticios —septiembre, octubre y ejercicio 2026—, métricas/tendencia simuladas y cinco etapas: selección de fuentes, propuesta de regla, vista de póliza, hoja con fórmulas y confirmación. Incluye pestañas de flujo, hoja de cálculo, procedencia y propuesta de planes. Cada vista aclara que sus registros, totales y fórmulas son ficticios; no consulta CFDI, bancos, perfiles o pólizas, no llama IA/Nora, no usa créditos, no genera un XLSX y no modifica ni guarda una contabilidad. La procedencia demuestra fuente, corte, conteo, total y fórmula sin exponer datos fiscales.
+
+Las pruebas `tests/workpapers-demo.test.js` y `tests/e2e/workpapers-island.spec.js` cubren fixtures deterministas sin identificadores, render, reset, cambio de periodo, aceptación de reglas, tabla de póliza, fórmulas, procedencia, confirmación simulada, contención en tema fiscal y limpieza. La entrega aprobó **269/269 pruebas unitarias**, **2/2 E2E focalizadas** en Chromium/Pixel 5, `npm run build:vercel` y la regresión completa **108/108 E2E** en serie. No se hizo commit, push ni despliegue de WP0/WP1.
+
+La siguiente fase propuesta es **WP2 — WorkpaperEngine local y snapshots autorizados**: pedir selección explícita de CFDI, Conciliación y/o Pólizas, obtener snapshots mínimos solo para la sesión, recalcular por periodo y mantener procedencia local. WP2 no debe iniciar sin autorización específica; WP3–WP5 y E2–E6 permanecen pendientes.
+
+
+---
+## Fase de visibilidad híbrida — Asistente IA CFDI + publicación WP0/WP1
+
+Esta fase convierte la arquitectura híbrida ya implementada en una capacidad reconocible para la persona usuaria, sin crear una isla adicional ni activar todavía el contrato comercial Free/Premium.
+
+### Entrega funcional
+
+- `src/tools/catalog.js` incorpora **Asistente IA CFDI** como herramienta `Listo`, con CTA propio y descripción de su límite local-first.
+- `src/tools/panel.js` muestra un estado de modelo operativo: cálculo local, planner remoto opcional únicamente para preguntas depuradas y revisión humana.
+- El CTA `cfdi-ai` reutiliza el workspace/isla CFDI existente; no duplica el orquestador ni cambia el ciclo fiscal.
+- CFDI muestra una banda de disponibilidad antes del análisis y cambia a `Listo para consultar` después del análisis, con salto accesible a la consulta.
+- El panel de consulta usa el encabezado `ASISTENTE IA CFDI · CONSULTA LOCAL` y explica la frontera híbrida; la landing pública también la describe.
+- WP0/WP1 se conserva como demo local ficticia: fórmulas, procedencia, periodos y confirmación efímera, sin fuentes reales, IA remota, XLSX real ni persistencia.
+
+### Límites
+
+La tarjeta visible no transmite XML, bancos, pólizas ni análisis completo. El endpoint planner existente solo recibe texto depurado cuando el router local no cubre la petición; el resultado JSON se valida y la ejecución fiscal ocurre en el navegador. No se agregaron planes, cuotas, créditos, pagos, upgrade ni entitlements.
+
+### Validación y publicación
+
+La suite alcanzó **270/270 pruebas unitarias**, el build estático fue aprobado y la regresión E2E obtuvo **107/108** en la corrida completa; el caso restante de matriz responsive fue aprobado en reejecución aislada con timeout ampliado, dejando **108/108 casos validados**. La prueba pública ajustada del copy aprobó en Chromium y Pixel 5. Los cambios quedan preparados para el commit GPG y push autorizados en esta tarea.

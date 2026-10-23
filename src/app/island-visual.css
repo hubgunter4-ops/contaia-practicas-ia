@@ -10,7 +10,11 @@
   .journal-adjustment-stage,
   .diot-stage,
   .diot-review-stage,
-  .diot-download-stage
+  .diot-download-stage,
+  .workpapers-flow-stage,
+  .workpapers-sheet-card,
+  .workpapers-provenance,
+  .workpapers-plans
 ) {
   position: relative;
   isolation: isolate;
@@ -27,7 +31,11 @@
   .journal-adjustment-stage,
   .diot-stage,
   .diot-review-stage,
-  .diot-download-stage
+  .diot-download-stage,
+  .workpapers-flow-stage,
+  .workpapers-sheet-card,
+  .workpapers-provenance,
+  .workpapers-plans
 )::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -50,7 +58,11 @@
   .journal-adjustment-stage,
   .diot-stage,
   .diot-review-stage,
-  .diot-download-stage
+  .diot-download-stage,
+  .workpapers-flow-stage,
+  .workpapers-sheet-card,
+  .workpapers-provenance,
+  .workpapers-plans
 ):hover {
   border-color: #b8d1c4;
   box-shadow: var(--island-shadow);
@@ -67,7 +79,11 @@
   .journal-adjustment-stage,
   .diot-stage,
   .diot-review-stage,
-  .diot-download-stage
+  .diot-download-stage,
+  .workpapers-flow-stage,
+  .workpapers-sheet-card,
+  .workpapers-provenance,
+  .workpapers-plans
 ):hover::before {
   width: 5px;
   opacity: 1;
@@ -172,7 +188,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .workpapers-flow-stage, .workpapers-sheet-card, .workpapers-provenance, .workpapers-plans, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
     animation: island-surface-enter var(--island-motion-slow) var(--island-motion-ease) both;
   }
 
@@ -182,7 +198,7 @@
 }
 
 @media (max-width: 760px) {
-  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .workpapers-flow-stage, .workpapers-sheet-card, .workpapers-provenance, .workpapers-plans) {
     padding: var(--island-space-4);
   }
 
@@ -200,7 +216,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
+  .app-shell--fiscal .content :is(.recon-step-card, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .journal-audit-stage, .journal-adjustment-stage, .diot-stage, .diot-review-stage, .diot-download-stage, .workpapers-flow-stage, .workpapers-sheet-card, .workpapers-provenance, .workpapers-plans, .cfdi-upload-card, .cfdi-storage, .cfdi-results, .cfdi-preflight) {
     animation: none !important;
     transform: none !important;
   }

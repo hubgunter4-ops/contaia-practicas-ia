@@ -39,7 +39,7 @@
   --island-text-secondary: var(--fiscal-text-secondary, #355A5B);
 }
 
-.app-shell--fiscal .content:is(.cfdi-page, .recon-page, .journal-page, .diot-page) {
+.app-shell--fiscal .content:is(.cfdi-page, .recon-page, .journal-page, .diot-page, .workpapers-page) {
   width: min(100%, var(--island-max-width));
   margin-inline: auto;
   padding: var(--island-space-7) var(--island-gutter) var(--island-space-9);
@@ -228,7 +228,7 @@
 }
 
 @media (max-width: 760px) {
-  .app-shell--fiscal .content:is(.cfdi-page, .recon-page, .journal-page, .diot-page) {
+  .app-shell--fiscal .content:is(.cfdi-page, .recon-page, .journal-page, .diot-page, .workpapers-page) {
     padding: var(--island-space-5) var(--island-gutter-mobile) calc(var(--island-space-9) + var(--mobile-nav-height, 70px));
   }
 

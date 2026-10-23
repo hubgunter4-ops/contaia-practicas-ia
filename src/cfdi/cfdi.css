@@ -605,3 +605,39 @@
 .app-shell--fiscal .cfdi-page .cfdi-ai-confirm li,
 .app-shell--fiscal .cfdi-page .cfdi-ai-consent { color: #4f4a2c; }
 .app-shell--fiscal .cfdi-page .cfdi-ai-consent input { accent-color: var(--fiscal-jade); }
+
+
+/* Visibilidad del producto híbrido · Asistente IA CFDI */
+.cfdi-ai-availability {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin: 14px 0;
+  padding: 15px 17px;
+  border: 1px solid #cddbd3;
+  border-left: 4px solid var(--fiscal-petroleum);
+  border-radius: 9px;
+  background: linear-gradient(110deg, #f4f8f2, #fff);
+  box-shadow: 0 6px 16px rgba(18, 59, 67, .05);
+}
+.cfdi-ai-availability-copy { min-width: 0; }
+.cfdi-ai-availability-copy > span { color: var(--fiscal-jade-ink); font: 9px var(--mono); letter-spacing: .11em; }
+.cfdi-ai-availability-copy h2 { margin: 5px 0 3px; color: var(--fiscal-petroleum); font-size: clamp(18px, 2.4vw, 23px); letter-spacing: -.025em; }
+.cfdi-ai-availability-copy p { max-width: 720px; margin: 0; color: var(--fiscal-text-secondary); font-size: 12px; line-height: 1.5; }
+.cfdi-ai-availability-action { display: grid; justify-items: end; gap: 8px; flex: none; }
+.cfdi-ai-availability-state { padding: 5px 8px; border: 1px solid #b7d9ce; border-radius: 999px; background: #eaf5f0; color: #126a57; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.cfdi-ai-availability.is-pending { border-left-color: var(--fiscal-validation); }
+.cfdi-ai-availability.is-pending .cfdi-ai-availability-state { border-color: #e7d79b; background: #fbf6df; color: #695516; }
+.cfdi-ai-availability-action small { color: var(--fiscal-text-secondary); font-size: 10px; line-height: 1.35; text-align: right; }
+.app-shell--fiscal .cfdi-ai-query { scroll-margin-top: 20px; }
+.app-shell--fiscal .cfdi-ai-query .cfdi-ai-badge { font-weight: 750; letter-spacing: .05em; }
+@media (max-width: 760px) {
+  .cfdi-ai-availability { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 11px; padding: 13px; }
+  .cfdi-ai-availability-action { justify-items: start; width: 100%; }
+  .cfdi-ai-availability-action .button { width: 100%; }
+  .cfdi-ai-availability-action small { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cfdi-ai-availability { scroll-behavior: auto; }
+}

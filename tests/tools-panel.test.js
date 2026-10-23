@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { renderToolsPanel, TOOL_DEFINITIONS } from "../src/tools/panel.js";
 
 test("el panel ofrece las herramientas fiscales con estados explícitos", () => {
-  assert.equal(TOOL_DEFINITIONS.length, 6);
+  assert.equal(TOOL_DEFINITIONS.length, 8);
   assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "cfdi")?.availability, "ready");
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "cfdi-ai")?.availability, "ready");
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "workpapers")?.availability, "demo");
   assert.equal(TOOL_DEFINITIONS.find((tool) => tool.id === "reconciliation")?.availability, "preparation");
-  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.availability !== "ready").length, 5);
+  assert.equal(TOOL_DEFINITIONS.filter((tool) => tool.availability === "preparation").length, 5);
   assert.ok(TOOL_DEFINITIONS.every((tool) => tool.description && tool.actionLabel && tool.detail));
 });
 
@@ -20,6 +22,9 @@ test("el panel renderiza el perfil fiscal, las tarjetas y el aviso de control", 
   assert.match(html, /Monitor fiscal/);
   assert.match(html, /Configura tu empresa/);
   assert.match(html, /data-tool-action="cfdi"/);
+  assert.match(html, /data-tool-action="cfdi-ai"/);
+  assert.match(html, /data-tool-action="workpapers"/);
+  assert.match(html, /Demo disponible/);
   assert.match(html, /Selecciona un perfil/);
   assert.match(html, /Leer archivos de apoyo/);
   assert.match(html, /data-section="advisor"/);
@@ -84,10 +89,10 @@ test("los formularios explican el tratamiento del perfil y las conexiones pendie
 test("cada herramienta muestra un SVG propio con nombre accesible", () => {
   const html = renderToolsPanel();
   const cards = [...html.matchAll(/<article class="tools-card[\s\S]*?<\/article>/g)].map(([card]) => card);
-  const iconIds = cards.map((card) => card.match(/class="tools-ui-icon tools-ui-icon--([a-z]+)"/)?.[1]);
-  assert.deepEqual(iconIds, ["cfdi", "accounting", "reconciliation", "payroll", "diot", "monitor"]);
-  assert.equal(new Set(iconIds).size, 6);
-  assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 6);
+  const iconIds = cards.map((card) => card.match(/class="tools-ui-icon tools-ui-icon--([a-z-]+)"/)?.[1]);
+  assert.deepEqual(iconIds, ["cfdi", "cfdi-ai", "accounting", "reconciliation", "payroll", "diot", "monitor", "workpapers"]);
+  assert.equal(new Set(iconIds).size, 8);
+  assert.equal((html.match(/class="tools-card-icon" role="img" aria-label=/g) || []).length, 8);
   assert.match(html, /tools-ui-icon--folder/);
 });
 
@@ -118,10 +123,14 @@ test("cada herramienta distingue los cinco estados de conexión por ambiente", (
   const cards = html.match(/<article class="tools-card[\s\S]*?<\/article>/g) || [];
   assert.equal(cards.length, TOOL_DEFINITIONS.length);
   for (const card of cards) {
-    if (card.includes('data-tool-card="reconciliation"') || card.includes('data-tool-card="diot"')) {
-      assert.match(card, card.includes('data-tool-card="diot"') ? /PREPARACIÓN DIOT/ : /CONEXIÓN BANCARIA/);
-      assert.match(card, card.includes('data-tool-card="diot"') ? /No conecta al SAT/ : /Sin conexión · archivos locales/);
-      assert.doesNotMatch(card, /data-environment="production"|data-connection-status="connected"/);
+    if (card.includes('data-tool-card="reconciliation"') || card.includes('data-tool-card="diot"') || card.includes('data-tool-card="workpapers"') || card.includes('data-tool-card="cfdi-ai"')) {
+      const isDiot = card.includes('data-tool-card="diot"');
+      const isWorkpapers = card.includes('data-tool-card="workpapers"');
+      const isCfdiAi = card.includes('data-tool-card="cfdi-ai"');
+      assert.match(card, isDiot ? /PREPARACIÓN DIOT/ : isWorkpapers ? /ALCANCE DE LA DEMO/ : isCfdiAi ? /MODELO OPERATIVO/ : /CONEXIÓN BANCARIA/);
+      assert.match(card, isDiot ? /No conecta al SAT/ : isWorkpapers ? /Demo local · datos ficticios/ : isCfdiAi ? /Local-first · después del análisis/ : /Sin conexión · archivos locales/);
+      if (!isCfdiAi) assert.doesNotMatch(card, /data-environment="production"|data-connection-status="connected"/);
+      else assert.doesNotMatch(card, /data-environment="sandbox"|data-environment="production"/);
       continue;
     }
     assert.match(card, /ESTADO DE INTEGRACIÓN/);

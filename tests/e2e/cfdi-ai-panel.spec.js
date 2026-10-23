@@ -57,7 +57,7 @@ test.describe("CFDI · Fase IA B · panel local", () => {
 
     const panel = page.locator("#cfdi-ai-panel-test-host .cfdi-ai-query");
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText("CONSULTA LOCAL · SIN IA REMOTA");
+    await expect(panel).toContainText("ASISTENTE IA CFDI · CONSULTA LOCAL");
     await panel.locator('[data-cfdi-ai-quick-id="alerts"]').click();
     await expect(panel.locator(".cfdi-ai-result")).toContainText("Resultado listo; requiere revisión humana");
     await expect(panel.locator(".cfdi-ai-result")).toContainText("UUID de factura repetido");

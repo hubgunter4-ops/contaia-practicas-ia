@@ -15,7 +15,7 @@ test.describe("Experiencia pública de ContaIA", () => {
     await expect(page.getByRole("link", { name: /Explorar ContaIA Aprende/ })).toHaveAttribute("href", "/descripcion/curso");
     await expect(page.getByRole("link", { name: /Conoce el Asistente abierto/ })).toHaveAttribute("href", "/descripcion/asistente");
     await expect(page.locator(".public-card")).toHaveCount(2);
-    await expect(page.locator(".public-card").filter({ hasText: "PRODUCTO 01 · OPERACIÓN" })).toContainText("CFDI disponible");
+    await expect(page.locator(".public-card").filter({ hasText: "PRODUCTO 01 · OPERACIÓN" })).toContainText("Asistente IA local-first");
     await expect(page.locator(".public-card").filter({ hasText: "PRODUCTO 02 · FORMACIÓN" })).toContainText("diez módulos semanales");
     await expect(page.locator("[data-testid=classroom-stage], .classroom-content, .classroom-scene")).toHaveCount(0);
   });
