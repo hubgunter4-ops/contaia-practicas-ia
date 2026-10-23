@@ -5,10 +5,10 @@ test.describe("Experiencia pública de ContaIA", () => {
     await page.goto("/");
 
     await expect(page).toHaveTitle(/ContaIA/);
-    const logoResponse = await page.request.get("/brand/contaia-logo.png");
+    const logoResponse = await page.request.get("/brand/contaia-logo-home.jpg");
     expect(logoResponse.status()).toBe(200);
-    expect(logoResponse.headers()["content-type"]).toMatch(/image\/png/);
-    await expect(page.locator(".public-brand img")).toHaveJSProperty("naturalWidth", 512);
+    expect(logoResponse.headers()["content-type"]).toMatch(/image\/jpeg/);
+    await expect(page.locator(".public-brand img")).toHaveJSProperty("naturalWidth", 622);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Dos maneras de avanzar con ContaIA\./);
     await expect(page.locator(".public-header .public-nav")).toHaveCount(1);
     await expect(page.getByRole("link", { name: /Explorar ContaIA Herramientas/ })).toHaveAttribute("href", "/descripcion/cfdi");

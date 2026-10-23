@@ -16,6 +16,7 @@ const mime = {
   ".css": "text/css; charset=utf-8",
   ".csv": "text/csv; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
@@ -50,7 +51,7 @@ function resolvePublicPath(pathname) {
   let relative;
   if (decoded === "/" || decoded === "/registro" || decoded === "/confirmar-correo" || decoded === "/recuperar-contrasena" || /^\/descripcion\/(cfdi|asistente|anam|curso)\/?$/.test(decoded)) relative = "public/index.html";
   else if (decoded === "/favicon.svg" || decoded === "/manus-routes.json") relative = `public${decoded}`;
-  else if (/^\/brand\/contaia-logo(?:-(?:64|192))?\.png$/.test(decoded)) relative = `public${decoded}`;
+  else if (/^\/brand\/contaia-logo(?:-(?:64|192))?\.png$/.test(decoded) || decoded === "/brand/contaia-logo-home.jpg") relative = `public${decoded}`;
   else if (decoded === "/vendor/anam-sdk.js") relative = "dist/vendor/anam-sdk.js";
   else if (decoded === "/vendor/document-reader.js") relative = "dist/vendor/document-reader.js";
   else if (decoded === "/vendor/cfdi-parser.js") relative = "dist/vendor/cfdi-parser.js";

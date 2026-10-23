@@ -1429,9 +1429,9 @@ function renderHome() {
         <p class="hero-lede">Un laboratorio para practicar criterio contable con IA, usando ejercicios seguros y datos inventados. Sin atajos mágicos; con explicaciones que sí sirven.</p>
         <button class="button button-primary" type="button" data-nav="${first.id}">Empezar una práctica <span aria-hidden="true">↗</span></button>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <div class="paper-sheet"><div class="paper-tab">EXP. 06 / 26</div><div class="paper-title">Conciliación<br/>bancaria</div><div class="paper-rule"></div><div class="paper-row"><span>LIBRO</span><b>$5,410</b><i>✓</i></div><div class="paper-row paper-marked"><span>BANCO</span><b>$5,323</b><i>!</i></div><div class="paper-note">¿Qué falta registrar?</div><div class="paper-stamp">SIMULADO</div></div>
-        <div class="hero-orbit hero-orbit-one"></div><div class="hero-orbit hero-orbit-two"></div><div class="hero-index">01—09</div>
+      <div class="hero-art hero-brand-art">
+        <div class="hero-logo-card"><img src="/brand/contaia-logo-home.jpg" alt="ContaIA Herramientas fiscales" width="622" height="549" fetchpriority="high" decoding="async" /></div>
+        <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div><div class="hero-orbit hero-orbit-two" aria-hidden="true"></div><div class="hero-index" aria-hidden="true">01—09</div>
       </div>
       <div class="hero-footer"><span><i>01</i> Prueba con casos ficticios</span><span><i>02</i> Recibe pistas y retroalimentación</span><span><i>03</i> Revisa una solución modelo</span></div>
     </section>
@@ -1452,7 +1452,7 @@ function renderHome() {
 function renderPublicLanding() {
   return `<div class="public-landing">
     <header class="public-header">
-      <a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a>
+      <a class="public-brand public-brand-wordmark" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo-home.jpg" alt="ContaIA Herramientas fiscales" width="622" height="549" fetchpriority="high" decoding="async" /></a>
       <nav class="public-nav" aria-label="Productos de ContaIA"><a href="#aprende">Aprende</a><a href="#herramientas">Herramientas</a><a href="#nora">Nora</a></nav>
       <button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button>
     </header>
