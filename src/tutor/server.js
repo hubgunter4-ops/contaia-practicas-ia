@@ -3,6 +3,8 @@ import { CLASSROOM_PHASES } from "../classroom.js";
 import { exercises } from "../exercises.js";
 import { createCfdiToolRegistry } from "../cfdi/ai/cfdi-tools.js";
 import { buildCfdiPlannerRequest, CFDI_PLANNER_SCHEMA, validateCfdiPlannerOutput } from "../cfdi/ai/planner.js";
+import { createClient } from "@supabase/supabase-js";
+import { AiAdmissionError, assertAiIdempotencyKey, createAiAdmissionService } from "../cfdi/ai/ai-admission.js";
 
 const maxBodyBytes = 192 * 1024;
 const maxMessageChars = 2000;
@@ -13,6 +15,7 @@ const rateLimitWindowMs = 10 * 60 * 1000;
 const rateLimitRequests = 30;
 const rateBuckets = new Map();
 const gatewayEndpoint = "https://ai-gateway.vercel.sh/v1/chat/completions";
+const defaultAiAdmissionService = createAiAdmissionService();
 
 const providerDefinitions = [
   { id: "openai", label: "OpenAI", keyEnv: "AI_GATEWAY_OPENAI_API_KEY", modelEnv: "AI_GATEWAY_OPENAI_MODEL", modelPrefix: "openai/" },
@@ -199,7 +202,7 @@ function applyCors(req, res, env) {
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Idempotency-Key");
   res.setHeader("Access-Control-Max-Age", "600");
   return true;
 }
@@ -252,6 +255,68 @@ function withinRateLimit(req, now = Date.now()) {
   if (previous.count >= rateLimitRequests) return false;
   previous.count += 1;
   return true;
+}
+
+function getBearerToken(req) {
+  const value = req.headers?.authorization || req.headers?.Authorization || "";
+  const match = /^Bearer\s+([^\s]+)$/i.exec(String(value));
+  return match?.[1] || "";
+}
+
+function getIdempotencyKey(req) {
+  const value = req.headers?.["idempotency-key"] || req.headers?.["Idempotency-Key"] || "";
+  return assertAiIdempotencyKey(String(value));
+}
+
+function supabaseAuthConfig(env) {
+  const url = String(env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+  const key = String(env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || "").trim();
+  let validUrl = false;
+  try { validUrl = new URL(url).protocol === "https:" && /^[a-z0-9-]+\.supabase\.co$/i.test(new URL(url).hostname); } catch { /* configuración inválida */ }
+  if (!validUrl || !/^sb_publishable_[A-Za-z0-9_-]{12,200}$/.test(key)) {
+    throw new AiAdmissionError("La admisión de IA no está configurada. Puedes continuar con las herramientas locales.", { code: "ai_entitlement_unknown", status: 503 });
+  }
+  return { url, key };
+}
+
+async function resolveAiAccount(req, env, { createClientImpl = createClient } = {}) {
+  const token = getBearerToken(req);
+  if (!token) throw new AiAdmissionError("Inicia sesión para usar una consulta remota de IA. Las herramientas locales siguen disponibles.", { code: "ai_auth_required", status: 401 });
+  const { url, key } = supabaseAuthConfig(env);
+  const client = createClientImpl(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await client.auth.getUser(token);
+  const accountId = data?.user?.id;
+  if (error || typeof accountId !== "string" || !accountId) {
+    throw new AiAdmissionError("La sesión de IA no es válida. Vuelve a iniciar sesión; tus resultados locales permanecen disponibles.", { code: "ai_auth_required", status: 401 });
+  }
+  return { accountId };
+}
+
+function sendAdmissionError(res, error) {
+  const status = Number.isInteger(error?.status) ? error.status : 403;
+  const headers = error?.retryAfter ? { "Retry-After": String(error.retryAfter) } : undefined;
+  const payload = { error: error?.message || "No se pudo admitir la solicitud remota de IA.", code: error?.code || "ai_capability_blocked" };
+  if (headers) {
+    res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...headers });
+    return res.end(JSON.stringify(payload));
+  }
+  return sendJson(res, status, payload);
+}
+
+async function admitAiRequest(req, { capability, env, admissionService, resolveAccount, createClientImpl }) {
+  const { accountId } = await resolveAccount(req, env, { createClientImpl });
+  const idempotencyKey = getIdempotencyKey(req);
+  return admissionService.admit({ accountId, capability, idempotencyKey, env });
+}
+
+function assertFreshAdmission(admission) {
+  if (admission?.replay) {
+    throw new AiAdmissionError("Esta acción remota ya se completó. Inicia una nueva consulta explícita para volver a ejecutarla.", { code: "ai_capability_blocked", status: 409 });
+  }
+  return admission;
 }
 
 function canonicalContext(input) {
@@ -404,7 +469,13 @@ async function callCfdiPlanner(input, signal, env, fetchImpl) {
   }
 }
 
-export async function handleCfdiPlanner(req, res, { env = process.env, fetchImpl = fetch } = {}) {
+export async function handleCfdiPlanner(req, res, {
+  env = process.env,
+  fetchImpl = fetch,
+  admissionService = defaultAiAdmissionService,
+  resolveAccount = resolveAiAccount,
+  createClientImpl = createClient,
+} = {}) {
   if (!applyCors(req, res, env)) return sendJson(res, 403, { error: "Origen no autorizado." });
   if (req.method === "OPTIONS") {
     res.writeHead(204, { "Cache-Control": "no-store" });
@@ -418,12 +489,28 @@ export async function handleCfdiPlanner(req, res, { env = process.env, fetchImpl
     return sendJson(res, error.status || 400, { error: error.message });
   }
   if (!withinRateLimit(req)) return sendJson(res, 429, { error: "Hay muchas consultas al planner desde esta conexión; espera unos minutos y vuelve a intentar." });
+  let admission;
+  try {
+    admission = await admitAiRequest(req, {
+      capability: "tools.ai.planner.requests",
+      env,
+      admissionService,
+      resolveAccount,
+      createClientImpl,
+    });
+    if (admission.replay && admission.cachedResult) return sendJson(res, 200, admission.cachedResult);
+    assertFreshAdmission(admission);
+  } catch (error) {
+    return sendAdmissionError(res, error);
+  }
   const controller = new AbortController();
   res.on?.("close", () => { if (!res.writableEnded) controller.abort(); });
   try {
     const plan = await callCfdiPlanner(input, controller.signal, env, fetchImpl);
+    admissionService.complete(admission, plan);
     return sendJson(res, 200, plan);
   } catch (error) {
+    admissionService.release(admission);
     if (controller.signal.aborted || res.destroyed) return;
     const safeMessage = [402, 429, 503].includes(error.status)
       ? error.message
@@ -442,7 +529,13 @@ export async function handleTutorConfig(req, res, env = process.env) {
   sendJson(res, 200, configuredProviders(env));
 }
 
-export async function handleTutorStream(req, res, { env = process.env, fetchImpl = fetch } = {}) {
+export async function handleTutorStream(req, res, {
+  env = process.env,
+  fetchImpl = fetch,
+  admissionService = defaultAiAdmissionService,
+  resolveAccount = resolveAiAccount,
+  createClientImpl = createClient,
+} = {}) {
   if (!applyCors(req, res, env)) return sendJson(res, 403, { error: "Origen no autorizado." });
   if (req.method === "OPTIONS") {
     res.writeHead(204, { "Cache-Control": "no-store" });
@@ -457,11 +550,39 @@ export async function handleTutorStream(req, res, { env = process.env, fetchImpl
     return sendJson(res, error.status || 400, { error: error.message });
   }
   if (!withinRateLimit(req)) return sendJson(res, 429, { error: "Hay muchas preguntas desde esta conexión; espera unos minutos y vuelve a intentar." });
+  const admissions = [];
+  if (input.cfdiContext) {
+    try {
+      const { accountId } = await resolveAccount(req, env, { createClientImpl });
+      const idempotencyKey = getIdempotencyKey(req);
+      const snapshotAdmission = admissionService.admit({
+        accountId,
+        capability: "tools.nora.snapshot.explicit",
+        idempotencyKey,
+        env,
+      });
+      assertFreshAdmission(snapshotAdmission);
+      admissions.push(snapshotAdmission);
+      const explanationAdmission = admissionService.admit({
+        accountId,
+        capability: "tools.ai.explanation.requests",
+        idempotencyKey,
+        env,
+      });
+      assertFreshAdmission(explanationAdmission);
+      admissions.push(explanationAdmission);
+    } catch (error) {
+      for (const admission of admissions) admissionService.release(admission);
+      return sendAdmissionError(res, error);
+    }
+  }
   const controller = new AbortController();
   res.on?.("close", () => { if (!res.writableEnded) controller.abort(); });
   try {
     await callGateway(input, res, controller.signal, env, fetchImpl);
+    for (const admission of admissions) admissionService.complete(admission, { delivered: true });
   } catch (error) {
+    for (const admission of admissions) admissionService.release(admission);
     if (controller.signal.aborted || res.destroyed) return;
     const safeMessage = [402, 429, 503].includes(error.status) ? error.message : "La respuesta se interrumpió. Puedes volver a intentarlo.";
     if (!res.headersSent) return sendJson(res, error.status || 502, { error: safeMessage });

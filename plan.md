@@ -1756,3 +1756,19 @@ La tarjeta visible no transmite XML, bancos, pólizas ni análisis completo. El 
 ### Validación y publicación
 
 La suite alcanzó **270/270 pruebas unitarias**, el build estático fue aprobado y la regresión E2E obtuvo **107/108** en la corrida completa; el caso restante de matriz responsive fue aprobado en reejecución aislada con timeout ampliado, dejando **108/108 casos validados**. La prueba pública ajustada del copy aprobó en Chromium y Pixel 5. Los cambios quedan preparados para el commit GPG y push autorizados en esta tarea.
+
+
+---
+## Fase IA E2 — Admisión, identidad y cuotas server-side
+
+E2 convierte el servidor en autoridad de las capacidades remotas de IA sin trasladar CFDI, bancos, pólizas, DIOT ni archivos fuera del navegador. Cubre el planner CFDI y el envío explícito de `cfdi-summary-v1` a Nora; el análisis y las herramientas deterministas locales continúan disponibles sin cuenta ni cuota.
+
+El diseño usa un Bearer de Supabase validado con `auth.getUser` para derivar únicamente el UUID opaco de la cuenta. `AiAdmissionService` resolverá Free por defecto y Premium solo desde una allowlist privada server-side; nunca desde `localStorage`, DOM, query string o body. Aplicará 20/200 solicitudes mensuales de planner y 10/100 explicaciones Free/Premium, mientras que el snapshot fiscal explícito seguirá bloqueado en Free.
+
+Las reservas se vinculan a cuenta, capacidad, periodo UTC e `Idempotency-Key`; la primera implementación usa un store de proceso inyectable con reserva, cierre, liberación y replay seguro. E3 reemplazará este store por almacenamiento distribuido, rate limiting global, timeout y circuit breaker. E2 no añade tablas, pagos, checkout, webhooks, UI comercial completa, persistencia fiscal, telemetría remota ni cambios de reglas fiscales.
+
+Los clientes envían autorización e idempotencia por headers y conservan body mínimo: el planner solo `{message}` depurado y Nora solo el `cfdi-summary-v1` ya sanitizado tras doble confirmación. Una sesión ausente, entitlement desconocido o fallo de admisión no desbloquea Premium ni envía el contenido a Gateway; la persona conserva las herramientas y resultados locales.
+
+La implementación entregó `src/cfdi/ai/ai-admission.js`: contrato `ai-admission-v1`, límites del contrato E0, resolver Free por defecto, allowlist privada opcional `AI_PREMIUM_ACCOUNT_IDS`, reserva/cierre/liberación por cuenta-capacidad-periodo UTC-idempotency key y replay seguro. `src/tutor/server.js` valida Bearer con `auth.getUser` antes de Gateway: planner requiere `tools.ai.planner.requests`; un resumen CFDI para Nora requiere además snapshot explícito y explicación, por lo que Free no puede compartirlo remotamente. El modo local no exige cuenta ni cuota.
+
+La validación final aprobó **281/281** pruebas unitarias, compilación ESM focalizada, build estático, **6/6** E2E focalizadas y la regresión completa **110/110** E2E en Chromium y Pixel 5. No se crearon tablas, pagos, checkout, persistencia remota fiscal, telemetría conectada ni rate limiting distribuido. E3 permanece pendiente para almacenamiento distribuido, límite global, timeout y circuit breaker.

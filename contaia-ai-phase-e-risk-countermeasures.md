@@ -1,8 +1,8 @@
 # ContaIA — Riesgos pendientes y contramedidas técnicas para Fase IA E
 
-**Corte:** revisión posterior a Fase IA D
+**Corte:** revisión posterior a Fase IA E2
 **Alcance:** planner JSON CFDI, explicación segura con Nora, cuotas Premium, DLP y observabilidad
-**Estado:** análisis y propuesta; no implementa cambios
+**Estado:** E0, E1 y E2 implementadas localmente; E3–E6 continúan como controles pendientes
 
 ## 1. Conclusión ejecutiva
 
@@ -17,6 +17,8 @@ Los riesgos pendientes están en cinco superficies operativas:
 5. **Entitlements Premium:** el contrato Free/Premium está diseñado, pero no implementado. El cliente no puede ser la autoridad para desbloquear Premium; la autorización debe ser server-side, versionada y separada de los datos fiscales locales.
 
 La recomendación es que Fase IA E sea una fase de **admisión segura, DLP, control de costos y observabilidad**, no una fase para ampliar el poder fiscal del modelo. No se deben añadir herramientas mutantes ni acciones de presentación, cancelación, aprobación o contabilización.
+
+> **Actualización E2:** planner y `cfdi-summary-v1` ya pasan por admisión server-side autenticada, entitlement Free por defecto, límites mensuales e idempotencia de proceso. Esto mitiga identidad/entitlement y duplicación dentro de una instancia; no resuelve abuso multi-instancia, almacenamiento distribuido, circuit breaker, observabilidad conectada, revisión de proveedor ni UX de upgrade.
 
 ## 2. Estado técnico observado
 

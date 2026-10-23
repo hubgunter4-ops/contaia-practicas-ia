@@ -922,3 +922,13 @@ Conectar el `CapabilityGate` del contrato Free/Premium para cuotas de explicaci�
 - [ ] No se fija un modelo concreto hasta consultar el catálogo vigente y completar un piloto sintético.
 
 **Siguiente paso recomendado:** implementar primero la Fase A — contratos puros de `ToolRegistry`, router determinista y `AiOrchestrator` local para CFDI. Requiere confirmación independiente antes de comenzar la implementación.
+
+
+---
+### Actualización — Fase IA E2: admisión, identidad y cuotas server-side
+
+E2 está implementada localmente. `src/cfdi/ai/ai-admission.js` aporta `ai-admission-v1`: identidad de cuenta opaca validada con Supabase, Free por defecto, allowlist privada opcional de Premium, periodo UTC, cuota por capacidad y reserva idempotente de proceso. El plan nunca llega desde el cliente ni se deriva de DOM, `localStorage`, query string o body.
+
+Antes de llamar Gateway, `POST /api/cfdi/planner` exige Bearer e `Idempotency-Key`; conserva el body reducido a texto filtrado. El flujo de Nora se admite únicamente cuando existe `cfdi-summary-v1` resultado de doble confirmación y exige snapshot explícito más explicación, por lo que Free mantiene las herramientas locales pero no comparte el resumen remotamente. Las reservas se completan con una respuesta válida o se liberan en error/abort; un replay no duplica consumo ni vuelve a invocar Gateway.
+
+El store de E2 es efímero por proceso, no sustituye una cuota distribuida ni introduce tablas, cobros, persistencia fiscal o telemetría conectada. La fase validó 281/281 unitarias, build estático, 6/6 E2E focalizadas y 110/110 E2E completas. E3 sigue pendiente para rate limit distribuido, TTL, concurrencia y circuit breaker.

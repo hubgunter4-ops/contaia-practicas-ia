@@ -700,3 +700,16 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [x] Validación: **270 pruebas unitarias**, build estático aprobado, **107/108 E2E** aprobadas en la regresión completa y el único caso restante de navegación responsive aprobado en reejecución aislada con timeout ampliado (**108/108 validadas**).
 - [x] Privacidad: la tarjeta y los cambios visuales no agregan endpoints, persistencia ni transmisión automática de XML, bancos, pólizas o datos fiscales.
 **Siguiente propuesta:** mantener Free/Premium pendiente y decidir después si se autoriza una fase comercial; no iniciar nuevas fases automáticamente.
+
+
+---
+## Fase IA E2 — Admisión, identidad y cuotas server-side
+**Estado:** terminada; se publica mediante el checkpoint firmado de esta fase.
+- [x] Crear `ai-admission-v1` con límites Free/Premium y periodos mensuales UTC.
+- [x] Validar Bearer con Supabase `auth.getUser` y derivar solo `accountId` opaco.
+- [x] Resolver entitlement server-side: Free por defecto; Premium solo mediante configuración privada explícita; estado desconocido cae a Free.
+- [x] Reservar, cerrar o liberar consumo con idempotencia antes de Gateway para planner y `cfdi-summary-v1`.
+- [x] Enviar Authorization e Idempotency-Key desde clientes sin añadir datos fiscales al body.
+- [x] Probar que manipular body, reintentos o la configuración cliente no desbloquea Premium ni duplica consumo.
+- [x] Validar **281/281** unitarias, build estático, **6/6** E2E focalizadas y **110/110** E2E completas; sin datos fiscales reales ni artefactos de test conservados.
+**Siguiente fase propuesta tras E2:** E3 — rate limit distribuido, resiliencia y circuit breaker, previa confirmación explícita.

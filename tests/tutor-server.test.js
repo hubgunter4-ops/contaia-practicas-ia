@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { handleCfdiPlanner, handleTutorConfig, handleTutorStream, validateTutorInput } from "../src/tutor/server.js";
+import { createAiAdmissionService } from "../src/cfdi/ai/ai-admission.js";
 import { exercises } from "../src/exercises.js";
 import { courseModules } from "../src/course.js";
 
@@ -27,8 +28,8 @@ class MockResponse extends EventEmitter {
   get body() { return this.chunks.join(""); }
 }
 
-function request(body, { method = "POST", origin, ip = "127.0.0.2" } = {}) {
-  return { method, body, headers: { ...(origin ? { origin } : {}) }, socket: { remoteAddress: ip } };
+function request(body, { method = "POST", origin, ip = "127.0.0.2", headers = {} } = {}) {
+  return { method, body, headers: { ...(origin ? { origin } : {}), ...headers }, socket: { remoteAddress: ip } };
 }
 
 const gatewayEnv = {
@@ -38,6 +39,16 @@ const gatewayEnv = {
   AI_GATEWAY_ANTHROPIC_API_KEY: "gateway-anthropic-secret-test",
   AI_GATEWAY_ANTHROPIC_MODEL: "anthropic/claude-test",
 };
+const aiAccountId = "0b907fb8-9f2f-4e50-8f8a-e8a54a1591c2";
+const resolveAiAccount = async () => ({ accountId: aiAccountId });
+const aiKey = (suffix) => `ai_${suffix}-12345678`;
+function aiOptions({ plan = "free", status = "active", fetchImpl } = {}) {
+  return {
+    admissionService: createAiAdmissionService({ entitlementResolver: () => ({ plan, status, contractVersion: 1, source: "test" }) }),
+    resolveAccount: resolveAiAccount,
+    ...(fetchImpl ? { fetchImpl } : {}),
+  };
+}
 
 const chunkedReply = () => {
   const source = [
@@ -76,8 +87,9 @@ test("el planner CFDI usa el modelo configurado, envía solo texto no sensible y
   let plannerRequest;
   const response = new MockResponse();
   const plan = { intent: "cfdi.summary", toolId: "cfdi.summary", arguments: { scope: "all" }, missing: [], requiresExplicitUserAction: false, humanReviewRequired: true };
-  await handleCfdiPlanner(request({ message: "¿Qué consulta local me ayuda a revisar el estado general?" }, { ip: "127.0.6.1" }), response, {
+  await handleCfdiPlanner(request({ message: "¿Qué consulta local me ayuda a revisar el estado general?" }, { ip: "127.0.6.1", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("planner-model") } }), response, {
     env: gatewayEnv,
+    ...aiOptions(),
     fetchImpl: async (_url, options) => {
       plannerRequest = options;
       return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(plan) } }] }), { status: 200, headers: { "content-type": "application/json" } });
@@ -93,6 +105,82 @@ test("el planner CFDI usa el modelo configurado, envía solo texto no sensible y
   assert.equal(body.messages.some(({ content }) => content.includes("analysisRef")), false);
   assert.equal(JSON.stringify(body).includes("gateway-openai-secret-test"), false);
   assert.equal(plannerRequest.headers.Authorization, `Bearer ${gatewayEnv.AI_GATEWAY_OPENAI_API_KEY}`);
+});
+
+test("el planner requiere Bearer e ignora cualquier plan declarado por el cliente antes de Gateway", async () => {
+  for (const [body, expected] of [
+    [{ message: "Necesito una consulta local" }, 401],
+    [{ message: "Necesito una consulta local", plan: "premium" }, 400],
+  ]) {
+    let called = false;
+    const response = new MockResponse();
+    await handleCfdiPlanner(request(body, { ip: "127.0.6.40" }), response, {
+      env: gatewayEnv,
+      fetchImpl: async () => { called = true; return new Response("should not run"); },
+    });
+    assert.equal(response.statusCode, expected);
+    assert.equal(called, false);
+    assert.equal(response.body.includes("premium"), false);
+  }
+});
+
+test("el planner valida el Bearer con Supabase Auth.getUser antes de admitir la cuota", async () => {
+  const accountId = "0b907fb8-9f2f-4e50-8f8a-e8a54a1591c2";
+  let observedToken = "";
+  let plannerCalls = 0;
+  const response = new MockResponse();
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, {
+    ip: "127.0.6.43",
+    headers: { Authorization: "Bearer supabase-session-fixture", "Idempotency-Key": aiKey("supabase-auth") },
+  }), response, {
+    env: { ...gatewayEnv, SUPABASE_URL: "https://contaia-test.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key_123456789" },
+    createClientImpl: (url, key, options) => {
+      assert.equal(url, "https://contaia-test.supabase.co");
+      assert.equal(key, "sb_publishable_test_key_123456789");
+      assert.equal(options.auth.persistSession, false);
+      return { auth: { getUser: async (token) => {
+        observedToken = token;
+        return { data: { user: { id: accountId } }, error: null };
+      } } };
+    },
+    fetchImpl: async () => {
+      plannerCalls += 1;
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intent: "cfdi.summary", toolId: "cfdi.summary", arguments: { scope: "all" }, missing: [], requiresExplicitUserAction: false, humanReviewRequired: true }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(observedToken, "supabase-session-fixture");
+  assert.equal(plannerCalls, 1);
+});
+
+test("el planner aplica la cuota Free server-side y una repetición idempotente no vuelve a llamar Gateway", async () => {
+  const admissionService = createAiAdmissionService({ entitlementResolver: () => ({ plan: "free", status: "active", contractVersion: 1 }) });
+  const plan = { intent: "cfdi.summary", toolId: "cfdi.summary", arguments: { scope: "all" }, missing: [], requiresExplicitUserAction: false, humanReviewRequired: true };
+  let calls = 0;
+  const options = {
+    env: gatewayEnv,
+    admissionService,
+    resolveAccount: resolveAiAccount,
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(plan) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+  };
+  for (let index = 0; index < 20; index += 1) {
+    const response = new MockResponse();
+    await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.41", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey(`quota-${index}`) } }), response, options);
+    assert.equal(response.statusCode, 200);
+  }
+  const blocked = new MockResponse();
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.41", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("quota-blocked") } }), blocked, options);
+  assert.equal(blocked.statusCode, 429);
+  assert.equal(calls, 20);
+
+  const replay = new MockResponse();
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.41", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("quota-0") } }), replay, options);
+  assert.equal(replay.statusCode, 200);
+  assert.equal(calls, 20);
+  assert.deepEqual(JSON.parse(replay.body), { ...plan, toolVersion: "1" });
 });
 
 test("el endpoint planner rechaza XML o identificadores antes de llamar al Gateway", async () => {
@@ -127,8 +215,9 @@ test("el endpoint planner rechaza una salida que intenta seleccionar una herrami
     requiresExplicitUserAction: false,
     humanReviewRequired: true,
   };
-  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.4" }), response, {
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, { ip: "127.0.6.4", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("malicious-output") } }), response, {
     env: gatewayEnv,
+    ...aiOptions(),
     fetchImpl: async () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(malicious) } }] }), { status: 200 }),
   });
   assert.equal(response.statusCode, 502);
@@ -343,8 +432,9 @@ test("el resumen CFDI solo se comparte desde Asistente abierto y el backend elim
 
   let providerRequest;
   const response = new MockResponse();
-  await handleTutorStream(request({ message: "Ayúdame a interpretar el pago", context: { section: "advisor" }, cfdiContext }, { ip: "127.0.6.1" }), response, {
+  await handleTutorStream(request({ message: "Ayúdame a interpretar el pago", context: { section: "advisor" }, cfdiContext }, { ip: "127.0.6.1", headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("cfdi-summary") } }), response, {
     env: gatewayEnv,
+    ...aiOptions({ plan: "premium" }),
     fetchImpl: async (_url, options) => { providerRequest = options; return chunkedReply(); },
   });
   const messages = JSON.parse(providerRequest.body).messages;
@@ -354,4 +444,28 @@ test("el resumen CFDI solo se comparte desde Asistente abierto y el backend elim
   assert.match(latest, /"invoiced":1160/);
   assert.match(latest, /"paymentBalanceDifferences":1/);
   for (const privateValue of ["UUID-PRIVADO", "RFC-PRIVADO", "XML-PRIVADO", "NO ENVIAR", "privado.xml"]) assert.equal(latest.includes(privateValue), false);
+});
+
+test("un resumen CFDI seguro requiere entitlement Premium antes de abrir Nora", async () => {
+  const cfdiContext = {
+    schemaVersion: "cfdi-summary-v1",
+    status: "analyzed",
+    counts: { invoices: 1, payments: 0, concepts: 1, matchedPayments: 0, unmatchedPayments: 0 },
+    checks: { duplicateUuids: 0, paymentBalanceDifferences: 0, paymentWithoutInvoice: 0, paymentsExceedingInvoice: 0, estimatedTaxPayments: 0 },
+    totalsByCurrency: [{ currency: "MXN", invoiced: 116, paid: 0, remaining: 116 }],
+    samplePayments: [],
+  };
+  const response = new MockResponse();
+  let called = false;
+  await handleTutorStream(request({ message: "Explica este resumen", context: { section: "advisor" }, cfdiContext }, {
+    ip: "127.0.6.42",
+    headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("free-snapshot") },
+  }), response, {
+    env: gatewayEnv,
+    ...aiOptions({ plan: "free" }),
+    fetchImpl: async () => { called = true; return chunkedReply(); },
+  });
+  assert.equal(response.statusCode, 403);
+  assert.equal(called, false);
+  assert.equal(response.body.includes("116"), false);
 });

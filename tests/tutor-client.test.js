@@ -14,17 +14,24 @@ const event = (name, payload) => `event: ${name}\ndata: ${JSON.stringify(payload
 test("el cliente transmite fragmentos SSE y devuelve la respuesta completa", async () => {
   const tokens = [];
   let postedBody;
+  let headers;
   const reply = await requestTutorReply({
     message: "¿Por dónde empiezo?",
     context: { section: "course", moduleId: "modulo-01" },
     documentText: "Caso ficticio extraído localmente.",
     provider: "openai",
+    accessToken: "session-token-test",
+    idempotencyKey: "ai_tutor-client-12345678",
     onToken: (token) => tokens.push(token),
-    fetchImpl: async (_url, options) => { postedBody = JSON.parse(options.body); return sse([event("token", { text: "Primero " }), event("token", { text: "observa." }), event("done", {})]); },
+    fetchImpl: async (_url, options) => { postedBody = JSON.parse(options.body); headers = options.headers; return sse([event("token", { text: "Primero " }), event("token", { text: "observa." }), event("done", {})]); },
   });
   assert.equal(reply, "Primero observa.");
   assert.deepEqual(tokens, ["Primero ", "observa."]);
   assert.equal(postedBody.documentText, "Caso ficticio extraído localmente.");
+  assert.equal(postedBody.accessToken, undefined);
+  assert.equal(postedBody.idempotencyKey, undefined);
+  assert.equal(headers.Authorization, "Bearer session-token-test");
+  assert.equal(headers["Idempotency-Key"], "ai_tutor-client-12345678");
 });
 
 test("el cliente informa errores de API y no genera respuestas locales de sustitución", async () => {

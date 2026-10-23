@@ -113,6 +113,28 @@ function handleCfdiAskNora(context, prompt) {
   app.querySelector("[data-open-input]")?.focus({ preventScroll: true });
 }
 
+function createAiIdempotencyKey() {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (typeof uuid === "string" && uuid) return `ai_${uuid}`;
+  return `ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 18)}`;
+}
+
+async function getAiRemoteCredentials() {
+  const client = window.__contaiaAuth?.client;
+  if (!client?.auth?.getSession) return { accessToken: "", idempotencyKey: createAiIdempotencyKey() };
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  return {
+    accessToken: typeof data?.session?.access_token === "string" ? data.session.access_token : "",
+    idempotencyKey: createAiIdempotencyKey(),
+  };
+}
+
+async function requestAuthenticatedCfdiPlanner(request, context) {
+  const credentials = await getAiRemoteCredentials();
+  return requestCfdiPlanner({ message: request.untrustedMessage, signal: context.signal, ...credentials });
+}
+
 function handleCfdiSourceHandoff(target) {
   if (!["diot", "journal"].includes(target)) return;
   try {
@@ -190,7 +212,7 @@ async function syncCfdiIsland() {
       onAskNora: handleCfdiAskNora,
       onHandoffSources: handleCfdiSourceHandoff,
       getAnalysis: () => cfdiState.analysis,
-      onCfdiPlanner: (request, context) => requestCfdiPlanner({ message: request.untrustedMessage, signal: context.signal }),
+      onCfdiPlanner: requestAuthenticatedCfdiPlanner,
       registerSourceProvider: (owner, provider) => sourceCapabilityBroker.registerSourceProvider(owner, provider),
     }),
   });
@@ -989,14 +1011,17 @@ async function sendTutorMessage(text, { includeDocument = false, openMode = stat
   let talkStreamFailed = false;
   refreshTutorPanel();
   try {
+    const cfdiContext = openMode ? state.openAssistant.cfdiContext : undefined;
+    const remoteCredentials = cfdiContext ? await getAiRemoteCredentials() : {};
     const reply = await requestTutorReply({
       message: question,
       context: openMode ? { section: "advisor" } : getTutorContext(),
       history,
       documentText: includeDocument ? conversation.documentText : "",
-      cfdiContext: openMode ? state.openAssistant.cfdiContext : undefined,
+      cfdiContext,
       provider: state.tutor.provider || state.tutor.defaultProvider,
       signal: controller.signal,
+      ...remoteCredentials,
       onToken: (token) => {
         assistantMessage.text += token;
         if (state.section === requestSection) {

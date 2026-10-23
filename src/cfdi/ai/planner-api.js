@@ -7,11 +7,14 @@ async function readError(response) {
   return payload.error || `El planner CFDI respondió con HTTP ${response.status}.`;
 }
 
-export async function requestCfdiPlanner({ message, fetchImpl = fetch, apiBaseUrl, signal } = {}) {
+export async function requestCfdiPlanner({ message, accessToken = "", idempotencyKey = "", fetchImpl = fetch, apiBaseUrl, signal } = {}) {
   if (typeof message !== "string" || !message.trim()) throw new TypeError("La petición del planner está vacía.");
+  const headers = { "Content-Type": "application/json", Accept: "application/json" };
+  if (typeof accessToken === "string" && accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) headers["Idempotency-Key"] = idempotencyKey.trim();
   const response = await fetchImpl(`${apiBase(apiBaseUrl)}/api/cfdi/planner`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers,
     cache: "no-store",
     signal,
     body: JSON.stringify({ message: message.trim() }),

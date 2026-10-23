@@ -20,10 +20,13 @@ export async function loadTutorConfig({ fetchImpl = fetch, apiBaseUrl } = {}) {
   return { providers, defaultProvider: providers.some(({ id }) => id === payload.defaultProvider) ? payload.defaultProvider : providers[0]?.id ?? "" };
 }
 
-export async function requestTutorReply({ message, context, history = [], provider = "", documentText = "", cfdiContext, onToken = () => {}, fetchImpl = fetch, apiBaseUrl, signal } = {}) {
+export async function requestTutorReply({ message, context, history = [], provider = "", documentText = "", cfdiContext, accessToken = "", idempotencyKey = "", onToken = () => {}, fetchImpl = fetch, apiBaseUrl, signal } = {}) {
+  const headers = { "Content-Type": "application/json", Accept: "text/event-stream, application/json" };
+  if (typeof accessToken === "string" && accessToken.trim()) headers.Authorization = `Bearer ${accessToken.trim()}`;
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) headers["Idempotency-Key"] = idempotencyKey.trim();
   const response = await fetchImpl(`${apiBase(apiBaseUrl)}/api/tutor/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
+    headers,
     cache: "no-store",
     signal,
     body: JSON.stringify({ message, context, history, provider, ...(documentText ? { documentText } : {}), ...(cfdiContext ? { cfdiContext } : {}) }),

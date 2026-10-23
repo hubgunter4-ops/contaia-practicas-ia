@@ -7,6 +7,8 @@ test("el cliente del planner envía únicamente la petición textual y respeta l
   const plan = { intent: "cfdi.alerts", toolId: "cfdi.alerts", arguments: {}, missing: [], requiresExplicitUserAction: false, humanReviewRequired: true };
   const result = await requestCfdiPlanner({
     message: "¿Qué alertas debo revisar?",
+    accessToken: "session-token-test",
+    idempotencyKey: "ai_planner-client-12345678",
     apiBaseUrl: "https://contaia.test",
     fetchImpl: async (url, options) => {
       request = { url, options };
@@ -16,6 +18,8 @@ test("el cliente del planner envía únicamente la petición textual y respeta l
   assert.equal(request.url, "https://contaia.test/api/cfdi/planner");
   assert.equal(JSON.stringify(JSON.parse(request.options.body)).includes("analysisRef"), false);
   assert.deepEqual(JSON.parse(request.options.body), { message: "¿Qué alertas debo revisar?" });
+  assert.equal(request.options.headers.Authorization, "Bearer session-token-test");
+  assert.equal(request.options.headers["Idempotency-Key"], "ai_planner-client-12345678");
   assert.deepEqual(result, plan);
 });
 

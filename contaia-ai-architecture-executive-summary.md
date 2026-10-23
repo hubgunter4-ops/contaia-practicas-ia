@@ -1,6 +1,6 @@
 # ContaIA — Resumen ejecutivo de arquitectura de IA
 
-**Corte arquitectónico:** Fase IA D terminada localmente
+**Corte arquitectónico:** Fase IA E2 terminada localmente
 **Producto:** ContaIA Herramientas · módulo CFDI
 **Estado de publicación:** cambios locales, sin commit, push ni despliegue
 **Audiencia:** revisión de arquitectura, seguridad y producto
@@ -185,15 +185,16 @@ La petición del usuario puede viajar al endpoint planner únicamente después d
 | **IA D** | Planner JSON cerrado, endpoint Gateway, doble validación y ejecución read-only | Terminada localmente |
 | **IA E0** | Contrato de gobernanza: datos, amenazas, cuotas, modelos y observabilidad redacted | Terminada localmente |
 | **IA E1** | `AiDataLossPreventionGate` local, modo planner estricto y rechazo antes de Gateway | Terminada localmente |
-| **IA E2-E6** | Admisión, cuotas, resiliencia, telemetría conectada, revisión de proveedores y UX Premium | No iniciadas |
+| **IA E2** | Admisión autenticada, entitlement server-side Free/Premium, cuota mensual e idempotencia | Terminada localmente |
+| **IA E3-E6** | Rate limit distribuido, resiliencia, telemetría conectada, revisión de proveedores y UX Premium | Pendientes |
 
 ## 8. Evidencia de validación
 
 La validación acumulada del estado actual incluye:
 
-- **265/265 pruebas unitarias aprobadas.**
-- **106/106 pruebas E2E aprobadas** en escritorio y Pixel 5.
-- **4/4 E2E focalizadas** del panel CFDI y planner aprobadas.
+- **281/281 pruebas unitarias aprobadas.**
+- **110/110 pruebas E2E aprobadas** en escritorio y Pixel 5.
+- **6/6 E2E focalizadas** de planner/admisión y panel CFDI aprobadas.
 - **21/21 pruebas focalizadas** de DLP y servidor aprobadas.
 - Build estático `npm run build:vercel` aprobado.
 - Compilación focalizada de planner, orquestador y endpoint aprobada.
@@ -230,7 +231,7 @@ El planner no aprueba pólizas, no presenta declaraciones, no cancela CFDI, no m
 
 ### Monetización y Premium
 
-Las cuotas y capacidades Premium todavía no están conectadas al planner ni a la explicación. La eventual Fase IA E debe limitar volumen o capacidades de IA sin bloquear la transparencia básica, la revisión humana ni las funciones locales.
+E2 aplica cuotas y entitlements server-side en las rutas remotas: planner Free/Premium y explicación/snapshot CFDI explícito. Free conserva las herramientas locales, pero no puede compartir `cfdi-summary-v1` con Nora. La allowlist privada de Premium es una transición operativa, no cobro, checkout ni fuente comercial definitiva; E3–E6 deben aportar almacenamiento distribuido, resiliencia, telemetría redacted, revisión de proveedores y UX de upgrade.
 
 ## 10. Recomendación para la revisión de arquitectura
 
