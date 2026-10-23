@@ -1765,10 +1765,31 @@ E2 convierte el servidor en autoridad de las capacidades remotas de IA sin trasl
 
 El diseño usa un Bearer de Supabase validado con `auth.getUser` para derivar únicamente el UUID opaco de la cuenta. `AiAdmissionService` resolverá Free por defecto y Premium solo desde una allowlist privada server-side; nunca desde `localStorage`, DOM, query string o body. Aplicará 20/200 solicitudes mensuales de planner y 10/100 explicaciones Free/Premium, mientras que el snapshot fiscal explícito seguirá bloqueado en Free.
 
-Las reservas se vinculan a cuenta, capacidad, periodo UTC e `Idempotency-Key`; la primera implementación usa un store de proceso inyectable con reserva, cierre, liberación y replay seguro. E3 reemplazará este store por almacenamiento distribuido, rate limiting global, timeout y circuit breaker. E2 no añade tablas, pagos, checkout, webhooks, UI comercial completa, persistencia fiscal, telemetría remota ni cambios de reglas fiscales.
+Las reservas se vinculan a cuenta, capacidad, periodo UTC e `Idempotency-Key`; el store base de E2 es de proceso e inyectable, con reserva, cierre, liberación y replay seguro. La extensión E3 añade un adaptador distribuido opcional, TTL, timeout y circuit breaker sin retirar el modo compatible de desarrollo. E2 no añade tablas, pagos, checkout, webhooks, UI comercial completa, persistencia fiscal, telemetría remota ni cambios de reglas fiscales.
 
 Los clientes envían autorización e idempotencia por headers y conservan body mínimo: el planner solo `{message}` depurado y Nora solo el `cfdi-summary-v1` ya sanitizado tras doble confirmación. Una sesión ausente, entitlement desconocido o fallo de admisión no desbloquea Premium ni envía el contenido a Gateway; la persona conserva las herramientas y resultados locales.
 
 La implementación entregó `src/cfdi/ai/ai-admission.js`: contrato `ai-admission-v1`, límites del contrato E0, resolver Free por defecto, allowlist privada opcional `AI_PREMIUM_ACCOUNT_IDS`, reserva/cierre/liberación por cuenta-capacidad-periodo UTC-idempotency key y replay seguro. `src/tutor/server.js` valida Bearer con `auth.getUser` antes de Gateway: planner requiere `tools.ai.planner.requests`; un resumen CFDI para Nora requiere además snapshot explícito y explicación, por lo que Free no puede compartirlo remotamente. El modo local no exige cuenta ni cuota.
 
-La validación final aprobó **281/281** pruebas unitarias, compilación ESM focalizada, build estático, **6/6** E2E focalizadas y la regresión completa **110/110** E2E en Chromium y Pixel 5. No se crearon tablas, pagos, checkout, persistencia remota fiscal, telemetría conectada ni rate limiting distribuido. E3 permanece pendiente para almacenamiento distribuido, límite global, timeout y circuit breaker.
+El cierre histórico de E2 aprobó **281/281** pruebas unitarias, compilación ESM focalizada, build estático, **6/6** E2E focalizadas y la regresión completa **110/110** E2E en Chromium y Pixel 5. No se crearon tablas, pagos, checkout, persistencia remota fiscal ni telemetría conectada; el estado actualizado de almacenamiento distribuido, timeout y circuit breaker se documenta en el anexo E3 posterior.
+
+
+---
+## Fase IA E3 — Rate limiting distribuido, TTL y circuit breaker
+
+E3 extiende E2 sin tocar el cálculo fiscal. El servidor conservará un límite inmediato por IP como defensa barata y añadirá un store Redis REST compatible con comandos atómicos/Lua, configurado por `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN`. Las claves se organizan por contrato, cuenta opaca, capability y periodo UTC; no contienen RFC, correo, UUID de CFDI, XML, prompt ni importes.
+
+La reserva mensual se ejecuta atómicamente junto con el contador de uso. Cada lease tendrá TTL de 30 segundos y un registro de retención de 62 días para distinguir `reserved`, `completed`, `released` y `expired`, evitando replays y doble consumo. Si el store distribuido no está configurado, desarrollo y pruebas usarán el store en memoria compatible; producción debe configurar ambos valores para activar E3 y no debe tratar el cliente como autoridad.
+
+El Gateway tendrá circuit breaker por proveedor/modelo: tres fallos transitorios consecutivos abren el circuito durante 30 segundos, las solicitudes nuevas reciben 503 seguro con `Retry-After`, y solo una prueba half-open puede intentar recuperación. Éxitos cierran el circuito; errores de validación, DLP, autenticación o cuota no lo abren. Planner y stream de Nora usarán un timeout de 15 segundos y liberarán la reserva si abortan o el proveedor falla.
+
+La configuración seguirá siendo reversible por variables privadas, sin incorporar pagos, tablas, telemetría conectada, acciones fiscales ni transmisión de fuentes locales. E3 deja E4 pendiente para observabilidad redacted y métricas agregadas.
+
+
+### Cierre E3 — resultado validado
+
+Se implementaron `src/cfdi/ai/ai-resilience.js` y `src/cfdi/ai/ai-distributed-store.js`, se extendió `AiAdmissionService` para aceptar stores síncronos o asíncronos y se integraron planner/Nora con timeout, breaker y liberación segura. El store Redis REST usa scripts atómicos, claves de cuenta opaca, TTL de lease de 30 segundos y retención de 62 días; una configuración inválida no rompe la función y bloquea la admisión remota con mensaje seguro. El fallback en memoria se conserva solo para desarrollo/pruebas cuando no hay variables Redis.
+
+El circuit breaker abre después de tres fallos transitorios, espera 30 segundos, permite una prueba half-open y responde 503 con `Retry-After`. La función planner declara `maxDuration: 20`; el timeout de Gateway es configurable y su valor por defecto es 15 segundos. No se añadieron tablas, pagos, persistencia de prompts, telemetría conectada ni acciones fiscales; tampoco se activó la configuración Redis en el sandbox. E3 quedó validada con **290/290 unitarias**, **9/9 pruebas focalizadas E3**, **24/24 E2E focalizadas** y **110/110 E2E completas**, además del build estático aprobado.
+
+E4 — observabilidad redacted y métricas agregadas — permanece pendiente y requiere autorización independiente.

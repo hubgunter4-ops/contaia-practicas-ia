@@ -24,7 +24,7 @@ La fuente efectiva es server-side: Free es el valor por defecto y Premium requie
 
 Cada admisión usa `accountId`, capacidad, periodo UTC `YYYY-MM` e `Idempotency-Key` con prefijo `ai_`. El store de proceso reserva una unidad antes de Gateway, la completa cuando la respuesta es válida o la libera ante error/abort. Un replay finalizado de planner devuelve el JSON previamente validado y no vuelve a llamar Gateway; un replay pendiente o liberado exige una nueva acción explícita.
 
-El store actual es deliberadamente efímero e inyectable para pruebas. No es distribuido, no sobrevive de forma confiable entre instancias ni representa una conciliación de facturación. E3 debe sustituirlo por un store distribuido con TTL, límite global, control de concurrencia y circuit breaker.
+El store base de E2 es deliberadamente efímero e inyectable para pruebas. E3 añade el adaptador Redis REST opcional con TTL, reserva atómica y circuit breaker; las variables privadas del store no están configuradas en el sandbox y el semáforo distribuido de concurrencia permanece pendiente.
 
 ## Fronteras de transporte
 
@@ -36,4 +36,4 @@ El endpoint planner valida DLP antes de admisión y valida la salida JSON despu�
 
 La implementación aprobó **281/281** pruebas unitarias, compilación ESM focalizada, build estático, **6/6** E2E focalizadas y **110/110** E2E completas. Las fixtures de navegador emplean tokens sintéticos e interceptan la red; no usan credenciales, CFDI ni datos fiscales reales.
 
-E2 no incluye tablas, pagos, checkout, webhooks, persistencia de prompts, telemetría conectada, rate limiting distribuido, UI de upgrade, canary ni aprobación de modelos. La siguiente fase propuesta es **E3 — rate limit distribuido, resiliencia y circuit breaker**, previa autorización explícita.
+E2 no incluye tablas, pagos, checkout, webhooks, persistencia de prompts, telemetría conectada, UI de upgrade, canary ni aprobación de modelos. E3 queda documentada en el diseño central; la siguiente fase propuesta es **E4 — observabilidad redacted y métricas agregadas**, previa autorización explícita.

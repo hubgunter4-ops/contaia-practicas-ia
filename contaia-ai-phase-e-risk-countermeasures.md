@@ -1,8 +1,8 @@
 # ContaIA — Riesgos pendientes y contramedidas técnicas para Fase IA E
 
-**Corte:** revisión posterior a Fase IA E2
+**Corte:** revisión posterior a Fase IA E3
 **Alcance:** planner JSON CFDI, explicación segura con Nora, cuotas Premium, DLP y observabilidad
-**Estado:** E0, E1 y E2 implementadas localmente; E3–E6 continúan como controles pendientes
+**Estado:** E0, E1, E2 y E3 implementadas localmente; E4–E6 continúan como controles pendientes
 
 ## 1. Conclusión ejecutiva
 
@@ -11,14 +11,14 @@ La arquitectura de Fases IA A-D tiene una frontera fiscal sólida: el parser, el
 Los riesgos pendientes están en cinco superficies operativas:
 
 1. **Salida de texto hacia terceros:** el filtro actual bloquea XML, RFC y UUID, pero no constituye DLP completo para nombres, correos, teléfonos, CLABE, cuentas, tarjetas, direcciones, importes o referencias bancarias.
-2. **Control de acceso y cuotas:** el endpoint planner actualmente puede invocarse sin una identidad de cuenta verificada; el rate limit es un `Map` en memoria por proceso y no es una cuota comercial ni un control distribuido de costo.
+2. **Control de acceso y cuotas:** E2 vincula planner y explicación CFDI a identidad, entitlements y cuotas server-side; el límite por IP sigue siendo un `Map` secundario y el store Redis distribuido de E3 requiere activación privada en el entorno de producción.
 3. **Observabilidad:** existen validaciones y errores controlados, pero no hay todavía un contrato de métricas redacted para saber cuántas solicitudes llegan, cuántos planes se bloquean, cuánto tardan o cuándo se degrada el proveedor.
-4. **Dependencia del Gateway/modelo:** se solicita `json_schema` estricto, pero aún no hay una matriz de compatibilidad, circuit breaker, presupuesto por cuenta ni una prueba de disponibilidad por modelo configurado.
-5. **Entitlements Premium:** el contrato Free/Premium está diseñado, pero no implementado. El cliente no puede ser la autoridad para desbloquear Premium; la autorización debe ser server-side, versionada y separada de los datos fiscales locales.
+4. **Dependencia del Gateway/modelo:** se solicita `json_schema` estricto y E3 añade timeout, `Retry-After` y circuit breaker; todavía falta la matriz de compatibilidad y aprobación por modelo.
+5. **Entitlements Premium:** E2 ya aplica Free/Premium server-side mediante allowlist privada temporal. Todavía no existe suscripción comercial, checkout ni resolver de entitlements versionado.
 
 La recomendación es que Fase IA E sea una fase de **admisión segura, DLP, control de costos y observabilidad**, no una fase para ampliar el poder fiscal del modelo. No se deben añadir herramientas mutantes ni acciones de presentación, cancelación, aprobación o contabilización.
 
-> **Actualización E2:** planner y `cfdi-summary-v1` ya pasan por admisión server-side autenticada, entitlement Free por defecto, límites mensuales e idempotencia de proceso. Esto mitiga identidad/entitlement y duplicación dentro de una instancia; no resuelve abuso multi-instancia, almacenamiento distribuido, circuit breaker, observabilidad conectada, revisión de proveedor ni UX de upgrade.
+> **Actualización E3:** planner y `cfdi-summary-v1` ya pasan por admisión server-side autenticada, entitlement Free por defecto, límites mensuales, idempotencia, leases con TTL y breaker. El adaptador Redis REST distribuido está preparado pero no activado en este sandbox; E4 aún debe conectar observabilidad redacted sin prompts ni datos fiscales.
 
 ## 2. Estado técnico observado
 
@@ -42,12 +42,12 @@ La recomendación es que Fase IA E sea una fase de **admisión segura, DLP, cont
 
 | Observación | Riesgo asociado |
 |---|---|
-| `handleCfdiPlanner()` valida método, origen y cuerpo, pero no verifica un Bearer token ni una cuenta de usuario | No existe todavía una autoridad server-side para vincular planner, cuota, plan Premium o abuso a una cuenta |
-| `rateBuckets` es un `Map` en memoria del proceso | El límite se reinicia al reciclar la función serverless y no es global entre instancias; puede evadirse con distribución de tráfico |
+| `handleCfdiPlanner()` valida método, origen, cuerpo, Bearer y cuenta antes de admisión | La autoridad server-side existe para planner; la activación comercial definitiva de entitlements continúa pendiente |
+| `rateBuckets` es un `Map` en memoria del proceso y el store Redis E3 es opcional | El límite por IP se reinicia al reciclar la función; producción necesita configurar el store distribuido para cuota global |
 | La clave de rate limit deriva de `x-forwarded-for` o `remoteAddress` | Debe confiarse únicamente en el encabezado de IP que el runtime de despliegue garantice; no conviene tratar un header arbitrario del cliente como identidad |
 | El filtro `SENSITIVE_TEXT_PATTERNS` cubre XML, UUID y una forma de RFC | No detecta todos los datos personales, bancarios, comerciales o fiscales que una persona puede escribir en texto libre |
 | No hay `requestId` ni eventos estructurados en `callCfdiPlanner()`/`handleCfdiPlanner()` | No se puede correlacionar una solicitud, su latencia, su fallback, su error de schema y su consumo sin inspeccionar datos potencialmente sensibles |
-| `vercel.json` no declara una función específica para `api/cfdi/planner.js` | El tiempo máximo, comportamiento de ejecución y límites operativos del planner no están documentados explícitamente en configuración |
+| `vercel.json` declara `maxDuration` para `api/cfdi/planner.js`, pero el timeout de Gateway es configurable | Un valor de entorno excesivo o una configuración de modelo incompatible puede degradar disponibilidad; E4/E5 deben añadir evidencia operativa |
 | La selección de modelo acepta un prefijo `openai/` o `anthropic/` y un valor de ambiente | Hay validación sintáctica, pero no una allowlist de modelos probados para `json_schema`, costo, latencia y retención |
 | El cliente puede ejecutar herramientas locales desde el navegador | Esto es aceptable para resultados locales, pero no puede usarse como autoridad para Premium, cuotas, cobros o acciones remotas futuras |
 | La limpieza termina referencias y Workers, pero JavaScript no ofrece borrado criptográfico garantizado de memoria | La promesa correcta es “limpieza best effort en memoria y lifecycle”, no “borrado forense” |
@@ -194,29 +194,31 @@ La cuota debe contar una admisión remota, no archivos, XML, filas o importes. E
 
 ### 6.1 Problema
 
-El rate limit actual es de 30 solicitudes por 10 minutos y vive en un `Map` de módulo. En un entorno serverless puede:
+El límite inmediato actual es de 30 solicitudes por 10 minutos y vive en un `Map` de módulo. En un entorno serverless puede:
 
 - reiniciarse con el proceso;
 - existir de forma independiente en múltiples instancias;
 - no limitar por cuenta;
 - no reservar presupuesto de Gateway;
 - compartir accidentalmente presión entre rutas que usan el mismo helper;
+
+E2 añadió cuota mensual por cuenta e idempotencia, y E3 preparó un store Redis REST con reserva atómica y TTL. Sin `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN`, el modo en memoria solo es válido para desarrollo/pruebas y no debe presentarse como cuota distribuida de producción.
 - depender de una IP que no siempre es una identidad estable.
 
 El límite de cuerpo es 192 KB aunque el planner solo necesita un mensaje de 2,000 caracteres. Eso no representa un costo grande por sí solo, pero permite consumir parsing y memoria innecesarios antes de rechazar campos adicionales.
 
-### 6.2 Contramedidas
+### 6.2 Contramedidas y estado E3
 
 - Mantener el límite local inmediato para reducir abuso barato.
-- Añadir rate limit distribuido por `accountId` y un límite separado por IP/anónimo.
-- Usar almacenamiento atómico con TTL y política de fail-closed para Premium; si el almacén está caído, permitir solo la ruta local y el presupuesto Free previamente definido.
-- Añadir `Retry-After` en respuestas 429.
-- Añadir límite de concurrencia por cuenta y por proveedor/modelo.
-- Añadir circuit breaker por modelo: abrir tras una tasa definida de 429/5xx o latencia elevada y volver a probar con backoff.
-- Definir timeout de función explícito para `api/cfdi/planner.js`.
-- No reintentar automáticamente una llamada cuyo resultado ya llegó; usar `idempotencyKey` para evitar doble consumo.
-- Reservar costo antes de Gateway y registrar el estado `admitted`, `completed`, `failed` o `released`.
-- No permitir que un cambio de proveedor por ambiente eluda el mismo presupuesto de cuenta.
+- [x] Preparar rate limit distribuido por `accountId` opaco, capability y periodo UTC, manteniendo un límite separado por IP/anónimo.
+- [x] Usar almacenamiento atómico con TTL de 30 segundos, retención de 62 días y política fail-closed cuando una configuración Redis explícita es inválida.
+- [x] Añadir `Retry-After` en respuestas de cuota y circuit breaker.
+- [ ] Añadir un semáforo distribuido independiente por cuenta y proveedor/modelo; la capability de concurrencia permanece pendiente.
+- [x] Añadir circuit breaker por modelo: tres fallos transitorios abren 30 segundos y una sola prueba half-open permite recuperación.
+- [x] Definir timeout de función explícito para `api/cfdi/planner.js` y timeout de Gateway configurable, con 15 segundos por defecto.
+- [x] No reintentar automáticamente una llamada cuyo resultado ya llegó; usar `idempotencyKey` y distinguir replay, expiración y liberación.
+- [x] Reservar antes de Gateway y representar `reserved`, `completed`, `released` y `expired` sin datos fiscales.
+- [x] Mantener el mismo presupuesto de cuenta aunque cambie el proveedor por ambiente.
 
 ## 7. Riesgo P0 — Observabilidad inexistente o demasiado rica
 
@@ -492,16 +494,19 @@ Entregables:
 
 **Objetivo:** controlar abuso y costo de Gateway.
 
+**Estado:** implementada localmente y validada. El store distribuido está preparado para activarse con `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN`; esas variables no están configuradas en el sandbox ni se inventaron secretos.
+
 Entregables:
 
-- límites por cuenta, IP/anónimo, provider/model y concurrencia;
-- almacenamiento distribuido con TTL;
-- `Retry-After`;
-- circuit breaker y timeout;
-- `maxDuration` explícito de la función;
-- pruebas de duplicados, retries y caída del almacén.
+- [x] límites por cuenta opaca, IP/anónimo y provider/model;
+- [x] almacenamiento Redis REST atómico con TTL de lease y retención de operación;
+- [x] `Retry-After`;
+- [x] circuit breaker y timeout;
+- [x] `maxDuration` explícito de la función;
+- [x] pruebas de duplicados, expiración, retries, circuit breaker y configuración del almacén;
+- [ ] semáforo distribuido independiente para concurrencia por cuenta/proveedor.
 
-**Criterio de salida:** una oleada distribuida no puede crear consumo ilimitado ni duplicar reservas.
+**Criterio de salida:** con el store Redis configurado, una oleada distribuida no puede crear consumo ilimitado ni duplicar reservas; sin esa configuración, el runtime remoto debe considerarse no habilitado para producción y las herramientas locales permanecen disponibles. Evidencia actual: **290/290 unitarias**, **9 focalizadas E3**, **24 E2E focalizadas** y **110/110 E2E completas**.
 
 ### E4 — Observabilidad redacted
 

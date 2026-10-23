@@ -893,13 +893,13 @@ La aplicación conecta el adaptador con `src/cfdi/ai/planner-api.js` y `POST /ap
 
 `ai-governance-v1` establece clases de datos, políticas por endpoint, cuotas iniciales de planner/explicación/snapshot, catálogo E-01–E-12, códigos de error y eventos de telemetría redacted. El contrato puro vive en `src/cfdi/ai/ai-governance-contract.js` y no activa red, persistencia, entitlements, DLP runtime ni observabilidad conectada. Su validador admite únicamente escalares y enums contractuales; rechaza prompts, bodies, headers, fuentes fiscales y referencias de cuenta no opacas.
 
-La especificación completa está en `contaia-ai-phase-e0-governance-contract.md`. Las siguientes etapas deben implementar el control runtime en orden: E1 DLP local, E2 admisión/entitlements, E3 cuotas distribuidas y resiliencia, E4 telemetría, E5 proveedores aprobados y E6 UX/canary.
+La especificación completa está en `contaia-ai-phase-e0-governance-contract.md`. E1 DLP local, E2 admisión/entitlements y E3 cuotas distribuidas/resiliencia están implementadas en sus contratos respectivos; siguen pendientes E4 telemetría, E5 proveedores aprobados y E6 UX/canary.
 
 ### Fase E1 — DLP local — implementada localmente
 
 `src/cfdi/ai/ai-dlp-gate.js` implementa `ai-dlp-v1` como gate determinista y local. El planner comparte esta frontera en cliente y servidor, clasifica señales de alta/media confianza, redacciona previews locales y detiene cualquier señal no permitida antes de Gateway. E1 no habilita DLP semántico para archivos/imágenes, confirmación interactiva de señales medias, entitlements, cuotas o telemetría conectada.
 
-El contrato y los límites están en `contaia-ai-phase-e1-dlp-gate.md`. La evidencia de cierre es 265/265 unitarias, 21/21 pruebas focalizadas de DLP/servidor, 4/4 E2E focalizadas y build estático aprobado. La siguiente etapa es E2 — admisión, identidad, entitlements y cuotas server-side.
+El contrato y los límites están en `contaia-ai-phase-e1-dlp-gate.md`. La evidencia histórica de cierre de E1 es 265/265 unitarias, 21/21 pruebas focalizadas de DLP/servidor, 4/4 E2E focalizadas y build estático aprobado; E2 y E3 se documentan en los anexos posteriores.
 
 ### Fase E — Capacidades Premium
 
@@ -931,4 +931,14 @@ E2 está implementada localmente. `src/cfdi/ai/ai-admission.js` aporta `ai-admis
 
 Antes de llamar Gateway, `POST /api/cfdi/planner` exige Bearer e `Idempotency-Key`; conserva el body reducido a texto filtrado. El flujo de Nora se admite únicamente cuando existe `cfdi-summary-v1` resultado de doble confirmación y exige snapshot explícito más explicación, por lo que Free mantiene las herramientas locales pero no comparte el resumen remotamente. Las reservas se completan con una respuesta válida o se liberan en error/abort; un replay no duplica consumo ni vuelve a invocar Gateway.
 
-El store de E2 es efímero por proceso, no sustituye una cuota distribuida ni introduce tablas, cobros, persistencia fiscal o telemetría conectada. La fase validó 281/281 unitarias, build estático, 6/6 E2E focalizadas y 110/110 E2E completas. E3 sigue pendiente para rate limit distribuido, TTL, concurrencia y circuit breaker.
+El store base de E2 era efímero por proceso, no sustituía una cuota distribuida ni introducía tablas, cobros, persistencia fiscal o telemetría conectada. E3 añade un adaptador Redis REST opcional con scripts atómicos, TTL y breaker, sin activarlo por defecto ni convertir la configuración del cliente en autoridad.
+
+La evidencia acumulada posterior a E3 es de 290/290 unitarias, build estático, 9 pruebas focalizadas E3, 24 E2E focalizadas y 110/110 E2E completas. El semáforo distribuido de concurrencia, la observabilidad conectada y la revisión formal de proveedores permanecen pendientes.
+
+### Actualización — Fase IA E3: rate limit distribuido y resiliencia
+
+`src/cfdi/ai/ai-distributed-store.js` define el contrato `ai-rate-store-v1` y usa operaciones Redis REST atómicas para reservar, completar y liberar una capacidad por cuenta opaca, capability, periodo UTC e idempotency key. La reserva tiene TTL de 30 segundos y la operación conserva estado durante 62 días para distinguir replay, expiración y liberación; no se envían XML, RFC, UUID, archivos, movimientos ni prompts al store.
+
+`src/cfdi/ai/ai-resilience.js` implementa timeout compuesto y circuit breaker por proveedor/modelo. Tres fallos transitorios abren el circuito durante 30 segundos, una sola solicitud half-open puede probar recuperación y el servidor responde con `Retry-After` sin devolver diagnósticos upstream. `vercel.json` declara `maxDuration: 20` para el planner y el timeout de Gateway es 15 segundos por defecto.
+
+La activación distribuida depende de `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN` como variables privadas. Sin ellas, memoria es solo un modo compatible para desarrollo/pruebas; una configuración parcial o insegura bloquea la admisión remota de forma controlada. E4 — observabilidad redacted — es la siguiente fase pendiente.

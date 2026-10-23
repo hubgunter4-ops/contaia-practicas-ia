@@ -186,15 +186,16 @@ La petición del usuario puede viajar al endpoint planner únicamente después d
 | **IA E0** | Contrato de gobernanza: datos, amenazas, cuotas, modelos y observabilidad redacted | Terminada localmente |
 | **IA E1** | `AiDataLossPreventionGate` local, modo planner estricto y rechazo antes de Gateway | Terminada localmente |
 | **IA E2** | Admisión autenticada, entitlement server-side Free/Premium, cuota mensual e idempotencia | Terminada localmente |
-| **IA E3-E6** | Rate limit distribuido, resiliencia, telemetría conectada, revisión de proveedores y UX Premium | Pendientes |
+| **IA E3** | Store Redis REST opcional, TTL de leases, timeout, `Retry-After` y circuit breaker | Implementada localmente; activación Redis pendiente |
+| **IA E4-E6** | Observabilidad conectada, revisión de proveedores y UX Premium | Pendientes |
 
 ## 8. Evidencia de validación
 
 La validación acumulada del estado actual incluye:
 
-- **281/281 pruebas unitarias aprobadas.**
+- **290/290 pruebas unitarias aprobadas.**
 - **110/110 pruebas E2E aprobadas** en escritorio y Pixel 5.
-- **6/6 E2E focalizadas** de planner/admisión y panel CFDI aprobadas.
+- **9/9 pruebas focalizadas E3** y **24/24 E2E focalizadas** de planner, admisión, Nora y resiliencia aprobadas.
 - **21/21 pruebas focalizadas** de DLP y servidor aprobadas.
 - Build estático `npm run build:vercel` aprobado.
 - Compilación focalizada de planner, orquestador y endpoint aprobada.
@@ -219,7 +220,7 @@ E1 amplió la defensa local a XML, UUID, RFC, CURP, NSS, CLABE, tarjetas, contac
 
 ### Disponibilidad y degradación
 
-El planner es opcional. Las acciones deterministas deben seguir funcionando aunque el Gateway no tenga configuración, alcance rate limit, falle o devuelva JSON inválido. Esta degradación es un requisito de producto, no un error fiscal.
+El planner es opcional. Las acciones deterministas deben seguir funcionando aunque el Gateway no tenga configuración, alcance rate limit, falle, el circuito se abra o devuelva JSON inválido. E3 prepara el store Redis distribuido, pero no se activó en el sandbox por falta de secretos privados; la memoria no debe presentarse como cuota de producción. Esta degradación es un requisito de producto, no un error fiscal.
 
 ### Observabilidad
 
@@ -231,7 +232,7 @@ El planner no aprueba pólizas, no presenta declaraciones, no cancela CFDI, no m
 
 ### Monetización y Premium
 
-E2 aplica cuotas y entitlements server-side en las rutas remotas: planner Free/Premium y explicación/snapshot CFDI explícito. Free conserva las herramientas locales, pero no puede compartir `cfdi-summary-v1` con Nora. La allowlist privada de Premium es una transición operativa, no cobro, checkout ni fuente comercial definitiva; E3–E6 deben aportar almacenamiento distribuido, resiliencia, telemetría redacted, revisión de proveedores y UX de upgrade.
+E2 aplica cuotas y entitlements server-side en las rutas remotas: planner Free/Premium y explicación/snapshot CFDI explícito. Free conserva las herramientas locales, pero no puede compartir `cfdi-summary-v1` con Nora. E3 añade resiliencia y el adaptador de almacenamiento distribuido; la allowlist privada de Premium sigue siendo una transición operativa, no cobro, checkout ni fuente comercial definitiva. E4–E6 deben aportar observabilidad redacted, revisión de proveedores y UX de upgrade.
 
 ## 10. Recomendación para la revisión de arquitectura
 

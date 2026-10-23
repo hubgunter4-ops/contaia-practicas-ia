@@ -713,3 +713,19 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [x] Probar que manipular body, reintentos o la configuración cliente no desbloquea Premium ni duplica consumo.
 - [x] Validar **281/281** unitarias, build estático, **6/6** E2E focalizadas y **110/110** E2E completas; sin datos fiscales reales ni artefactos de test conservados.
 **Siguiente fase propuesta tras E2:** E3 — rate limit distribuido, resiliencia y circuit breaker, previa confirmación explícita.
+
+
+---
+## Fase IA E3 — Rate limiting distribuido, TTL y circuit breaker
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+- [x] Crear store Redis REST opcional con operaciones atómicas Lua de reserva, cierre y liberación por cuenta opaca, capability y periodo UTC.
+- [x] Aplicar TTL de 30 segundos a reservas y retención de 62 días para distinguir `reserved`, `completed`, `released` y `expired` sin permitir replay silencioso.
+- [x] Mantener store en memoria compatible solo para desarrollo/pruebas cuando no existan las variables privadas del store distribuido; la configuración inválida falla cerrada para la admisión remota.
+- [x] Añadir circuit breaker por proveedor/modelo: tres fallos transitorios abren 30 segundos, una sola prueba half-open y cierre tras éxito.
+- [x] Añadir timeout de Gateway de 15 segundos, `Retry-After` seguro y liberación de reservas en timeout, abort o error.
+- [x] Mantener límite inmediato por IP como defensa secundaria y no confiar en él como cuota comercial.
+- [x] Cubrir atomicidad, TTL, expiración, replay, fallos del store, estados del breaker y fallback local sin datos fiscales.
+- [x] Validar **290/290 pruebas unitarias**, build estático, **9/9 pruebas E3 focalizadas**, **24/24 E2E focalizadas** y **110/110 E2E** completas en serie.
+- [ ] Las variables `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIMIT_KV_REST_TOKEN` quedaron preparadas pero no configuradas en este sandbox; la activación distribuida real requiere definirlas como secretos privados en Vercel.
+- [ ] No se añadió todavía un semáforo distribuido independiente para `tools.ai.concurrent.requests`; queda como parte de la siguiente revisión de capacidad/resiliencia.
+**Siguiente fase propuesta tras E3:** E4 — observabilidad redacted y métricas agregadas sin prompts ni datos fiscales, previa confirmación explícita.

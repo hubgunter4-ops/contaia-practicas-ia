@@ -46,7 +46,7 @@ test("admite planner Free hasta el límite mensual y bloquea la siguiente reserv
     admission.complete(result, { toolId: "cfdi.summary", sequence: index });
   }
   assert.throws(() => admission.admit({ accountId, capability: plannerCapability, idempotencyKey: key("free-blocked") }), (error) => {
-    assert.equal(error.code, "ai_capability_blocked");
+    assert.equal(error.code, "ai_rate_limited");
     assert.equal(error.status, 429);
     return true;
   });

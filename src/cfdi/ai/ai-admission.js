@@ -1,7 +1,9 @@
-import { AI_GOVERNANCE_CONTRACT_VERSION, getAiCapability } from "./ai-governance-contract.js";
+import { getAiCapability } from "./ai-governance-contract.js";
 
 export const AI_ADMISSION_CONTRACT_VERSION = "ai-admission-v1";
 export const AI_ADMISSION_PLAN_VERSION = 1;
+export const AI_RESERVATION_TTL_MS = 30_000;
+export const AI_OPERATION_RETENTION_MS = 62 * 24 * 60 * 60 * 1000;
 
 const PLAN_IDS = new Set(["free", "premium"]);
 const PLAN_STATUSES = new Set(["active", "grace", "expired", "unknown"]);
@@ -20,6 +22,7 @@ export class AiAdmissionError extends Error {
 }
 
 function freeze(value) { return Object.freeze(value); }
+function isThenable(value) { return value && typeof value.then === "function"; }
 
 function assertAccountId(accountId) {
   if (typeof accountId !== "string" || !ACCOUNT_ID.test(accountId)) {
@@ -84,30 +87,58 @@ function safeResult(result) {
   return JSON.parse(JSON.stringify(result));
 }
 
-export function createMemoryAiUsageStore({ now = () => Date.now() } = {}) {
+export function createMemoryAiUsageStore({
+  now = () => Date.now(),
+  reservationTtlMs = AI_RESERVATION_TTL_MS,
+  retentionMs = AI_OPERATION_RETENTION_MS,
+} = {}) {
   const usage = new Map();
   const operations = new Map();
+  const ttlMs = Math.max(5_000, Math.min(120_000, Number(reservationTtlMs) || AI_RESERVATION_TTL_MS));
+  const retention = Math.max(86_400_000, Number(retentionMs) || AI_OPERATION_RETENTION_MS);
+
+  function decrementUsage(item, reference) {
+    const currentUsage = usage.get(item.usageRecordKey);
+    if (currentUsage) usage.set(item.usageRecordKey, { count: Math.max(0, currentUsage.count - 1), updatedAt: reference });
+  }
+
+  function expire(item, reference) {
+    if (!item || item.state !== "reserved") return false;
+    decrementUsage(item, reference);
+    item.state = "expired";
+    item.updatedAt = reference;
+    return true;
+  }
 
   function prune(reference = now()) {
-    const cutoff = reference - 62 * 24 * 60 * 60 * 1000;
-    for (const [key, item] of operations) if (item.updatedAt < cutoff) operations.delete(key);
+    const cutoff = reference - retention;
+    for (const [key, item] of operations) {
+      if (item.state === "reserved" && item.expiresAt <= reference) expire(item, reference);
+      if (item.updatedAt < cutoff && item.state !== "reserved") operations.delete(key);
+    }
     for (const [key, item] of usage) if (item.updatedAt < cutoff) usage.delete(key);
   }
 
   function reserve({ accountId, capability, period, idempotencyKey, limit }) {
-    prune();
+    const reference = now();
+    prune(reference);
     const key = operationKey({ accountId, capability, period, idempotencyKey });
     const existing = operations.get(key);
     if (existing) {
-      if (existing.state === "completed") return freeze({ decision: "replay_completed", reservation: freeze({ ...existing }), result: safeResult(existing.result) });
-      return freeze({ decision: existing.state === "reserved" ? "replay_pending" : "replay_released", reservation: freeze({ ...existing }), result: null });
+      const decision = existing.state === "completed"
+        ? "replay_completed"
+        : existing.state === "reserved"
+          ? "replay_pending"
+          : existing.state === "expired"
+            ? "replay_expired"
+            : "replay_released";
+      return freeze({ decision, reservation: freeze({ ...existing, result: safeResult(existing.result) }), result: safeResult(existing.result) });
     }
     const usageRecordKey = usageKey({ accountId, capability, period });
-    const current = usage.get(usageRecordKey) || { count: 0, updatedAt: now() };
+    const current = usage.get(usageRecordKey) || { count: 0, updatedAt: reference };
     if (current.count >= limit) return freeze({ decision: "blocked", currentUsage: current.count, remaining: 0 });
-    const updatedAt = now();
     const reservation = {
-      id: `res_${crypto.randomUUID()}`,
+      id: `res_${globalThis.crypto?.randomUUID?.() || `${reference}_${Math.random().toString(36).slice(2)}`}`,
       key,
       usageRecordKey,
       accountId,
@@ -115,34 +146,43 @@ export function createMemoryAiUsageStore({ now = () => Date.now() } = {}) {
       period,
       idempotencyKey,
       state: "reserved",
-      createdAt: updatedAt,
-      updatedAt,
+      createdAt: reference,
+      updatedAt: reference,
+      expiresAt: reference + ttlMs,
       result: null,
     };
-    usage.set(usageRecordKey, { count: current.count + 1, updatedAt });
+    usage.set(usageRecordKey, { count: current.count + 1, updatedAt: reference });
     operations.set(key, reservation);
     return freeze({ decision: "reserved", reservation: freeze({ ...reservation }), currentUsage: current.count + 1, remaining: Math.max(0, limit - current.count - 1) });
   }
 
   function complete(reservation, result) {
+    const reference = now();
+    prune(reference);
     const current = operations.get(reservation?.key);
-    if (!current || current.id !== reservation.id) throw new AiAdmissionError("La reserva de IA ya no es válida.", { code: "ai_entitlement_unknown", status: 409 });
-    if (current.state === "completed") return freeze({ ...current });
-    if (current.state !== "reserved") throw new AiAdmissionError("La reserva de IA no puede cerrarse.", { code: "ai_entitlement_unknown", status: 409 });
+    if (!current || current.id !== reservation.id) throw new AiAdmissionError("La reserva de IA ya no es válida.", { code: "ai_capability_blocked", status: 409 });
+    if (current.state === "reserved" && current.expiresAt <= reference) {
+      expire(current, reference);
+      throw new AiAdmissionError("La reserva de IA expiró antes de terminar.", { code: "ai_capability_blocked", status: 409 });
+    }
+    if (current.state === "completed") return freeze({ ...current, result: safeResult(current.result) });
+    if (current.state !== "reserved") throw new AiAdmissionError("La reserva de IA no puede cerrarse.", { code: "ai_capability_blocked", status: 409 });
     current.state = "completed";
     current.result = safeResult(result);
-    current.updatedAt = now();
-    return freeze({ ...current });
+    current.updatedAt = reference;
+    return freeze({ ...current, result: safeResult(current.result) });
   }
 
   function release(reservation) {
+    const reference = now();
+    prune(reference);
     const current = operations.get(reservation?.key);
     if (!current || current.id !== reservation.id) return false;
+    if (current.state === "reserved" && current.expiresAt <= reference) return expire(current, reference);
     if (current.state !== "reserved") return false;
-    const currentUsage = usage.get(current.usageRecordKey);
-    if (currentUsage) usage.set(current.usageRecordKey, { count: Math.max(0, currentUsage.count - 1), updatedAt: now() });
+    decrementUsage(current, reference);
     current.state = "released";
-    current.updatedAt = now();
+    current.updatedAt = reference;
     return true;
   }
 
@@ -150,34 +190,45 @@ export function createMemoryAiUsageStore({ now = () => Date.now() } = {}) {
     reserve,
     complete,
     release,
-    getUsage({ accountId, capability, period }) { return usage.get(usageKey({ accountId, capability, period }))?.count || 0; },
+    getUsage({ accountId, capability, period }) {
+      prune();
+      return usage.get(usageKey({ accountId, capability, period }))?.count || 0;
+    },
     getOperation({ accountId, capability, period, idempotencyKey }) {
+      prune();
       const item = operations.get(operationKey({ accountId, capability, period, idempotencyKey }));
       return item ? freeze({ ...item, result: safeResult(item.result) }) : null;
     },
+    reservationTtlMs: ttlMs,
+    retentionMs: retention,
   });
+}
+
+function normalizeStoreError(error) {
+  if (error instanceof AiAdmissionError) return error;
+  if (error?.code === "ai_rate_store_unavailable") return new AiAdmissionError("El control remoto de cuota no está disponible. Conserva las herramientas locales y vuelve a intentar.", { code: "ai_rate_store_unavailable", status: 503, retryAfter: error.retryAfter || 2 });
+  return error;
+}
+
+function withStoreErrorHandling(operation) {
+  try {
+    const result = operation();
+    return isThenable(result) ? result.catch((error) => { throw normalizeStoreError(error); }) : result;
+  } catch (error) {
+    throw normalizeStoreError(error);
+  }
 }
 
 export function createAiAdmissionService({ entitlementResolver = resolveServerEntitlement, usageStore = createMemoryAiUsageStore(), now = () => new Date() } = {}) {
   if (typeof entitlementResolver !== "function" || !usageStore?.reserve || !usageStore?.complete || !usageStore?.release) throw new TypeError("AiAdmissionService necesita resolver y store válidos.");
 
-  function admit({ accountId, capability, idempotencyKey, env = process.env } = {}) {
-    assertAccountId(accountId);
-    assertAiIdempotencyKey(idempotencyKey);
-    const entitlement = normalizedEntitlement(entitlementResolver({ accountId, capability, env }));
-    const { descriptor, limit } = resolveLimit(capability, entitlement);
-    const period = utcMonthPeriod(now());
-    const reservation = usageStore.reserve({ accountId, capability, period, idempotencyKey, limit });
-    if (reservation.decision === "blocked") {
-      throw new AiAdmissionError("Alcanzaste el límite mensual de consultas remotas para este plan. Puedes continuar con las herramientas locales.", { code: "ai_capability_blocked", status: 429, retryAfter: 60 });
-    }
-    if (reservation.decision === "replay_pending") {
-      throw new AiAdmissionError("Esta solicitud de IA ya está en proceso. Espera su resultado antes de volver a intentarlo.", { code: "ai_capability_blocked", status: 409 });
-    }
-    if (reservation.decision === "replay_released") {
-      throw new AiAdmissionError("Esta acción anterior no se completó. Inicia una nueva consulta explícita para volver a intentarlo.", { code: "ai_capability_blocked", status: 409 });
-    }
-    return freeze({
+  function finalizeAdmission({ accountId, capability, idempotencyKey, entitlement, descriptor, limit, period, reservation }) {
+    if (reservation.decision === "blocked") throw new AiAdmissionError("Alcanzaste el límite mensual de consultas remotas para este plan. Puedes continuar con las herramientas locales.", { code: "ai_rate_limited", status: 429, retryAfter: 60 });
+    if (reservation.decision === "replay_pending") throw new AiAdmissionError("Esta solicitud de IA ya está en proceso. Espera su resultado antes de volver a intentarlo.", { code: "ai_capability_blocked", status: 409 });
+    if (reservation.decision === "replay_released") throw new AiAdmissionError("Esta acción anterior no se completó. Inicia una nueva consulta explícita para volver a intentarlo.", { code: "ai_capability_blocked", status: 409 });
+    if (reservation.decision === "replay_expired") throw new AiAdmissionError("La reserva anterior expiró. Inicia una nueva consulta explícita para volver a intentarlo.", { code: "ai_capability_blocked", status: 409 });
+    const currentUsage = reservation.currentUsage ?? usageStore.getUsage({ accountId, capability, period });
+    const make = (usage) => freeze({
       contractVersion: AI_ADMISSION_CONTRACT_VERSION,
       accountId,
       capability,
@@ -186,23 +237,35 @@ export function createAiAdmissionService({ entitlementResolver = resolveServerEn
       period,
       limit,
       reservation: reservation.reservation,
-      currentUsage: reservation.currentUsage ?? usageStore.getUsage({ accountId, capability, period }),
+      currentUsage: usage,
       remaining: reservation.remaining ?? null,
       replay: reservation.decision === "replay_completed",
       cachedResult: reservation.result || null,
     });
+    return isThenable(currentUsage) ? currentUsage.then(make) : make(currentUsage);
+  }
+
+  function admit({ accountId, capability, idempotencyKey, env = process.env } = {}) {
+    assertAccountId(accountId);
+    assertAiIdempotencyKey(idempotencyKey);
+    const entitlement = normalizedEntitlement(entitlementResolver({ accountId, capability, env }));
+    const { descriptor, limit } = resolveLimit(capability, entitlement);
+    const period = utcMonthPeriod(now());
+    const reservation = withStoreErrorHandling(() => usageStore.reserve({ accountId, capability, period, idempotencyKey, limit }));
+    const finalize = (item) => finalizeAdmission({ accountId, capability, idempotencyKey, entitlement, descriptor, limit, period, reservation: item });
+    return isThenable(reservation) ? reservation.then(finalize) : finalize(reservation);
   }
 
   function complete(admission, result) {
     if (!admission?.reservation) throw new TypeError("La admisión no contiene una reserva.");
-    return usageStore.complete(admission.reservation, result);
+    return withStoreErrorHandling(() => usageStore.complete(admission.reservation, result));
   }
 
   function release(admission) {
-    return admission?.reservation ? usageStore.release(admission.reservation) : false;
+    return admission?.reservation ? withStoreErrorHandling(() => usageStore.release(admission.reservation)) : false;
   }
 
   return freeze({ admit, complete, release, usageStore });
 }
 
-export const __test = { normalizedEntitlement, resolveLimit, usageKey, operationKey, IDEMPOTENCY_KEY, ACCOUNT_ID };
+export const __test = { normalizedEntitlement, resolveLimit, usageKey, operationKey, IDEMPOTENCY_KEY, ACCOUNT_ID, isThenable };
