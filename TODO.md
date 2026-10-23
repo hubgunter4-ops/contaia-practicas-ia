@@ -743,3 +743,18 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [x] Validar **301/301 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E** completas en serie.
 - [ ] No se añadió un endpoint público de métricas, persistencia de eventos, dashboard externo ni telemetría con datos fiscales; E5 queda pendiente.
 **Siguiente fase propuesta tras E4:** E5 — matriz y aprobación de modelos/proveedores, previa confirmación explícita.
+
+
+---
+## Fase IA E5 — Matriz y aprobación formal de modelos/proveedores
+**Estado:** terminada localmente y validada; sin commit, push ni despliegue de esta fase.
+- [x] Registrar el catálogo vivo consultado el 23 de octubre de 2026 como evidencia de candidatos; no usar IDs del catálogo como configuración automática del Gateway.
+- [x] Crear `ai-model-approval-v1` con entradas exactas por proveedor/modelo, estado, capacidades requeridas, política de retención, evidencia de revisión, aprobador y expiración.
+- [x] Rechazar por defecto entradas ausentes, `candidate`, `deprecated`, `superseded`, preview sin aprobación, proveedor no allowlisted o cualquier modelo sin JSON Schema estricto, structured output, abort signal y salida acotada.
+- [x] Leer la matriz únicamente desde `AI_MODEL_APPROVALS_JSON` privado de servidor; nunca desde frontend, query string, body, localStorage o variables públicas.
+- [x] Bloquear planner y Nora remota antes de Gateway con `ai_provider_unapproved`, conservando herramientas locales, resultados CFDI y fallback local.
+- [x] Mantener `configuredProviders()` sin secretos y añadir solo `approvalStatus` seguro, sin convertir la UI en autoridad de seguridad.
+- [x] Añadir pruebas de matriz válida, campos extra, modelo expirado, capacidades insuficientes, proveedor no permitido, JSON inválido y bloqueo previo a Gateway.
+- [x] Validar catálogo vivo, **309/309 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E** completas en serie; no se activó ningún proveedor nuevo automáticamente.
+**Contrato entregado:** `contaia-ai-phase-e5-model-approval.md`.
+**Siguiente fase propuesta tras E5:** E6 — UX Premium, canary sintético y aprobación de lanzamiento, previa confirmación explícita.

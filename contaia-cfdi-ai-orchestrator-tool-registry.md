@@ -949,4 +949,10 @@ La activación distribuida depende de `AI_RATE_LIMIT_KV_REST_URL` y `AI_RATE_LIM
 
 El servidor instrumenta admisión permitida/bloqueada, planner solicitado/completado/fallback, explicación CFDI sanitizada/confirmada/fallida y cancelación de lifecycle. El sink de consola solo se activa con `AI_OBSERVABILITY_SINK=console`; en pruebas y desarrollo permanece nulo. No se añadió endpoint público, tabla, persistencia, dashboard ni payload adicional hacia Gateway. El contrato completo está en `contaia-ai-phase-e4-observability.md`.
 
-E4 se validó con 301/301 unitarias, 24/24 E2E focalizadas y 110/110 E2E completas, además del build estático. E5 — matriz y aprobación de proveedores — queda pendiente y requiere confirmación independiente.
+E4 se validó con 301/301 unitarias, 24/24 E2E focalizadas y 110/110 E2E completas, además del build estático. E5 queda documentada en el anexo siguiente.
+
+### Actualización — Fase IA E5: matriz y aprobación formal de modelos
+
+`src/cfdi/ai/model-approval.js` implementa `ai-model-approval-v1`. La matriz privada exige coincidencia exacta proveedor/modelo, estado `approved`, capacidades `json_schema_strict`, `structured_output` y `abort_signal`, controles de no logging/no entrenamiento/salida acotada, evidencia de revisión y expiración futura. La ausencia, invalidez o expiración de la matriz produce `ai_provider_unapproved` y no alcanza Gateway.
+
+`configuredProviders()` conserva solo información no secreta y añade `approvalStatus`; el servidor vuelve a validar en `selectProvider()` y el cliente no puede elevar la decisión. El catálogo vivo consultado el 23 de octubre de 2026 se conserva como referencia de candidatos, sin convertir sus IDs en configuración automática del Gateway. E5 cerró con 309/309 unitarias, build, 24/24 E2E focalizadas y 110/110 E2E completas. E6 queda pendiente para UX Premium, canary sintético y lanzamiento controlado.

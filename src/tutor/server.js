@@ -8,6 +8,7 @@ import { AiAdmissionError, assertAiIdempotencyKey, createAiAdmissionService, cre
 import { createConfiguredRedisRestAiUsageStore } from "../cfdi/ai/ai-distributed-store.js";
 import { AiResilienceError, composeAbortSignal, createCircuitBreaker } from "../cfdi/ai/ai-resilience.js";
 import { createConfiguredAiObservability } from "../cfdi/ai/ai-observability.js";
+import { loadModelApprovalRegistry } from "../cfdi/ai/model-approval.js";
 
 const maxBodyBytes = 192 * 1024;
 const maxMessageChars = 2000;
@@ -23,6 +24,8 @@ let defaultAiAdmissionService;
 let defaultAiAdmissionMode = "";
 let defaultAiObservability;
 let defaultAiObservabilityMode = "";
+let defaultModelApprovalRegistry;
+let defaultModelApprovalMatrixKey = "";
 
 const providerDefinitions = [
   { id: "openai", label: "OpenAI", keyEnv: "AI_GATEWAY_OPENAI_API_KEY", modelEnv: "AI_GATEWAY_OPENAI_MODEL", modelPrefix: "openai/" },
@@ -70,6 +73,15 @@ function getDefaultAiObservability(env = process.env) {
     defaultAiObservabilityMode = mode;
   }
   return defaultAiObservability;
+}
+
+function getDefaultModelApprovalRegistry(env = process.env) {
+  const raw = String(env.AI_MODEL_APPROVALS_JSON || "");
+  if (!defaultModelApprovalRegistry || defaultModelApprovalMatrixKey !== raw) {
+    defaultModelApprovalRegistry = loadModelApprovalRegistry(raw);
+    defaultModelApprovalMatrixKey = raw;
+  }
+  return defaultModelApprovalRegistry;
 }
 
 function observe(telemetry, eventName, payload) {
@@ -164,7 +176,7 @@ export function configuredProviders(env = process.env) {
   const providers = providerDefinitions
     .map((definition) => providerSettings(definition, env))
     .filter(Boolean)
-    .map(({ id, label, model }) => ({ id, label, model }));
+    .map(({ id, label, model }) => ({ id, label, model, approvalStatus: getDefaultModelApprovalRegistry(env).status(id, model) }));
   const requested = env.AI_PROVIDER_DEFAULT;
   const defaultProvider = providers.some(({ id }) => id === requested) ? requested : providers[0]?.id ?? "";
   return { providers, defaultProvider };
@@ -174,6 +186,7 @@ function selectProvider(providerId, env) {
   const definition = providerDefinitions.find(({ id }) => id === providerId);
   const settings = definition && providerSettings(definition, env);
   if (!settings) throw fail("El proveedor solicitado no está configurado en Vercel AI Gateway.", 503);
+  getDefaultModelApprovalRegistry(env).assertApproved(settings.id, settings.model);
   return settings;
 }
 

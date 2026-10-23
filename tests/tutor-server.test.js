@@ -5,6 +5,7 @@ import { handleCfdiPlanner, handleTutorConfig, handleTutorStream, validateTutorI
 import { createAiAdmissionService } from "../src/cfdi/ai/ai-admission.js";
 import { exercises } from "../src/exercises.js";
 import { courseModules } from "../src/course.js";
+import { AI_MODEL_APPROVALS_JSON } from "./ai-model-approval-fixture.js";
 
 class MockResponse extends EventEmitter {
   constructor() {
@@ -38,6 +39,7 @@ const gatewayEnv = {
   AI_GATEWAY_OPENAI_MODEL: "openai/gpt-test",
   AI_GATEWAY_ANTHROPIC_API_KEY: "gateway-anthropic-secret-test",
   AI_GATEWAY_ANTHROPIC_MODEL: "anthropic/claude-test",
+  AI_MODEL_APPROVALS_JSON,
 };
 const aiAccountId = "0b907fb8-9f2f-4e50-8f8a-e8a54a1591c2";
 const resolveAiAccount = async () => ({ accountId: aiAccountId });
@@ -105,6 +107,25 @@ test("el planner CFDI usa el modelo configurado, envía solo texto no sensible y
   assert.equal(body.messages.some(({ content }) => content.includes("analysisRef")), false);
   assert.equal(JSON.stringify(body).includes("gateway-openai-secret-test"), false);
   assert.equal(plannerRequest.headers.Authorization, `Bearer ${gatewayEnv.AI_GATEWAY_OPENAI_API_KEY}`);
+});
+
+test("el planner bloquea un modelo no aprobado antes de llamar al Gateway", async () => {
+  const candidateMatrix = JSON.parse(AI_MODEL_APPROVALS_JSON);
+  candidateMatrix.entries[0].status = "candidate";
+  let called = false;
+  const response = new MockResponse();
+  await handleCfdiPlanner(request({ message: "Necesito una consulta local" }, {
+    ip: "127.0.6.2",
+    headers: { Authorization: "Bearer session-test", "Idempotency-Key": aiKey("model-unapproved") },
+  }), response, {
+    env: { ...gatewayEnv, AI_MODEL_APPROVALS_JSON: JSON.stringify(candidateMatrix) },
+    ...aiOptions(),
+    fetchImpl: async () => { called = true; return new Response("should not run"); },
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(called, false);
+  assert.match(response.body, /aprobado|modelo/i);
+  assert.equal(response.body.includes("openai/gpt-test"), false);
 });
 
 test("el planner requiere Bearer e ignora cualquier plan declarado por el cliente antes de Gateway", async () => {

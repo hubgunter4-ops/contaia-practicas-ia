@@ -1804,3 +1804,27 @@ El registry solo conserva contadores y buckets de latencia (`lt_100`, `100_499`,
 El servidor emite eventos de admisión, planner y explicación CFDI únicamente en puntos de decisión: admisión permitida/bloqueada, planner solicitado/completado/fallback local, resumen sanitizado/confirmado/fallido y cancelación por lifecycle. No se añade un endpoint público para consultar métricas ni se incluye el snapshot en respuestas de usuario. La instrumentación es best effort: un error del registry o del sink nunca rompe una consulta ni cambia el cálculo fiscal.
 
 La fase se validó con **301/301 pruebas unitarias**, build estático aprobado, **24/24 E2E focalizadas** de CFDI/admisión/Nora y **110/110 E2E** completas en serie. E4 no incorpora tablas, proveedor de telemetría, dashboards externos, cookies nuevas, retención persistente ni transmisión automática de fuentes locales. E5 queda pendiente para la matriz de modelos y aprobación de proveedores.
+
+
+---
+## Fase IA E5 — Matriz y aprobación formal de modelos/proveedores
+
+E5 establecerá una frontera de aprobación server-side para impedir que un modelo configurado por prefijo o variable de entorno quede habilitado sin revisión formal. La matriz no será un listado hardcodeado de memoria: se parte del catálogo vivo consultado mediante `manus-node` el 23 de octubre de 2026 y se conserva como evidencia de candidatos, mientras que la autorización operativa del Gateway se recibe únicamente mediante `AI_MODEL_APPROVALS_JSON` como secreto privado de Vercel.
+
+El nuevo módulo `src/cfdi/ai/model-approval.js` definirá `ai-model-approval-v1` y validará entradas exactas `{ provider, model, status, capabilities, retention, approval }`. Solo `status: approved` podrá pasar; se rechazarán candidatos, previews, modelos deprecated/superseded, expirados, proveedores fuera de `openai`/`anthropic`, capacidades faltantes (`json_schema_strict`, `structured_output`, `abort_signal`) o controles ausentes (`no_prompt_logging_by_default`, `configured_retention_policy`, `bounded_output`). La aprobación incluirá evidencia de revisión, aprobador opaco, fecha de revisión y expiración para obligar a renovar la decisión.
+
+`src/tutor/server.js` cargará y cacheará la matriz privada por versión de configuración. `selectProvider()` verificará la coincidencia exacta proveedor/modelo antes de construir la solicitud al Gateway; el bloqueo devolverá `ai_provider_unapproved` sin llamar al proveedor. La configuración pública seguirá omitiendo claves y no será autoridad de seguridad: puede mostrar proveedor/modelo configurado y un estado seguro de aprobación, pero nunca la matriz completa ni evidencias internas. Si la matriz falta o es inválida, la ruta remota queda cerrada y las herramientas locales permanecen disponibles.
+
+La matriz inicial distinguirá los modelos vivos de Manus como referencia de capacidades y los modelos del Vercel AI Gateway como candidatos operativos independientes; no se asumirá que un ID del catálogo Manus existe en el Gateway. En particular, el catálogo vivo mostró candidatos OpenAI con JSON Schema estricto, pero también modelos deprecated/superseded y previews; ninguno se habilitará automáticamente. La aprobación de Anthropic requerirá evidencia específica del modelo configurado en Gateway, aunque el proveedor siga dentro de la allowlist arquitectónica.
+
+La fase reutiliza el planner JSON cerrado, DLP, admisión E2 y circuit breaker E3. No añade llamadas nuevas desde el navegador, no transmite datos CFDI al registro de aprobación, no agrega persistencia fiscal, no selecciona modelos por costo automáticamente y no cambia el cálculo local. La validación cubrirá parsing estricto, capacidades, expiración, bloqueo antes de Gateway, proveedor no autorizado, campos extra, ausencia de secretos y conservación del fallback local; E6 quedará pendiente para UX Premium, canary sintético y lanzamiento controlado.
+
+
+---
+### Cierre de Fase IA E5 — matriz y aprobación formal de modelos/proveedores
+
+E5 quedó implementada en `src/cfdi/ai/model-approval.js` con el contrato `ai-model-approval-v1`. La matriz privada exige coincidencia exacta de proveedor y modelo, estado `approved`, capacidades de JSON Schema estricto, structured output y abort signal, controles de salida acotada/no logging/no entrenamiento, retención cero declarada, evidencia de revisión y expiración futura. `configuredProviders()` muestra solo `approvalStatus`; `selectProvider()` repite la autoridad server-side inmediatamente antes de Gateway.
+
+Se consultó el catálogo vivo de Manus el 23 de octubre de 2026 y se separaron candidatos, modelos superseded/deprecated y proveedores fuera de allowlist. Los IDs del catálogo no se copiaron a la configuración del Gateway ni se activó ningún proveedor nuevo. La ausencia o invalidez de `AI_MODEL_APPROVALS_JSON` mantiene bloqueadas las rutas remotas con `ai_provider_unapproved`, mientras CFDI local, planner determinista, herramientas locales y fallback siguen disponibles.
+
+La evidencia final fue **309/309 unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E completas**. E6 queda pendiente para UX Premium, canary sintético, aprobación de lanzamiento y configuración operativa de secretos privados.

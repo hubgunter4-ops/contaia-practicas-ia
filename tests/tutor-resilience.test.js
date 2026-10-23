@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { handleCfdiPlanner } from "../src/tutor/server.js";
 import { createAiAdmissionService } from "../src/cfdi/ai/ai-admission.js";
+import { AI_MODEL_APPROVALS_JSON } from "./ai-model-approval-fixture.js";
 import { createCircuitBreaker } from "../src/cfdi/ai/ai-resilience.js";
 
 class MockResponse extends EventEmitter {
@@ -25,6 +26,7 @@ const env = {
   AI_PROVIDER_DEFAULT: "openai",
   AI_GATEWAY_OPENAI_API_KEY: "gateway-openai-secret-test",
   AI_GATEWAY_OPENAI_MODEL: "openai/gpt-test",
+  AI_MODEL_APPROVALS_JSON,
 };
 const accountId = "0b907fb8-9f2f-4e50-8f8a-e8a54a1591c2";
 const request = (suffix) => ({

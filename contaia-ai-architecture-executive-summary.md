@@ -188,17 +188,20 @@ La petición del usuario puede viajar al endpoint planner únicamente después d
 | **IA E2** | Admisión autenticada, entitlement server-side Free/Premium, cuota mensual e idempotencia | Terminada localmente |
 | **IA E3** | Store Redis REST opcional, TTL de leases, timeout, `Retry-After` y circuit breaker | Implementada localmente; activación Redis pendiente |
 | **IA E4** | Eventos redacted, contadores/buckets en memoria y sink de consola opcional | Terminada localmente; sin persistencia ni endpoint público |
-| **IA E5-E6** | Revisión de proveedores y UX Premium | Pendientes |
+| **IA E5** | Matriz `ai-model-approval-v1`, aprobación exacta, expiración y bloqueo antes de Gateway | Terminada localmente; secretos de activación pendientes |
+| **IA E6** | UX Premium, canary sintético y aprobación de lanzamiento | Pendiente |
 
 ## 8. Evidencia de validación
 
 La validación acumulada del estado actual incluye:
 
-- **301/301 pruebas unitarias aprobadas.**
+- **309/309 pruebas unitarias aprobadas.**
 - **110/110 pruebas E2E aprobadas** en escritorio y Pixel 5.
 - **9/9 pruebas focalizadas E3** y **24/24 E2E focalizadas** de planner, admisión, Nora, resiliencia y observabilidad aprobadas.
 - **21/21 pruebas focalizadas** de DLP y servidor aprobadas.
 - Build estático `npm run build:vercel` aprobado.
+- Catálogo vivo de modelos consultado el 23 de octubre de 2026; ningún ID se habilitó automáticamente.
+- E5 bloquea un modelo `candidate` antes de Gateway y expone solo `approvalStatus` seguro.
 - Compilación focalizada de planner, orquestador y endpoint aprobada.
 - Sintaxis JavaScript validada en módulos y pruebas nuevas.
 - `git diff --check` aprobado.

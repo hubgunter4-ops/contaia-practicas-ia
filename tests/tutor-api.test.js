@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { configuredProviders, validateTutorInput } from "../src/tutor/server.js";
 import { courseModules } from "../src/course.js";
+import { AI_MODEL_APPROVALS_JSON } from "./ai-model-approval-fixture.js";
 
 const gatewayEnv = {
   AI_GATEWAY_OPENAI_API_KEY: "gateway-openai-secret-test",
@@ -9,14 +10,15 @@ const gatewayEnv = {
   AI_GATEWAY_ANTHROPIC_API_KEY: "gateway-anthropic-secret-test",
   AI_GATEWAY_ANTHROPIC_MODEL: "anthropic/claude-test",
   AI_PROVIDER_DEFAULT: "anthropic",
+  AI_MODEL_APPROVALS_JSON,
 };
 
 test("la configuración publica OpenAI y Anthropic de Gateway, pero nunca claves", () => {
   const config = configuredProviders(gatewayEnv);
   assert.deepEqual(config, {
     providers: [
-      { id: "openai", label: "OpenAI", model: "openai/gpt-test" },
-      { id: "anthropic", label: "Claude", model: "anthropic/claude-test" },
+      { id: "openai", label: "OpenAI", model: "openai/gpt-test", approvalStatus: "approved" },
+      { id: "anthropic", label: "Claude", model: "anthropic/claude-test", approvalStatus: "approved" },
     ],
     defaultProvider: "anthropic",
   });
@@ -44,7 +46,7 @@ test("solo habilita modelos con el prefijo del proveedor que les corresponde", (
     AI_GATEWAY_ANTHROPIC_MODEL: "anthropic/claude-test",
     AI_PROVIDER_DEFAULT: "openai",
   });
-  assert.deepEqual(config.providers, [{ id: "anthropic", label: "Claude", model: "anthropic/claude-test" }]);
+  assert.deepEqual(config.providers, [{ id: "anthropic", label: "Claude", model: "anthropic/claude-test", approvalStatus: "unapproved" }]);
   assert.equal(config.defaultProvider, "anthropic");
 });
 

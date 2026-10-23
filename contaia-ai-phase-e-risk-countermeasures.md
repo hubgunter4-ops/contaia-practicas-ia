@@ -529,15 +529,20 @@ Entregables:
 
 **Objetivo:** aceptar solo modelos configurados que estén probados y aprobados.
 
-Entregables:
+**Estado:** implementada localmente y validada; ningún proveedor nuevo fue activado automáticamente.
 
-- matriz de modelos;
-- pruebas sintéticas de JSON Schema;
-- política de cambio de modelo;
-- configuración de no retención cuando aplique;
-- fallback local y circuit breaker por modelo.
+Entregables cerrados:
 
-**Criterio de salida:** un modelo no aprobado no puede habilitar planner aunque cumpla el prefijo de proveedor.
+- matriz `ai-model-approval-v1` con coincidencia exacta de proveedor/modelo, aprobación, expiración y evidencia;
+- validación de JSON Schema estricto, structured output, abort signal y salida acotada;
+- política de no logging de prompts, no entrenamiento y retención cero declarada;
+- bloqueo server-side antes de Gateway con `ai_provider_unapproved`;
+- estado público seguro `approvalStatus`, sin claves ni autoridad en el cliente;
+- fallback local y circuit breaker E3 conservados.
+
+Evidencia: **309/309 unitarias**, build estático aprobado, **24/24 E2E focalizadas** y **110/110 E2E completas**. La matriz privada `AI_MODEL_APPROVALS_JSON` aún debe configurarse como secreto de Vercel para activar modelos operativos reales.
+
+**Criterio de salida:** cumplido; un modelo no aprobado no puede habilitar planner aunque cumpla el prefijo de proveedor.
 
 ### E6 — UX, regresión y canary
 
