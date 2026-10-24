@@ -18,7 +18,7 @@ import { resetWorkpapersWorkspace } from "./workpapers/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, getAuthDestinationTarget, initializeAuthClient, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, updatePassword, signIn, signUp, signInWithGoogle, signOut } from "./auth/client.js";
+import { authState, currentUser, getAuthDestinationTarget, initializeAuthClient, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, updatePassword, signIn, signUp, signInWithGoogle, signOut, syncAuthCaptchaWidgets } from "./auth/client.js";
 import { createIslandManager } from "./app/island-manager.js";
 import { createIslandRegistry } from "./app/island-registry.js";
 import { CapabilityExpiredError, createSourceCapabilityBroker } from "./app/source-capabilities.js";
@@ -1933,6 +1933,7 @@ function render() {
   persistViewInUrl();
   const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   renderView();
+  queueMicrotask(syncAuthCaptchaWidgets);
   void syncLearningIsland();
   void syncJournalIsland();
   void syncDiotIsland();

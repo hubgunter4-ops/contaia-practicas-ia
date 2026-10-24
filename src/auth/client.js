@@ -89,11 +89,7 @@ export function initializeAuthClient({ signal } = {}) {
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
     setAuthClient(client, data.session?.user ?? null);
-    queueMicrotask(() => syncCaptchaWidgets({
-      onToken: (token) => { authState.captchaToken = token; },
-      onExpired: () => { authState.captchaToken = ""; },
-      onError: () => { authState.captchaToken = ""; },
-    }));
+    queueMicrotask(syncAuthCaptchaWidgets);
     client.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         authState.recoveryMode = true;
@@ -183,6 +179,14 @@ export function setAuthClient(client, user) {
   window.__contaiaAuth = { client, user };
   authState.ready = true;
   notify();
+}
+
+export function syncAuthCaptchaWidgets() {
+  syncCaptchaWidgets({
+    onToken: (token) => { authState.captchaToken = token; },
+    onExpired: () => { authState.captchaToken = ""; },
+    onError: () => { authState.captchaToken = ""; },
+  });
 }
 
 export function updateAuthUser(user) {
