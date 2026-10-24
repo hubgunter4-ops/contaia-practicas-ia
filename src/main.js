@@ -511,7 +511,10 @@ const restoredProgress = loadProgress(scopedStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
 const nextIncompleteModule = courseModules.find(({ id }) => !state.completedModules.has(id));
-state.activeModuleId = nextIncompleteModule?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
+state.activeModuleId = restoredProgress.activeModuleId || nextIncompleteModule?.id || courseModules.at(-1)?.id || state.activeModuleId;
+state.coursePhaseIndex = restoredProgress.coursePhaseIndex;
+state.highestUnlockedPhase = restoredProgress.highestUnlockedPhase;
+state.practiceStepIndex = restoredProgress.practiceStepIndex;
 state.storageWarning = progressStorage ? "" : "El navegador no permite guardar el progreso; esta sesión seguirá en memoria.";
 try {
   state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || "";
@@ -522,9 +525,30 @@ function persistProgress() {
   const saved = saveProgress({
     completedModules: [...state.completedModules],
     completedExercises: [...state.completed],
+    activeModuleId: state.activeModuleId,
+    coursePhaseIndex: state.coursePhaseIndex,
+    highestUnlockedPhase: state.highestUnlockedPhase,
+    practiceStepIndex: state.practiceStepIndex,
   }, scopedStorage);
   state.storageWarning = saved ? "" : "No se pudo guardar el progreso local; podrás continuar en memoria durante esta sesión.";
   return saved;
+}
+
+function clearLearningProgress() {
+  state.completedModules.clear();
+  state.completed.clear();
+  state.activeModuleId = courseModules[0]?.id || "modulo-01";
+  state.coursePhaseIndex = 0;
+  state.highestUnlockedPhase = 0;
+  state.practiceStepIndex = 0;
+  state.attempted.clear();
+  state.hints.clear();
+  state.revealed.clear();
+  state.answers.clear();
+  state.selections.clear();
+  state.feedback.clear();
+  persistProgress();
+  resetTutor();
 }
 
 function persistOnboarding() {
@@ -636,6 +660,7 @@ function advanceClassroomPhase() {
   state.highestUnlockedPhase = Math.max(state.highestUnlockedPhase, nextPhase);
   state.coursePhaseIndex = nextPhase;
   if (nextPhase === 2) state.practiceStepIndex = 0;
+  persistProgress();
   resetTutor();
   refreshLearningIsland();
   narrateClassroomInstruction();
@@ -651,6 +676,7 @@ function completePracticeInstruction() {
     state.highestUnlockedPhase = Math.max(state.highestUnlockedPhase, 3);
     state.coursePhaseIndex = 3;
   }
+  persistProgress();
   resetTutor();
   refreshLearningIsland();
   narrateClassroomInstruction();
@@ -1920,6 +1946,7 @@ function handleLearningClick(event) {
       state.coursePhaseIndex = 0;
       state.highestUnlockedPhase = 0;
       state.practiceStepIndex = 0;
+      persistProgress();
     }
     refreshLearningIsland();
     if (!continuingCurrentClass) narrateClassroomInstruction();
@@ -1932,6 +1959,7 @@ function handleLearningClick(event) {
     if (!Number.isInteger(phaseIndex) || phaseIndex < 0 || phaseIndex >= CLASSROOM_PHASES.length || phaseIndex > state.highestUnlockedPhase) return;
     resetTutor();
     state.coursePhaseIndex = phaseIndex;
+    persistProgress();
     refreshLearningIsland();
     narrateClassroomInstruction();
     return;
@@ -2046,6 +2074,12 @@ function handleLearningClick(event) {
     state.activeModuleId = moduleId;
     state.tutor.avatarState = "celebrating";
     persistProgress();
+    refreshLearningIsland();
+    return;
+  }
+  if (action.dataset.action === "clear-learning-progress") {
+    if (!window.confirm("¿Quieres borrar todo tu avance local y regresar a la primera clase?")) return;
+    clearLearningProgress();
     refreshLearningIsland();
     return;
   }
@@ -2535,7 +2569,10 @@ document.addEventListener("contaia:auth-updated", (event) => {
   const restored = loadProgress(scopedStorage);
   state.completedModules = new Set(restored.completedModules);
   state.completed = new Set(restored.completedExercises);
-  state.activeModuleId = courseModules.find(({ id }) => !state.completedModules.has(id))?.id ?? courseModules.at(-1)?.id ?? state.activeModuleId;
+  state.activeModuleId = restored.activeModuleId || courseModules.find(({ id }) => !state.completedModules.has(id))?.id || courseModules.at(-1)?.id || state.activeModuleId;
+  state.coursePhaseIndex = restored.coursePhaseIndex;
+  state.highestUnlockedPhase = restored.highestUnlockedPhase;
+  state.practiceStepIndex = restored.practiceStepIndex;
   try { state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || ""; state.onboardingDraft = state.onboardingLevel; } catch { /* El almacenamiento puede estar bloqueado. */ }
   if (event.detail?.user && authState.status === "success") {
     authState.status = "success-visible";

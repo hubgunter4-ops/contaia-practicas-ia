@@ -5,7 +5,10 @@ export const PROGRESS_STORAGE_KEY = "contaia.progress.v1";
 
 const validModuleIds = new Set(courseModules.map((module) => module.id));
 const validExerciseIds = new Set(exercises.map((exercise) => exercise.id));
-const emptyProgress = () => ({ completedModules: [], completedExercises: [] });
+const emptyProgress = () => ({
+  completedModules: [], completedExercises: [], activeModuleId: null,
+  coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0,
+});
 
 function cleanIds(values, allowedIds) {
   if (!Array.isArray(values)) return [];
@@ -14,9 +17,17 @@ function cleanIds(values, allowedIds) {
 
 function sanitizeProgress(progress, moduleIds = validModuleIds, exerciseIds = validExerciseIds) {
   const source = progress && typeof progress === "object" ? progress : {};
+  const activeModuleId = typeof source.activeModuleId === "string" && moduleIds.has(source.activeModuleId) ? source.activeModuleId : null;
+  const integerOrZero = (value) => Number.isInteger(value) && value >= 0 ? value : 0;
+  const coursePhaseIndex = Math.min(integerOrZero(source.coursePhaseIndex), 4);
+  const highestUnlockedPhase = Math.min(Math.max(integerOrZero(source.highestUnlockedPhase), coursePhaseIndex), 4);
   return {
     completedModules: cleanIds(source.completedModules, moduleIds),
     completedExercises: cleanIds(source.completedExercises, exerciseIds),
+    activeModuleId,
+    coursePhaseIndex,
+    highestUnlockedPhase,
+    practiceStepIndex: integerOrZero(source.practiceStepIndex),
   };
 }
 
