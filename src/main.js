@@ -504,6 +504,8 @@ const state = {
 let progressStorage = null;
 try { progressStorage = window.localStorage; } catch { /* El navegador puede bloquear el almacenamiento local. */ }
 let activeStorageScope = "anonymous";
+const VIEW_STATE_KEY = "active-view.v1";
+const RESTORABLE_SECTIONS = new Set(["course", "lab", "study", "advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "tools"]);
 let accountProgressReady = false;
 let accountProgressQueue = Promise.resolve();
 let pendingAnonymousProgress = null;
@@ -511,6 +513,35 @@ const scopedStorage = {
   getItem(key) { return progressStorage?.getItem(`contaia.session.${activeStorageScope}.${key}`) ?? null; },
   setItem(key, value) { progressStorage?.setItem(`contaia.session.${activeStorageScope}.${key}`, value); },
 };
+
+function viewStorage(scope = activeStorageScope) {
+  return {
+    getItem(key) { return progressStorage?.getItem(`contaia.session.${scope}.${key}`) ?? null; },
+    setItem(key, value) { progressStorage?.setItem(`contaia.session.${scope}.${key}`, value); },
+  };
+}
+
+function restoreViewState(scope = activeStorageScope) {
+  try {
+    const raw = viewStorage(scope).getItem(VIEW_STATE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved || !RESTORABLE_SECTIONS.has(saved.section)) return false;
+    state.section = saved.section;
+    state.current = typeof saved.current === "string" && (saved.current === "home" || exercises.some(({ id }) => id === saved.current))
+      ? saved.current
+      : "home";
+    return true;
+  } catch { return false; }
+}
+
+function persistViewState() {
+  try {
+    viewStorage().setItem(VIEW_STATE_KEY, JSON.stringify({ section: state.section, current: state.current, updatedAt: new Date().toISOString() }));
+  } catch { /* La vista se conserva durante la sesión aunque el almacenamiento esté bloqueado. */ }
+}
+
+restoreViewState("anonymous");
 const restoredProgress = loadProgress(scopedStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
@@ -1873,6 +1904,7 @@ function render() {
   const pageKey = `${location.pathname}${location.search}|${currentUser()?.id ?? "anonymous"}|${state.section}|${state.current}`;
   const pageChanged = Boolean(lastPageTransitionKey && pageKey !== lastPageTransitionKey);
   lastPageTransitionKey = pageKey;
+  persistViewState();
   const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   renderView();
   void syncLearningIsland();
@@ -1928,7 +1960,7 @@ function renderView() {
     const queryDestination = requestedDestination === "anam" ? "asistente" : requestedDestination;
     const destination = routeDestination || (Object.prototype.hasOwnProperty.call(PUBLIC_FEATURES, queryDestination) ? queryDestination : "");
     if (destination) state.section = destination === "cfdi" ? "cfdi" : destination === "asistente" ? "advisor" : "course";
-    if (destination || location.pathname === "/registro") window.history.replaceState(null, "", "/");
+    if (destination) window.history.replaceState(null, "", "/");
     state.publicDestinationApplied = true;
   }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
@@ -2619,6 +2651,7 @@ document.addEventListener("contaia:auth-updated", (event) => {
     resetWorkpapersWorkspace();
   }
   activeStorageScope = nextStorageScope;
+  if (!getAuthDestination()) restoreViewState(activeStorageScope);
   if (!userId) resetToolsWorkspace();
   else if (state.section === "tools") void loadToolsWorkspace();
   const restored = loadProgress(scopedStorage);
