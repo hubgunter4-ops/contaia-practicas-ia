@@ -86,10 +86,9 @@ export function initializeAuthClient({ signal } = {}) {
     authState.captchaSitekey = config.hcaptchaSitekey || "";
     const { createClient } = await import("/vendor/supabase.js");
     const client = createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-    const { data, error } = await client.auth.getSession();
-    if (error) throw error;
-    setAuthClient(client, data.session?.user ?? null);
-    queueMicrotask(syncAuthCaptchaWidgets);
+    // El cliente queda disponible de inmediato; getSession no debe dejar bloqueados
+    // los formularios si la recuperación de una sesión anterior tarda o falla.
+    setAuthClient(client, null);
     client.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         authState.recoveryMode = true;
@@ -103,6 +102,14 @@ export function initializeAuthClient({ signal } = {}) {
       updateAuthUser(session?.user ?? null);
       document.dispatchEvent(new CustomEvent("contaia:auth-event", { detail: { event } }));
     });
+    try {
+      const { data } = await client.auth.getSession();
+      updateAuthUser(data.session?.user ?? null);
+    } catch {
+      // El login y el registro siguen disponibles aunque una sesión guardada esté dañada.
+      updateAuthUser(null);
+    }
+    queueMicrotask(syncAuthCaptchaWidgets);
     return client;
   })().catch((error) => {
     if (error?.name !== "AbortError") setAuthClient(null, null);
