@@ -7,7 +7,7 @@ const validModuleIds = new Set(courseModules.map((module) => module.id));
 const validExerciseIds = new Set(exercises.map((exercise) => exercise.id));
 const emptyProgress = () => ({
   completedModules: [], completedExercises: [], activeModuleId: null,
-  coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0,
+  coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0, updatedAt: "",
 });
 
 function cleanIds(values, allowedIds) {
@@ -15,7 +15,7 @@ function cleanIds(values, allowedIds) {
   return [...new Set(values.filter((id) => typeof id === "string" && allowedIds.has(id)))];
 }
 
-function sanitizeProgress(progress, moduleIds = validModuleIds, exerciseIds = validExerciseIds) {
+export function normalizeProgress(progress, moduleIds = validModuleIds, exerciseIds = validExerciseIds) {
   const source = progress && typeof progress === "object" ? progress : {};
   const activeModuleId = typeof source.activeModuleId === "string" && moduleIds.has(source.activeModuleId) ? source.activeModuleId : null;
   const integerOrZero = (value) => Number.isInteger(value) && value >= 0 ? value : 0;
@@ -28,6 +28,7 @@ function sanitizeProgress(progress, moduleIds = validModuleIds, exerciseIds = va
     coursePhaseIndex,
     highestUnlockedPhase,
     practiceStepIndex: integerOrZero(source.practiceStepIndex),
+    updatedAt: typeof source.updatedAt === "string" && Number.isFinite(Date.parse(source.updatedAt)) ? source.updatedAt : "",
   };
 }
 
@@ -35,14 +36,14 @@ export function loadProgress(storage) {
   try {
     const serialized = storage.getItem(PROGRESS_STORAGE_KEY);
     if (!serialized) return emptyProgress();
-    return sanitizeProgress(JSON.parse(serialized));
+    return normalizeProgress(JSON.parse(serialized));
   } catch {
     return emptyProgress();
   }
 }
 
 export function saveProgress(progress, storage) {
-  const sanitized = sanitizeProgress(progress);
+  const sanitized = normalizeProgress(progress);
   try {
     storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(sanitized));
     return true;
@@ -54,7 +55,7 @@ export function saveProgress(progress, storage) {
 export function createPortfolioMarkdown(progress, modules, practiceExercises, generatedAt = new Date()) {
   const moduleIds = new Set(modules.map((module) => module.id));
   const exerciseIds = new Set(practiceExercises.map((exercise) => exercise.id));
-  const sanitized = sanitizeProgress(progress, moduleIds, exerciseIds);
+  const sanitized = normalizeProgress(progress, moduleIds, exerciseIds);
   const date = generatedAt instanceof Date ? generatedAt : new Date(generatedAt);
   const dateLabel = Number.isNaN(date.valueOf()) ? String(generatedAt) : date.toISOString();
   const completedModules = new Set(sanitized.completedModules);

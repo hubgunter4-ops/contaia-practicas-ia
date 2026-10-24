@@ -16,11 +16,11 @@ test("guarda y recupera solo módulos y prácticas completados", () => {
   const storage = memoryStorage();
   const progress = {
     completedModules: ["modulo-01"], completedExercises: ["prompt"], activeModuleId: "modulo-02",
-    coursePhaseIndex: 2, highestUnlockedPhase: 3, practiceStepIndex: 1,
+    coursePhaseIndex: 2, highestUnlockedPhase: 3, practiceStepIndex: 1, updatedAt: "2026-10-24T00:00:00.000Z",
   };
   assert.equal(saveProgress(progress, storage), true);
   assert.deepEqual(loadProgress(storage), progress);
-  assert.deepEqual(Object.keys(JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY))), ["completedModules", "completedExercises", "activeModuleId", "coursePhaseIndex", "highestUnlockedPhase", "practiceStepIndex"]);
+  assert.deepEqual(Object.keys(JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY))), ["completedModules", "completedExercises", "activeModuleId", "coursePhaseIndex", "highestUnlockedPhase", "practiceStepIndex", "updatedAt"]);
 });
 
 test("elimina IDs desconocidos y duplicados al guardar y leer", () => {
@@ -28,14 +28,14 @@ test("elimina IDs desconocidos y duplicados al guardar y leer", () => {
   assert.equal(saveProgress({ completedModules: ["modulo-01", "ghost", "modulo-01"], completedExercises: ["prompt", "ghost"] }, storage), true);
   assert.deepEqual(loadProgress(storage), {
     completedModules: ["modulo-01"], completedExercises: ["prompt"], activeModuleId: null,
-    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0,
+    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0, updatedAt: "",
   });
 });
 
 test("JSON corrupto produce progreso vacío y no detiene la aplicación", () => {
   assert.deepEqual(loadProgress(memoryStorage("{")), {
     completedModules: [], completedExercises: [], activeModuleId: null,
-    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0,
+    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0, updatedAt: "",
   });
 });
 
@@ -43,7 +43,7 @@ test("un almacenamiento que lanza errores falla de forma controlada", () => {
   const broken = { getItem() { throw new Error("sin acceso"); }, setItem() { throw new Error("sin espacio"); } };
   assert.deepEqual(loadProgress(broken), {
     completedModules: [], completedExercises: [], activeModuleId: null,
-    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0,
+    coursePhaseIndex: 0, highestUnlockedPhase: 0, practiceStepIndex: 0, updatedAt: "",
   });
   assert.equal(saveProgress({ completedModules: ["modulo-01"], completedExercises: [] }, broken), false);
 });

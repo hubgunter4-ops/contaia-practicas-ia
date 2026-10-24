@@ -2,7 +2,8 @@ import { categories, exercises } from "./exercises.js";
 import { buildChoiceFeedback, buildWrittenFeedback, calculateDifference, evaluateChoice, getGuidedStage } from "./logic.js";
 import { courseModules, courseSessionFlow } from "./course.js";
 import { buildClassroomScene, CLASSROOM_PHASES, renderClassroom } from "./classroom.js";
-import { createPortfolioMarkdown, loadProgress, saveProgress } from "./progress.js";
+import { createPortfolioMarkdown, loadProgress, normalizeProgress, saveProgress } from "./progress.js";
+import { chooseNewestProgress, fetchAccountProgress, upsertAccountProgress } from "./progress-sync.js";
 import { loadTutorConfig, requestTutorReply } from "./tutor/api.js";
 import { createSpeechSpeaker } from "./tutor/speech.js";
 import { GLOSSARY, findGlossaryEntry } from "./glossary.js";
@@ -503,6 +504,9 @@ const state = {
 let progressStorage = null;
 try { progressStorage = window.localStorage; } catch { /* El navegador puede bloquear el almacenamiento local. */ }
 let activeStorageScope = "anonymous";
+let accountProgressReady = false;
+let accountProgressQueue = Promise.resolve();
+let pendingAnonymousProgress = null;
 const scopedStorage = {
   getItem(key) { return progressStorage?.getItem(`contaia.session.${activeStorageScope}.${key}`) ?? null; },
   setItem(key, value) { progressStorage?.setItem(`contaia.session.${activeStorageScope}.${key}`, value); },
@@ -522,16 +526,65 @@ try {
 } catch { /* El diagnóstico se puede repetir sin almacenamiento. */ }
 
 function persistProgress() {
-  const saved = saveProgress({
+  const snapshot = {
     completedModules: [...state.completedModules],
     completedExercises: [...state.completed],
     activeModuleId: state.activeModuleId,
     coursePhaseIndex: state.coursePhaseIndex,
     highestUnlockedPhase: state.highestUnlockedPhase,
     practiceStepIndex: state.practiceStepIndex,
-  }, scopedStorage);
+    updatedAt: new Date().toISOString(),
+  };
+  const saved = saveProgress(snapshot, scopedStorage);
   state.storageWarning = saved ? "" : "No se pudo guardar el progreso local; podrás continuar en memoria durante esta sesión.";
+  if (saved && accountProgressReady) {
+    const client = window.__contaiaAuth?.client;
+    const userId = currentUser()?.id;
+    accountProgressQueue = accountProgressQueue
+      .catch(() => {})
+      .then(() => {
+        if (!accountProgressReady || currentUser()?.id !== userId) return null;
+        return upsertAccountProgress(client, normalizeProgress(snapshot));
+      })
+      .catch(() => { state.storageWarning = "El progreso quedó guardado localmente, pero no se pudo sincronizar con tu cuenta."; });
+  }
   return saved;
+}
+
+function applyProgress(progress) {
+  const restored = normalizeProgress(progress);
+  state.completedModules = new Set(restored.completedModules);
+  state.completed = new Set(restored.completedExercises);
+  const nextIncompleteModule = courseModules.find(({ id }) => !state.completedModules.has(id));
+  state.activeModuleId = restored.activeModuleId || nextIncompleteModule?.id || courseModules.at(-1)?.id || state.activeModuleId;
+  state.coursePhaseIndex = restored.coursePhaseIndex;
+  state.highestUnlockedPhase = restored.highestUnlockedPhase;
+  state.practiceStepIndex = restored.practiceStepIndex;
+  return restored;
+}
+
+async function synchronizeAccountProgress() {
+  const client = window.__contaiaAuth?.client;
+  if (!client || !currentUser()) return;
+  const local = loadProgress(scopedStorage);
+  const anonymous = pendingAnonymousProgress;
+  pendingAnonymousProgress = null;
+  const localCandidate = anonymous && !local.updatedAt ? anonymous : chooseNewestProgress(local, anonymous).progress;
+  try {
+    const remote = await fetchAccountProgress(client);
+    const selection = chooseNewestProgress(localCandidate, remote);
+    const chosen = selection.progress;
+    applyProgress(chosen);
+    saveProgress(chosen, scopedStorage);
+    if (!remote || selection.source === "local") await upsertAccountProgress(client, chosen);
+    accountProgressReady = true;
+    if (state.section === "course") refreshLearningIsland();
+  } catch {
+    applyProgress(localCandidate);
+    accountProgressReady = true;
+    state.storageWarning = "Progreso local activo; no se pudo conectar con la sincronización de la cuenta.";
+    if (state.section === "course") refreshLearningIsland();
+  }
 }
 
 function clearLearningProgress() {
@@ -2552,6 +2605,8 @@ document.addEventListener("contaia:tools-updated", () => {
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   const nextStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  if (userId && activeStorageScope === "anonymous") pendingAnonymousProgress = loadProgress(scopedStorage);
+  accountProgressReady = false;
   sourceCapabilityBroker.advanceSessionEpoch("auth-updated");
   pendingJournalHandoff = null;
   pendingJournalBankHandoff = null;
@@ -2574,6 +2629,7 @@ document.addEventListener("contaia:auth-updated", (event) => {
   state.highestUnlockedPhase = restored.highestUnlockedPhase;
   state.practiceStepIndex = restored.practiceStepIndex;
   try { state.onboardingLevel = scopedStorage.getItem("contaia.onboarding.v1") || ""; state.onboardingDraft = state.onboardingLevel; } catch { /* El almacenamiento puede estar bloqueado. */ }
+  if (userId) void synchronizeAccountProgress();
   if (event.detail?.user && authState.status === "success") {
     authState.status = "success-visible";
     window.setTimeout(() => {
