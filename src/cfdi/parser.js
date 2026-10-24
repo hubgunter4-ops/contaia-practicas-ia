@@ -31,13 +31,29 @@ export function formatIEPSRate(rate, factor = "") {
 function attr(element, name) { return element?.getAttribute(name) ?? ""; }
 function numAttr(element, name) { return safeNumber(attr(element, name)); }
 function localName(node) { return String(node?.localName || node?.nodeName || "").split(":").pop(); }
+const allElementsCache = new WeakMap();
+const nodeQueryCache = new WeakMap();
+
 function allElements(parent) {
-  return typeof parent?.getElementsByTagName === "function" ? Array.from(parent.getElementsByTagName("*")) : [];
+  if (!parent || typeof parent !== "object") return [];
+  const cached = allElementsCache.get(parent);
+  if (cached) return cached;
+  const elements = typeof parent.getElementsByTagName === "function" ? Array.from(parent.getElementsByTagName("*")) : [];
+  allElementsCache.set(parent, elements);
+  return elements;
 }
 function getNodes(parent, name) {
+  if (!parent || typeof parent !== "object") return [];
+  let queries = nodeQueryCache.get(parent);
+  if (!queries) {
+    queries = new Map();
+    nodeQueryCache.set(parent, queries);
+  }
+  if (queries.has(name)) return queries.get(name);
   const namespaceNodes = Array.from(parent?.getElementsByTagNameNS?.("*", name) ?? []);
-  if (namespaceNodes.length) return namespaceNodes;
-  return allElements(parent).filter((node) => localName(node) === name);
+  const nodes = namespaceNodes.length ? namespaceNodes : allElements(parent).filter((node) => localName(node) === name);
+  queries.set(name, nodes);
+  return nodes;
 }
 function getNode(parent, name) { return getNodes(parent, name)[0] ?? null; }
 function directChildren(parent, name) {
