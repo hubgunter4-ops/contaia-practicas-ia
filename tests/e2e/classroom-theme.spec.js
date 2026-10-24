@@ -2,15 +2,15 @@ import { expect, test } from "@playwright/test";
 
 const LOCAL_ORIGIN = "http://127.0.0.1:3000";
 const COLORS = {
-  ivory: "rgb(245, 244, 236)",
-  petroleum: "rgb(18, 59, 67)",
-  jade: "rgb(20, 125, 104)",
-  jadeToken: "rgb(22, 134, 111)",
+  ivory: "rgb(243, 246, 251)",
+  petroleum: "rgb(11, 42, 85)",
+  jade: "rgb(18, 102, 201)",
+  jadeToken: "rgb(25, 143, 104)",
   white: "rgb(255, 255, 255)",
 };
 
 const hostMarkup = `
-  <div class="app-shell">
+  <div class="app-shell app-shell--platform">
     <header class="topbar">
       <a class="brand" href="/">ContaIA</a>
       <nav class="section-tabs" aria-label="Secciones">
@@ -157,8 +157,8 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.describe("Aula de Aprende · tema Confianza fiscal", () => {
-  test("usa marfil claro, petróleo y jade en los controles principales", async ({ page }) => {
+test.describe("Aula de Aprende · tema de Herramientas fiscales", () => {
+  test("usa el canvas, azul de acción y azul marino en los controles principales", async ({ page }) => {
     await mountHost(page);
     await renderScene(page, 2, 2, true);
     const contract = await readThemeContract(page);

@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const theme = readFileSync(new URL("../src/app/platform-theme.css", import.meta.url), "utf8");
 const index = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
 
 const themeLink = "/src/app/platform-theme.css";
 
@@ -14,7 +15,7 @@ test("el tema de plataforma se carga después de las hojas específicas", () => 
   assert.ok(auth >= 0 && platform > auth);
 });
 
-test("la paleta de plataforma cubre Herramientas y las vistas individuales", () => {
+test("Herramientas conserva su paleta y sus vistas fiscales", () => {
   assert.match(theme, /\.app-shell--fiscal:has\(\.tools-page\)/);
   assert.match(theme, /--tools-navy:\s*#0b2a55/);
   assert.match(theme, /--tools-blue:\s*#1266c9/);
@@ -25,13 +26,22 @@ test("la paleta de plataforma cubre Herramientas y las vistas individuales", () 
   for (const page of ["cfdi-page", "diot-page", "journal-page", "recon-page", "workpapers-page"]) {
     assert.match(theme, new RegExp(`\\.${page}`));
   }
-  assert.doesNotMatch(theme, /\.public-|\.auth-|\.classroom-content/);
 });
 
-test("la referencia visual pública no se modifica por el tema de Herramientas", () => {
+test("la identidad visual de Herramientas se comparte en las vistas internas autenticadas", () => {
+  assert.match(main, /class="app-shell app-shell--platform \$\{fiscalTheme\}"/);
+  assert.match(theme, /\.app-shell--platform:not\(\.app-shell--fiscal\) \.topbar/);
+  assert.match(theme, /\.app-shell--platform:not\(\.app-shell--fiscal\) \.sidebar/);
+  assert.match(theme, /\.app-shell--platform:not\(\.app-shell--fiscal\):has\(\.classroom-content\)/);
+  assert.match(theme, /\.app-shell--platform:not\(\.app-shell--fiscal\) \.mobile-bottom-nav/);
+});
+
+test("la landing, el registro y la autenticación pública quedan fuera del tema de aplicación", () => {
   assert.match(styles, /\.public-landing/);
+  assert.doesNotMatch(theme, /\.public-|\.auth-/);
   assert.doesNotMatch(theme, /(^|\n)body\s*\{/);
   assert.doesNotMatch(theme, /(^|\n):root\s*\{/);
+  assert.ok(main.indexOf("if (!currentUser())") < main.indexOf('class="app-shell app-shell--platform'));
 });
 
 test("el tema conserva foco visible y movimiento reducido", () => {

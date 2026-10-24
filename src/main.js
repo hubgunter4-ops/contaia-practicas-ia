@@ -1866,7 +1866,7 @@ function renderView() {
   const showSidebar = ["lab", "study"].includes(state.section);
   const tutorPanel = ["advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "tools"].includes(state.section) ? "" : renderTutorPanel(getTutorContext());
   const fiscalTheme = ["tools", "cfdi", "reconciliation", "journal", "diot", "workpapers"].includes(state.section) ? "app-shell--fiscal" : "";
-  app.innerHTML = `<div class="app-shell ${fiscalTheme}">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
+  app.innerHTML = `<div class="app-shell app-shell--platform ${fiscalTheme}">${showSidebar ? sidebar() : ""}<div class="main-shell ${showSidebar ? "" : "main-shell-live"}">${topbar()}${content}</div>${tutorPanel}${renderAuthPanel()}${mobileNavigation()}</div>`;
   if (persistentVideo) {
     const placeholder = app.querySelector("[data-anam-video]");
     if (placeholder) placeholder.replaceWith(persistentVideo);

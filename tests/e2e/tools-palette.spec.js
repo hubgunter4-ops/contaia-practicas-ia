@@ -9,7 +9,7 @@ async function renderTools(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.evaluate(async () => {
     document.body.innerHTML = `
-      <div class="app-shell app-shell--fiscal">
+      <div class="app-shell app-shell--platform app-shell--fiscal">
         <aside class="sidebar" aria-label="Navegación fiscal"></aside>
         <div class="main-shell">
           <header class="topbar"><span class="breadcrumb"><strong>ContaIA Herramientas</strong></span></header>
@@ -58,7 +58,7 @@ async function renderIndividualTool(page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.evaluate(async () => {
     document.body.innerHTML = `
-      <div class="app-shell app-shell--fiscal">
+      <div class="app-shell app-shell--platform app-shell--fiscal">
         <aside class="sidebar" aria-label="Navegación fiscal"></aside>
         <div class="main-shell">
           <header class="topbar"><span class="breadcrumb"><strong>ContaIA Herramientas</strong></span></header>

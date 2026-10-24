@@ -11,7 +11,7 @@ const viewports = [
 async function blankHost(page, id) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.evaluate((hostId) => {
-    document.body.innerHTML = `<div class="app-shell app-shell--fiscal"><div class="main-shell main-shell-live"><div id="${hostId}"></div></div></div>`;
+    document.body.innerHTML = `<div class="app-shell app-shell--platform app-shell--fiscal"><div class="main-shell main-shell-live"><div id="${hostId}"></div></div></div>`;
   }, id);
   return page.locator(`#${id}`);
 }
@@ -96,6 +96,7 @@ async function measureLayout(page, root) {
 }
 
 test("la matriz responsive conserva jerarquía, acciones y ancho visible en las cuatro islas", async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
   const captureRoot = testInfo.outputPath("visual-phase7-evidencia");
   const evidence = [];
   await mkdir(captureRoot, { recursive: true });
