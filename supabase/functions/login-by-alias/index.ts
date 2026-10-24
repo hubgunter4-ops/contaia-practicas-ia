@@ -76,6 +76,17 @@ function publicSession(session: any) {
   };
 }
 
+function authFailure(error: unknown): { status: number; error: string } {
+  const message = String((error as { message?: unknown })?.message || "").toLowerCase();
+  if (/captcha|hcaptcha|verification|verificación/.test(message)) {
+    return { status: 400, error: "La verificación de seguridad caducó o no fue aceptada. Completa el captcha nuevamente." };
+  }
+  if (Number((error as { status?: unknown })?.status) === 429) {
+    return { status: 429, error: "Demasiados intentos. Espera unos minutos antes de volver a probar." };
+  }
+  return { status: 401, error: "Correo, usuario o contraseña incorrectos." };
+}
+
 Deno.serve(async (request) => {
   if (!originAllowed(request)) return json(403, { error: "Origen no autorizado." });
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Accept" } });
@@ -103,7 +114,10 @@ Deno.serve(async (request) => {
     const authClient = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
     const options = captchaToken ? { captchaToken } : undefined;
     const { data, error } = await authClient.auth.signInWithPassword({ email, password, ...(options ? { options } : {}) });
-    if (error || !data.session || !data.user) return json(401, { error: "Correo, usuario o contraseña incorrectos." });
+    if (error || !data.session || !data.user) {
+      const failure = authFailure(error);
+      return json(failure.status, { error: failure.error });
+    }
     return json(200, { session: publicSession(data.session) });
   } catch (error) {
     const code = error instanceof Error ? error.message : "unknown";

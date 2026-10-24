@@ -86,6 +86,15 @@ function normalizeCaptchaToken(value) {
   return value;
 }
 
+function authFailure(error) {
+  const message = String(error?.message || "").toLowerCase();
+  if (/captcha|hcaptcha|verification|verificación/.test(message)) {
+    return { status: 400, error: "La verificación de seguridad caducó o no fue aceptada. Completa el captcha nuevamente." };
+  }
+  if (Number(error?.status) === 429) return { status: 429, error: "Demasiados intentos. Espera unos minutos antes de volver a probar." };
+  return { status: 401, error: "El correo o alias no coincide con la contraseña." };
+}
+
 function publicSession(session) {
   return {
     access_token: session.access_token,
@@ -122,7 +131,10 @@ export async function handleAuth(request, response, env = process.env) {
     const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
     const options = captchaToken ? { captchaToken } : undefined;
     const { data, error } = await client.auth.signInWithPassword({ email: identifier, password, ...(options ? { options } : {}) });
-    if (error || !data.session || !data.user) return sendJson(response, 401, { error: "El correo o alias no coincide con la contraseña." });
+    if (error || !data.session || !data.user) {
+      const failure = authFailure(error);
+      return sendJson(response, failure.status, { error: failure.error });
+    }
     return sendJson(response, 200, { session: publicSession(data.session) });
   } catch (error) {
     return sendJson(response, Number.isInteger(error?.status) ? error.status : 500, { error: Number.isInteger(error?.status) ? error.message : "No se pudo iniciar sesión." });
