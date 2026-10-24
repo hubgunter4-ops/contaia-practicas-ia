@@ -3,7 +3,7 @@ import { MAX_BATCH_FILES, MAX_UPLOAD_BYTES } from "./upload-queue.js";
 import { parseXmlDocument } from "./xml-dom.js";
 
 const MAX_XML_BYTES = 5 * 1024 * 1024;
-const MAX_TOTAL_XML_BYTES = 25 * 1024 * 1024;
+const MAX_TOTAL_XML_BYTES = 1024 * 1024 * 1024;
 const MAX_XML_FILES = MAX_BATCH_FILES;
 const paymentForms = {
   "01": "01 - Efectivo", "02": "02 - Cheque nominativo", "03": "03 - Transferencia electrónica de fondos",
@@ -302,7 +302,7 @@ export async function parseFiles(files) {
     const bytes = new TextEncoder().encode(text).byteLength;
     if (bytes > MAX_XML_BYTES) throw new Error("Un XML supera el límite de 5 MB.");
     totalInflated += bytes;
-    if (totalInflated > MAX_TOTAL_XML_BYTES) throw new Error("El contenido XML extraído supera el límite total de 25 MB.");
+    if (totalInflated > MAX_TOTAL_XML_BYTES) throw new Error("El contenido XML extraído supera el límite total de 1 GB.");
     xmlCount += 1;
     if (xmlCount > MAX_XML_FILES) throw new Error(`El ZIP contiene más de ${MAX_XML_FILES.toLocaleString("es-MX")} XML.`);
     const parsed = parsearXML(text, name);

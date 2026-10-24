@@ -48,7 +48,7 @@ test("limita el lote a 5,000 archivos y reporta cuántos quedaron fuera", () => 
 test("el parser conserva el máximo de 5,000 XML sin cambiar los límites de tamaño", () => {
   assert.equal(parserLimits.maxXmlFiles, 5000);
   assert.equal(parserLimits.maxXmlBytes, 5 * 1024 * 1024);
-  assert.equal(parserLimits.maxTotalXmlBytes, 25 * 1024 * 1024);
+  assert.equal(parserLimits.maxTotalXmlBytes, 1024 * 1024 * 1024);
 });
 
 test("bloquea el análisis de lotes con archivos inválidos", () => {
