@@ -39,6 +39,15 @@ test.describe("Pólizas sugeridas · frontend local", () => {
     expect(requests.filter((url) => /\/api\/|supabase|documents/i.test(url))).toEqual([]);
   });
 
+  test("confirma que limpiar selección no elimina las fuentes locales", async ({ page }) => {
+    await mountJournalWorkspace(page);
+    const source = page.locator("[data-journal-source]").first();
+    await source.check();
+    await page.locator("[data-journal-clear-selection]").click();
+    await expect(page.locator(".journal-inline-note[role='status']")).toContainText("Selección vaciada localmente; las fuentes originales no se eliminaron.");
+    await expect(source).not.toBeChecked();
+  });
+
   test("abre el asistente contextual sin cambiar de herramienta y no provoca una solicitud", async ({ page }) => {
     await mountJournalWorkspace(page);
     const requests = [];

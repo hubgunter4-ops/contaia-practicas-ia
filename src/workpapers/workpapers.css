@@ -33,10 +33,12 @@
 .workpapers-stage-rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .workpapers-stage-rail li { min-width: 0; }
 .workpapers-stage-rail button { width: 100%; min-height: 54px; display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid var(--fiscal-line); border-radius: 8px; background: #fff; color: var(--island-text-secondary); text-align: left; cursor: pointer; }
-.workpapers-stage-rail span { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border: 1px solid #cbd8d1; border-radius: 50%; background: #f1f5f1; color: var(--fiscal-petroleum); font: 700 10px var(--mono); }
-.workpapers-stage-rail b { overflow: hidden; font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.workpapers-stage-rail .workpapers-stage-index { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border: 1px solid #cbd8d1; border-radius: 50%; background: #f1f5f1; color: var(--fiscal-petroleum); font: 700 10px var(--mono); }
+.workpapers-stage-copy { display: grid; min-width: 0; gap: 3px; }
+.workpapers-stage-copy b { overflow: hidden; font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.workpapers-stage-copy small { color: var(--island-text-secondary); font-size: 9px; line-height: 1.2; }
 .workpapers-stage-rail .is-current button { border-color: #8fbfac; background: #eaf5f0; color: var(--fiscal-petroleum); }
-.workpapers-stage-rail .is-current span, .workpapers-stage-rail .is-complete span { border-color: var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
+.workpapers-stage-rail .is-current .workpapers-stage-index, .workpapers-stage-rail .is-complete .workpapers-stage-index { border-color: var(--fiscal-jade); background: var(--fiscal-jade); color: #fff; }
 .workpapers-flow-stage, .workpapers-sheet-card, .workpapers-provenance, .workpapers-plans { position: relative; min-width: 0; padding: var(--island-space-6); border: 1px solid var(--fiscal-line); border-radius: var(--island-radius-md); background: #fff; box-shadow: var(--island-shadow); }
 .workpapers-flow-stage::before, .workpapers-sheet-card::before, .workpapers-provenance::before, .workpapers-plans::before { position: absolute; inset: 0 auto 0 0; width: 3px; border-radius: inherit; content: ""; background: var(--fiscal-jade); opacity: .75; }
 .workpapers-stage-title, .workpapers-section-heading, .workpapers-sheet-heading, .workpapers-entry-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--island-space-3); }

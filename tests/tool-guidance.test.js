@@ -13,8 +13,11 @@ test("la guía común anuncia estado, siguiente paso, pendientes y límites con 
     nextStep: "Siguiente paso seguro",
     pending: ["Falta revisión"],
     boundary: "No reemplaza la revisión humana.",
+    tone: "error",
   });
   assert.match(html, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(html, /data-guidance-state="error"/);
+  assert.match(html, /<i aria-hidden="true">×<\/i>/);
   assert.match(html, /&lt;estado&gt;/);
   assert.match(html, /Siguiente paso seguro/);
   assert.match(html, /Falta revisión/);
@@ -45,7 +48,11 @@ test("las cinco herramientas muestran progreso y límites contextuales", () => {
 
   assert.match(pages[0], /Volver a Herramientas/);
   assert.match(pages[1], /paso 01 de 5/);
+  assert.match(pages[1], /class="is-active" data-diot-step=/);
+  assert.match(pages[1], /Por iniciar/);
   assert.match(pages[2], /Fuentes pendientes/);
   assert.match(pages[3], /Archivo pendiente/);
   assert.match(pages[4], /Paso 1 de 5/);
+  assert.match(pages[4], /workpapers-stage-copy/);
+  assert.match(pages[4], /Alcance y privacidad/);
 });

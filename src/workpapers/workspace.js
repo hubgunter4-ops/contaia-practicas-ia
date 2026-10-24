@@ -39,7 +39,12 @@ function currentDemo() {
 }
 
 function renderStageRail() {
-  return `<ol class="workpapers-stage-rail" aria-label="Flujo demostrativo">${STAGES.map((stage, index) => `<li class="${index === workpapersState.stageIndex ? "is-current" : index < workpapersState.stageIndex ? "is-complete" : ""}"><button type="button" data-workpapers-stage="${index}" aria-current="${index === workpapersState.stageIndex ? "step" : "false"}"><span aria-hidden="true">${index < workpapersState.stageIndex ? "✓" : index + 1}</span><b>${escapeHtml(stage.label)}</b></button></li>`).join("")}</ol>`;
+  return `<ol class="workpapers-stage-rail" aria-label="Flujo demostrativo">${STAGES.map((stage, index) => {
+    const isCurrent = index === workpapersState.stageIndex;
+    const state = index < workpapersState.stageIndex ? "Completada" : isCurrent ? "Etapa actual" : "Por iniciar";
+    const className = index < workpapersState.stageIndex ? "is-complete" : isCurrent ? "is-current" : "is-upcoming";
+    return `<li class="${className}"><button type="button" data-workpapers-stage="${index}" ${isCurrent ? 'aria-current="step"' : ""} aria-label="${escapeHtml(stage.label)} · ${state}"><span class="workpapers-stage-index" aria-hidden="true">${index < workpapersState.stageIndex ? "✓" : index + 1}</span><span class="workpapers-stage-copy"><b>${escapeHtml(stage.label)}</b><small>${state}</small></span></button></li>`;
+  }).join("")}</ol>`;
 }
 
 function renderSources(demo) {
@@ -94,6 +99,7 @@ export function renderWorkpapersWorkspace() {
     nextStep: tab !== "demo" ? "Explora el flujo guiado para recorrer una demostración completa." : workpapersState.saved ? "Continúa explorando la hoja y su procedencia; la confirmación se borra al salir." : stageIndex < STAGES.length - 1 ? `Continúa con la etapa «${STAGES[stageIndex + 1].label}» del recorrido.` : "Revisa la confirmación de demostración; no se creará un archivo ni se escribirá en una contabilidad.",
     pending: tab === "demo" && !workpapersState.saved && stageIndex < STAGES.length - 1 ? [`Recorrer la etapa «${STAGES[stageIndex + 1].label}» si deseas completar la demo.`] : [],
     boundary: "WP1 usa cifras ficticias en memoria; no consulta fuentes reales, no usa IA remota y no persiste ni modifica contabilidad.",
+    tone: workpapersState.saved ? "ready" : "info",
   });
   const header = renderToolHeader({
     id: "workpapers",

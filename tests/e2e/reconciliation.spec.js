@@ -50,6 +50,8 @@ test.describe("Conciliación bancaria · frontend local", () => {
     await expect(row).toContainText("Dirección bancaria pendiente de revisión");
     await expect(page.locator(".recon-privacy-banner")).toContainText("No se sube el extracto");
     expect(requests.filter((url) => /\/api\/|supabase|tutor|documents/i.test(url))).toEqual([]);
+    await page.locator("[data-recon-clear-file]").click();
+    await expect(page.locator(".recon-notice[role='status']")).toContainText("El extracto y sus resultados se retiraron de esta pestaña.");
   });
 
   test("carga un libro XLSX real usando el bundle local de SheetJS", async ({ page }) => {

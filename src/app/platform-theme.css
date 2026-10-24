@@ -354,21 +354,68 @@
 .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > p,
 .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > ul { margin: 0; color: #536982; font-size: .82rem; line-height: 1.5; }
 .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > ul { padding-left: 17px; }
-.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary { padding-left: 13px; border-left: 2px solid #b8d4f1; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state > b { display: flex; align-items: flex-start; gap: 8px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state > b > i { display: grid; width: 23px; height: 23px; flex: none; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: .8rem; font-style: normal; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state.is-info > b > i { color: #245d98; background: #e9f2fc; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state.is-ready > b > i,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-pending > p > i { color: #176746; background: #e8f5ec; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state.is-pending > b > i { color: #245d98; background: #eaf3ff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state.is-attention > b > i { color: #765300; background: #fff4d7; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-state.is-error > b > i { color: #8c2c2c; background: #fff0ee; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary { align-self: stretch; padding: 10px 12px; border: 1px solid #ead8aa; border-left: 4px solid #b68a24; border-radius: 8px; background: #fff9e9; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary > span { color: #705818; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary > span > i { margin-right: 4px; font-style: normal; }
+
+/* Progress states remain distinguishable by label, icon and shape—not color alone. */
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .diot-stepper button { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; gap: 2px 7px; min-width: 112px; min-height: 58px; padding: 7px 9px; border: 1px solid transparent; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; text-align: left; white-space: normal; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .diot-stepper button .diot-step-label { font-size: .76rem; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .diot-stepper button small { grid-column: 2 / 4; color: inherit; font-size: .64rem; font-weight: 600; opacity: .82; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .diot-stepper button.is-complete { border-color: #c5dfcf; border-bottom-color: #27845d; background: #eff8f1; color: #205c40; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .diot-stepper button.is-upcoming { color: #576a7f; background: #f7f9fc; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-rail button { min-height: 64px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-rail .is-upcoming button { border-style: dashed; color: #5d6d7e; background: #f7f9fc; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-rail .is-complete button { border-color: #b8d8c4; background: #eff8f1; color: #205c40; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-copy { display: grid; width: auto; min-width: 0; flex: 1; gap: 3px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-copy b { white-space: normal; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-copy small { color: inherit; font-size: .63rem; line-height: 1.25; opacity: .8; }
+
+/* Form labels and controls use consistent spacing, legible type and touch targets. */
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field > span, .journal-field > span, .recon-field > span, .workpapers-period-control label) { color: var(--tools-navy); font-size: .78rem; font-weight: 750; line-height: 1.4; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field input, .diot-field select, .diot-row textarea, .diot-assistant textarea, .journal-field input, .journal-field select, .journal-assistant textarea, .recon-field input, .recon-field select, .recon-filter select, .workpapers-period-control select) { min-height: 44px; font-size: .9rem; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field, .journal-field, .recon-field) :is(input, select, textarea)[required] { border-left: 3px solid #6b91bd; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field, .journal-field):has(:is(input, select, textarea)[required]) > span::after { content: " · obligatorio"; color: #536982; font-size: .68rem; font-weight: 600; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field, .journal-field, .recon-field) :is(input, select, textarea)[aria-invalid="true"] { border-color: #a83232; background: #fff7f5; box-shadow: 0 0 0 1px #a83232; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.tool-shell-action, .diot-filter, .diot-download-actions .button, .journal-tabs button, .recon-remove-file, .recon-run-actions .button, .workpapers-stage-rail button, .workpapers-tabs button) { min-height: 44px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-exclude, .diot-acknowledge) input { width: 20px; height: 20px; flex: none; }
+
+/* Confirmation messages are persistent, announced and visually different from errors. */
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.cfdi-progress.is-ready[role="status"], .cfdi-operation-confirmation[role="status"], .cfdi-workbook-message.is-success[role="status"], .cfdi-success-text[role="status"], .cfdi-db-status.is-ready[role="status"], .diot-source-note[role="status"], .journal-inline-note[role="status"], .recon-notice[role="status"], .recon-source-ok[role="status"], .workpapers-notice[role="status"]) { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border: 1px solid #b8d8c4; border-left: 4px solid #27845d; border-radius: 7px; background: #eff8f1; color: #205c40; font-size: .82rem; line-height: 1.5; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.cfdi-progress.is-ready[role="status"], .cfdi-operation-confirmation[role="status"], .cfdi-workbook-message.is-success[role="status"], .cfdi-success-text[role="status"], .cfdi-db-status.is-ready[role="status"], .diot-source-note[role="status"], .journal-inline-note[role="status"], .recon-notice[role="status"], .recon-source-ok[role="status"], .workpapers-notice[role="status"])::before { content: "✓"; display: grid; width: 21px; height: 21px; flex: none; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-weight: 800; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.cfdi-workbook-message.is-error[role="status"], .recon-source-warning[role="status"], .cfdi-batch-message[role="alert"], .journal-inline-error[role="alert"], .recon-inline-error[role="alert"], .recon-error[role="alert"]) { border-left: 4px solid #a83232; background: #fff3f1; color: #7f2929; }
+
+/* Privacy and product limits have a separate visual panel from progress and errors. */
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.cfdi-privacy-note, .diot-privacy-banner, .journal-privacy-banner, .recon-privacy-banner, .workpapers-privacy-banner) { border-left: 4px solid var(--tools-blue); background: #eef5fd; color: #354f6c; }
 
 @media (max-width: 1000px) {
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 226px; }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 226px; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-rail { display: flex; overflow-x: auto; padding-bottom: 3px; scroll-snap-type: x proximity; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .workpapers-stage-rail li { flex: 0 0 132px; scroll-snap-align: start; }
 }
 @media (max-width: 760px) {
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 100%; padding: 8px 14px; border-bottom-color: rgba(255, 255, 255, .12); background: var(--tools-navy); }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 0; }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .topbar { min-height: 50px; height: auto; background: var(--tools-navy-deep); }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary { padding-left: 0; border-left: 0; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-shell-header { align-items: stretch; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-shell-actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-shell-action { width: 100%; justify-content: center; }
 }
 @media (max-width: 520px) {
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance { grid-template-columns: minmax(0, 1fr); gap: 11px; padding: 14px; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-form-grid, .recon-file-options, .recon-form-grid) { grid-template-columns: minmax(0, 1fr); }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(input, select, textarea) { font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

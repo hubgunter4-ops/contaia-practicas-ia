@@ -9,7 +9,7 @@ export const cfdiState = {
   initialized: false, configStatus: "loading", configMessage: "Conectando con el almacenamiento privado…",
   client: null, user: null, authBusy: false, email: "", authMessage: "", authError: false,
   analysis: null, fileCount: 0, queuedFiles: [], queueMessage: "", status: "empty", processingStep: 0, error: "", activeTab: "overview", pendingRequest: "", taxReportOpen: false, taxReport: null, taxReportBusinessRfc: "", exportBusy: false, exportNotice: "", exportError: false,
-  savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false,
+  savedRuns: [], historyBusy: false, saveBusy: false, operationMessage: "", operationError: false, confirmationNotice: "",
   aiQuery: "", aiBusy: false, aiResult: null, aiError: "", aiRequestId: 0, aiConfirmOpen: false, aiConfirmChecked: false, aiExplainBusy: false, aiExplainError: "",
 };
 
@@ -45,6 +45,7 @@ export function resetCfdiWorkspace() {
   cfdiState.status = "empty";
   cfdiState.processingStep = 0;
   cfdiState.error = "";
+  cfdiState.confirmationNotice = "";
   cfdiState.pendingRequest = "";
   cfdiState.taxReport = null;
   cfdiState.taxReportOpen = false;
@@ -257,12 +258,13 @@ export function renderCfdiWorkspace() {
     ? `<div class="cfdi-empty-state cfdi-empty-large"><span aria-hidden="true">XML</span><b>${cfdiState.queuedFiles.length ? "Lote listo para analizar" : "El análisis empieza aquí"}</b><p>${cfdiState.queuedFiles.length ? "Confirma la revisión del lote para analizarlo localmente; los resultados aparecerán aquí." : "Selecciona CFDI en XML o un ZIP con varios comprobantes. La extracción y las relaciones se calculan en este navegador."}</p></div>`
     : `<section class="cfdi-results" aria-label="Resultados del análisis">${summaryCards(analysis)}${renderCfdiLocalAssistant()}${renderTaxReport(analysis)}${renderWorkbookExport(analysis)}${renderSourceHandoff()}${renderCurrencyTotals(analysis)}${renderAlerts(analysis)}<nav class="cfdi-result-tabs" aria-label="Vistas del resultado">${[["overview", "Resumen"], ["invoices", `Facturas (${analysis.facturas.length})`], ["payments", `Pagos (${analysis.pagos.length})`], ["concepts", `Conceptos (${analysis.conceptos.length})`]].map(([id, label]) => `<button type="button" data-cfdi-tab="${id}" class="${currentTab === id ? "is-active" : ""}" aria-current="${currentTab === id ? "page" : "false"}">${label}</button>`).join("")}</nav><section class="cfdi-tab-panel" aria-live="polite">${currentTab === "overview" ? `<div class="cfdi-overview-grid">${renderInvoices(analysis)}${renderPayments(analysis)}</div>` : currentTab === "invoices" ? renderInvoices(analysis) : currentTab === "payments" ? renderPayments(analysis) : renderConcepts(analysis)}</section>${renderNoraContextCard({ eyebrow: "NORA · ACOMPAÑAMIENTO CFDI", title: "¿Quieres interpretar una alerta o revisar una diferencia?", description: "Solo se prepara un resumen numérico sin RFC, nombres, UUID, folios, archivo ni XML. Nora lo recibe cuando pulsas esta acción y envías tu pregunta.", actionLabel: "Pedir apoyo a Nora", cfdiAction: "ask-nora", avatarState: "explaining", className: "cfdi-nora-handoff" })}<button type="button" class="cfdi-reset" data-cfdi-reset>Quitar resultado de esta sesión</button></section>`;
   const pending = cfdiState.pendingRequest ? `<aside class="cfdi-origin-request"><div><span>DERIVADO DESDE ASISTENTE ABIERTO</span><p>${escapeHtml(cfdiState.pendingRequest)}</p></div><button type="button" data-cfdi-dismiss-request aria-label="Quitar solicitud de origen">×</button></aside>` : "";
-  const status = cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
+  const status = cfdiState.confirmationNotice ? `<p class="cfdi-operation-confirmation" role="status">${escapeHtml(cfdiState.confirmationNotice)}</p>` : cfdiState.status === "processing" ? renderProcessingStatus() : cfdiState.error ? `<div class="cfdi-parse-error" role="alert"><div><b>No se pudo completar el análisis</b><p>${escapeHtml(cfdiState.error)}</p></div><button type="button" data-cfdi-ask-error>Pedir ayuda a Nora</button></div>` : cfdiState.status === "ready" ? `<p class="cfdi-progress is-ready" role="status">Último análisis listo · ${cfdiState.fileCount} archivo(s) leídos en este navegador.</p>` : "";
   const statusLabel = cfdiState.status === "processing" ? "Analizando localmente" : cfdiState.error ? "Requiere revisión" : cfdiState.analysis ? "Análisis listo" : cfdiState.queuedFiles.length ? "Lote en revisión" : "Disponible · análisis local";
   const statusKind = cfdiState.error ? "attention" : cfdiState.status === "processing" ? "pending" : "ready";
   const nextStep = cfdiState.status === "processing" ? "Espera a que termine el análisis en este navegador." : cfdiState.error ? "Corrige el problema indicado y vuelve a seleccionar el archivo si hace falta." : cfdiState.analysis ? "Revisa alertas, relaciones y estimaciones antes de guardar o compartir un resumen." : cfdiState.queuedFiles.length ? "Revisa el lote y confirma el análisis local." : "Selecciona XML o ZIP para comenzar la revisión.";
   const pendingItems = cfdiState.status === "processing" ? ["El análisis está en curso."] : cfdiState.error ? ["Revisar el error antes de reintentar."] : cfdiState.analysis ? ["Las alertas requieren validación humana; no equivalen a una revisión del SAT."] : cfdiState.queuedFiles.length ? ["Confirmar la revisión del lote para iniciar el análisis."] : ["Añadir al menos un archivo XML o ZIP."];
-  const guidance = renderToolGuidance({ state: statusLabel, nextStep, pending: pendingItems, boundary: "El análisis ocurre en este navegador; no valida ante el SAT ni sustituye un dictamen profesional." });
+  const guidanceTone = cfdiState.error ? "error" : cfdiState.status === "processing" ? "pending" : cfdiState.analysis ? "attention" : "info";
+  const guidance = renderToolGuidance({ state: statusLabel, nextStep, pending: pendingItems, boundary: "El análisis ocurre en este navegador; no valida ante el SAT ni sustituye un dictamen profesional.", tone: guidanceTone });
   const toolHeader = renderToolHeader({
     id: "cfdi",
     eyebrow: "DOCUMENTOS FISCALES · CFDI 4.0",
@@ -414,6 +416,7 @@ function stageCfdiFiles(files) {
   if (cfdiState.status === "processing") return;
   const incoming = Array.from(files || []);
   if (!incoming.length) return;
+  cfdiState.confirmationNotice = "";
   const result = addCfdiFilesToQueue(cfdiState.queuedFiles, incoming);
   cfdiState.queuedFiles = result.files;
   cfdiState.queueMessage = result.skipped
@@ -679,7 +682,7 @@ export function bindCfdiWorkspace(app, { onUpdate = () => {}, onAskNora = () => 
     const tab = event.target.closest("[data-cfdi-tab]");
     if (tab) { cfdiState.activeTab = tab.dataset.cfdiTab; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-reset]")) {
-      resetCfdiWorkspace(); cfdiState.operationMessage = ""; onUpdate(); return;
+      resetCfdiWorkspace(); cfdiState.operationMessage = ""; cfdiState.confirmationNotice = "Resultado CFDI retirado de esta sesión local."; onUpdate(); return;
     }
     if (event.target.closest("[data-cfdi-dismiss-request]")) { cfdiState.pendingRequest = ""; onUpdate(); return; }
     if (event.target.closest("[data-cfdi-ask-nora]")) {

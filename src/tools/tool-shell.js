@@ -42,19 +42,21 @@ export function renderToolHeader({
       <p class="tool-shell-description">${escapeHtml(description)}</p>
     </div>
     <div class="tool-shell-actions island-frame-actions">
-      ${statusLabel ? `<span class="tool-shell-status island-frame-status is-${safeKind}" data-island-status="${safeKind}"><span aria-hidden="true">${safeKind === "ready" ? "✓" : safeKind === "error" ? "×" : safeKind === "attention" ? "!" : "i"}</span>${escapeHtml(statusLabel)}</span>` : ""}
+      ${statusLabel ? `<span class="tool-shell-status island-frame-status is-${safeKind}" data-island-status="${safeKind}"><span aria-hidden="true">${safeKind === "ready" ? "✓" : safeKind === "error" ? "×" : safeKind === "attention" ? "!" : safeKind === "pending" ? "…" : "i"}</span>${escapeHtml(statusLabel)}</span>` : ""}
       ${actionMarkup.replaceAll("tool-shell-action", "tool-shell-action island-frame-action")}
     </div>
   </header>`;
 }
 
-export function renderToolGuidance({ state, nextStep, pending = [], boundary }) {
+export function renderToolGuidance({ state, nextStep, pending = [], boundary, tone = "info" }) {
   const pendingItems = Array.isArray(pending) ? pending.filter(Boolean) : [];
-  return `<aside class="tool-guidance" role="status" aria-live="polite" aria-atomic="true" aria-label="Estado y siguiente paso">
-    <div class="tool-guidance-item"><span>Estado actual</span><b>${escapeHtml(state)}</b></div>
+  const safeTone = ["info", "ready", "pending", "attention", "error"].includes(tone) ? tone : "info";
+  const stateMark = { info: "i", ready: "✓", pending: "…", attention: "!", error: "×" }[safeTone];
+  return `<aside class="tool-guidance" data-guidance-state="${safeTone}" role="status" aria-live="polite" aria-atomic="true" aria-label="Estado y siguiente paso">
+    <div class="tool-guidance-item tool-guidance-state is-${safeTone}"><span>Estado actual</span><b><i aria-hidden="true">${stateMark}</i>${escapeHtml(state)}</b></div>
     <div class="tool-guidance-item"><span>Siguiente paso</span><p>${escapeHtml(nextStep)}</p></div>
-    <div class="tool-guidance-item"><span>Pendiente</span>${pendingItems.length ? `<ul>${pendingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>Sin bloqueos conocidos para continuar; conserva la revisión humana.</p>`}</div>
-    <div class="tool-guidance-item tool-guidance-boundary"><span>Alcance</span><p>${escapeHtml(boundary)}</p></div>
+    <div class="tool-guidance-item tool-guidance-pending"><span>Pendiente</span>${pendingItems.length ? `<ul>${pendingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p><i aria-hidden="true">✓</i> Sin bloqueos conocidos; conserva la revisión humana.</p>`}</div>
+    <div class="tool-guidance-item tool-guidance-boundary"><span><i aria-hidden="true">ⓘ</i> Alcance y privacidad</span><p>${escapeHtml(boundary)}</p></div>
   </aside>`;
 }
 

@@ -175,16 +175,17 @@ export function renderReconciliationWorkspace({ analysis = null } = {}) {
   const startRows = reconciliationState.rawRows.length ? rows : [];
   const canAnalyze = canGenerate(availableSource);
   const statusLabel = reconciliationState.loading ? "Leyendo archivo local" : reconciliationState.error ? "Requiere corregir el archivo" : reconciliationState.analyzed ? "Sugerencias listas · revisión humana" : !reconciliationState.fileName ? "Archivo pendiente" : !availableSource ? "Falta análisis CFDI" : canAnalyze ? "Lista para comparar" : "Mapeo pendiente";
+  const statusKind = reconciliationState.error ? "error" : reconciliationState.loading ? "pending" : reconciliationState.analyzed ? "attention" : canAnalyze ? "ready" : reconciliationState.fileName ? "pending" : "info";
   const nextStep = reconciliationState.loading ? "Espera a que termine la lectura local del extracto." : reconciliationState.error ? "Corrige el archivo o el formato indicado y vuelve a cargarlo." : reconciliationState.analyzed ? "Revisa cada candidata y valida dirección, importes parciales, comisiones y reversas." : !reconciliationState.fileName ? "Selecciona un archivo CSV o Excel y revisa sus encabezados." : !availableSource ? "Analiza CFDI en esta pestaña para habilitar candidatos de conciliación." : canAnalyze ? "Genera sugerencias locales y verifica cada vínculo propuesto." : "Completa el mapeo de fecha e importe y define formato, signo, fuente CFDI y moneda.";
   const pendingItems = reconciliationState.loading ? ["Lectura del archivo en curso."] : reconciliationState.error ? ["Resolver el error de lectura antes de continuar."] : reconciliationState.analyzed ? ["Confirmar manualmente cada candidata; ninguna relación queda conciliada automáticamente."] : !reconciliationState.fileName ? ["Seleccionar un extracto CSV/XLSX/XLS."] : !availableSource ? ["Cargar un análisis CFDI local en esta pestaña."] : canAnalyze ? ["Ejecutar la comparación; después revisar los resultados."] : ["Completar los campos requeridos de mapeo y convención."];
-  const guidance = renderToolGuidance({ state: statusLabel, nextStep, pending: pendingItems, boundary: "El archivo se procesa en esta pestaña; no se conecta a bancos ni guarda o confirma conciliaciones." });
+  const guidance = renderToolGuidance({ state: statusLabel, nextStep, pending: pendingItems, boundary: "El archivo se procesa en esta pestaña; no se conecta a bancos ni guarda o confirma conciliaciones.", tone: statusKind });
   const header = renderToolHeader({
     id: "bank-reconciliation",
     eyebrow: "CONTAIA HERRAMIENTAS · MOVIMIENTOS LOCALES",
     title: "Conciliación bancaria",
     description: "Carga un extracto, mapea sus columnas y revisa posibles relaciones con facturas o pagos CFDI. El archivo no se envía ni conecta una cuenta bancaria.",
     statusLabel,
-    statusKind: reconciliationState.error || reconciliationState.analyzed ? "attention" : canAnalyze ? "ready" : "info",
+    statusKind,
     className: "recon-header",
     actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }, { label: "Abrir CFDI", section: "cfdi", arrow: false }],
   });
@@ -362,6 +363,7 @@ export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onU
     if (fileInput) {
       const file = fileInput.files?.[0];
       fileInput.value = "";
+      reconciliationState.notice = "";
       if (file) void loadFile(file, onUpdate);
       return;
     }
@@ -410,6 +412,7 @@ export function bindReconciliationWorkspace(app, { getAnalysis = () => null, onU
   app.addEventListener("click", (event) => {
     if (event.target.closest("[data-recon-clear-file]")) {
       resetReconciliationWorkspace();
+      reconciliationState.notice = "El extracto y sus resultados se retiraron de esta pestaña.";
       onUpdate();
       app.querySelector("[data-recon-file]")?.focus({ preventScroll: true });
       return;

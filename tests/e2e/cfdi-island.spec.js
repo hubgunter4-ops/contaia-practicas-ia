@@ -46,8 +46,10 @@ test.describe("CFDI · isla y limpieza", () => {
       render();
       const button = root.querySelector('[data-cfdi-handoff="diot"]');
       button.click();
-      return { buttonVisible: Boolean(button), target: received?.target, sourceCount: received?.sourceIds.length, hasXml: JSON.stringify(received).includes("rawXml") || JSON.stringify(received).includes("<cfdi:") };
+      root.querySelector("[data-cfdi-reset]").click();
+      const confirmation = root.querySelector(".cfdi-operation-confirmation[role='status']")?.textContent;
+      return { buttonVisible: Boolean(button), target: received?.target, sourceCount: received?.sourceIds.length, hasXml: JSON.stringify(received).includes("rawXml") || JSON.stringify(received).includes("<cfdi:"), confirmation };
     });
-    expect(result).toEqual({ buttonVisible: true, target: "diot", sourceCount: 1, hasXml: false });
+    expect(result).toEqual({ buttonVisible: true, target: "diot", sourceCount: 1, hasXml: false, confirmation: "Resultado CFDI retirado de esta sesión local." });
   });
 });

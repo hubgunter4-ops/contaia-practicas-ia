@@ -113,7 +113,12 @@ function statusClass(label) { return label === "Lista para descargar" ? "is-read
 
 function renderStepper() {
   const index = currentStepIndex();
-  return `<nav class="diot-stepper" aria-label="Etapas de DIOT asistida">${STEPS.map((step, stepIndex) => `<button type="button" class="${step.id === diotState.activeStep ? "is-active" : ""}" data-diot-step="${step.id}" aria-current="${step.id === diotState.activeStep ? "step" : "false"}"><b>${step.number}</b><span>${escapeHtml(step.label)}</span>${stepIndex < index ? "<i aria-hidden=\"true\">✓</i>" : ""}</button>`).join("")}</nav>`;
+  return `<nav class="diot-stepper" aria-label="Etapas de DIOT asistida">${STEPS.map((step, stepIndex) => {
+    const isCurrent = step.id === diotState.activeStep;
+    const state = stepIndex < index ? "Completada" : isCurrent ? "Etapa actual" : "Por iniciar";
+    const className = stepIndex < index ? "is-complete" : isCurrent ? "is-active" : "is-upcoming";
+    return `<button type="button" class="${className}" data-diot-step="${step.id}" ${isCurrent ? 'aria-current="step"' : ""} aria-label="${escapeHtml(step.label)} · ${state}"><b>${step.number}</b><span class="diot-step-label">${escapeHtml(step.label)}</span><small>${state}</small>${stepIndex < index ? "<i aria-hidden=\"true\">✓</i>" : ""}</button>`;
+  }).join("")}</nav>`;
 }
 
 function renderContextStep() {
@@ -224,8 +229,10 @@ export function renderDiotWorkspace({ analysis = null } = {}) {
     review: { nextStep: result.errors.length ? "Resuelve los bloqueos y vuelve a revisar los totales trazables." : "Coteja las incidencias y advertencias antes de abrir la vista previa.", pending: [...(result.errors.length ? [`${result.errors.length} bloqueo(s) pendiente(s).`] : []), ...(result.warnings.length && !diotState.warningsAcknowledged ? [`Reconocer ${result.warnings.length} advertencia(s) tras cotejarlas.`] : [])] },
     download: { nextStep: result.canDownload ? "Descarga el CSV o JSON de trabajo y verifica el archivo fuera de ContaIA." : "Vuelve a Revisión y resuelve los bloqueos antes de descargar.", pending: result.canDownload ? [] : [`${result.errors.length} bloqueo(s) de descarga pendiente(s).`] },
   }[step.id];
-  const guidance = renderToolGuidance({ state: `${label} · paso ${step.number} de ${STEPS.length}`, ...guidanceByStep, boundary: "El CSV/JSON es un archivo de trabajo local, no un formato oficial ni una presentación ante el SAT; requiere revisión profesional." });
-  const header = renderToolHeader({ id: "diot", eyebrow: "CONTAIA HERRAMIENTAS · IVA Y TERCEROS", title: "DIOT asistida", description: "Prepara, revisa y descarga; no presenta declaraciones. Revisa operaciones con terceros e IVA sin validar ante el SAT.", statusLabel: label, statusKind: label.includes("Lista") || label.includes("Descargada") ? "ready" : label === "Requiere revisión" ? "attention" : "info", className: "diot-header", actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }] });
+  const guidanceTone = result.errors.length ? "error" : result.warnings.length && !diotState.warningsAcknowledged ? "attention" : result.canDownload ? "ready" : "pending";
+  const guidance = renderToolGuidance({ state: `${label} · paso ${step.number} de ${STEPS.length}`, ...guidanceByStep, boundary: "El CSV/JSON es un archivo de trabajo local, no un formato oficial ni una presentación ante el SAT; requiere revisión profesional.", tone: guidanceTone });
+  const statusKind = label.includes("Lista") || label.includes("Descargada") ? "ready" : label === "Requiere revisión" ? "attention" : "info";
+  const header = renderToolHeader({ id: "diot", eyebrow: "CONTAIA HERRAMIENTAS · IVA Y TERCEROS", title: "DIOT asistida", description: "Prepara, revisa y descarga; no presenta declaraciones. Revisa operaciones con terceros e IVA sin validar ante el SAT.", statusLabel: label, statusKind, className: "diot-header", actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }] });
   const content = diotState.activeStep === "context" ? renderContextStep() : diotState.activeStep === "sources" ? renderSourcesStep() : diotState.activeStep === "classify" ? renderClassifyStep() : diotState.activeStep === "review" ? renderReviewStep() : renderDownloadStep();
   return `<main id="contenido" class="content diot-page" data-diot-page tabindex="-1">${header}${guidance}<section class="diot-privacy-banner" aria-label="Privacidad de DIOT"><span aria-hidden="true">◉</span><p><b>Preparación local de esta sesión.</b> CFDI, terceros, importes y descargas permanecen en este navegador. La herramienta produce archivos de trabajo; no presenta declaraciones ni contacta al SAT.</p></section>${renderStepper()}${content}${renderAssistantPanel()}<footer class="diot-disclaimer"><b>Alcance de esta entrega</b><p>El esquema local está versionado para revisión y no es un formato oficial compatible. Confirma obligación, datos, categoría, importes y aplicación de facilidades con fuentes vigentes y revisión profesional.</p></footer></main>`;
 }

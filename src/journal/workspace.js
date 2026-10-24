@@ -238,11 +238,13 @@ export function renderJournalWorkspace({ analysis = null, bankRows = [], bankFil
   const draftCount = journalState.drafts.length;
   const hasSelection = journalState.selectedSourceIds.length > 0;
   const statusLabel = !sourceCount ? "Fuentes pendientes" : draftCount ? `${draftCount} borrador(es) · revisión` : hasSelection ? "Listo para generar propuesta" : "Fuentes disponibles · selección pendiente";
+  const statusTone = draftCount ? "attention" : sourceCount && hasSelection ? "ready" : sourceCount ? "pending" : "info";
   const guidance = renderToolGuidance({
     state: statusLabel,
     nextStep: !sourceCount ? "Carga o comparte CFDI desde el Analizador, o agrega movimientos desde Conciliación; después selecciona las fuentes." : !draftCount ? "Confirma periodo, papel de la empresa y regla; selecciona las fuentes para generar una propuesta." : "Abre cada borrador, verifica evidencia, saldos y advertencias; aprueba localmente solo si corresponde.",
     pending: !sourceCount ? ["Añadir una fuente local de CFDI o movimiento bancario."] : !hasSelection && !draftCount ? ["Seleccionar al menos una fuente en Contexto y pólizas."] : draftCount ? [`Revisar ${draftCount} borrador(es); ninguno se contabiliza automáticamente.`] : [],
     boundary: "Las propuestas son borradores locales; la aprobación no contabiliza, no sustituye auditoría certificada ni asesoría profesional.",
+    tone: statusTone,
   });
   const header = renderToolHeader({ id: "accounting-journal", eyebrow: "CONTAIA HERRAMIENTAS · CONTABILIDAD Y AUDITORÍA LOCAL", title: "Pólizas contables sugeridas", description: "Reconstruye factura, pago y ajuste desde fuentes seleccionadas; la auditoría CFDI local muestra evidencia y pendientes. Revisa antes de aprobar; nada se contabiliza automáticamente.", statusLabel, statusKind: draftCount ? "attention" : sourceCount ? "ready" : "info", className: "journal-header", actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }] });
   const tabs = [["drafts", "Contexto y pólizas"], ["adjustments", "Notas de crédito"], ["audit-global", "Auditoría global"], ["audit-partial", "Auditoría parcial"], ["catalog", "Catálogo"], ["rules", "Reglas"]];
@@ -421,7 +423,7 @@ export function bindJournalWorkspace(app, { getSources = () => ({}), onUpdate = 
   addListener("click", (event) => {
     const tab = event.target.closest("[data-journal-tab]");
     if (tab) { journalState.activeTab = tab.dataset.journalTab || "drafts"; journalState.auditActiveFindingId = ""; onUpdate(); return; }
-    if (event.target.closest("[data-journal-clear-selection]")) { journalState.selectedSourceIds = []; onUpdate(); return; }
+    if (event.target.closest("[data-journal-clear-selection]")) { journalState.selectedSourceIds = []; journalState.notice = "Selección vaciada localmente; las fuentes originales no se eliminaron."; onUpdate(); return; }
     if (event.target.closest("[data-journal-generate]")) { generateDraft(onUpdate); return; }
     if (event.target.closest("[data-journal-generate-adjustments]")) { journalState.generationMode = "lifecycle"; journalState.activeTab = "drafts"; generateDraft(onUpdate); return; }
     if (event.target.closest("[data-audit-refresh]")) { journalState.auditExportNotice = "Auditoría reconstruida a partir de las fuentes de esta sesión."; journalState.auditExportError = false; onUpdate(); return; }
