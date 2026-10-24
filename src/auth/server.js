@@ -80,6 +80,12 @@ function normalizePassword(value) {
   return value;
 }
 
+function normalizeCaptchaToken(value) {
+  if (value == null || value === "") return "";
+  if (typeof value !== "string" || value.length > 8192 || /[\u0000-\u001f\u007f]/.test(value)) throw Object.assign(new Error("La verificación de seguridad no es válida."), { status: 400 });
+  return value;
+}
+
 function publicSession(session) {
   return {
     access_token: session.access_token,
@@ -103,17 +109,19 @@ export async function handleAuth(request, response, env = process.env) {
     const body = await readJson(request);
     const identifier = normalizeIdentifier(body?.identifier);
     const password = normalizePassword(body?.password);
+    const captchaToken = normalizeCaptchaToken(body?.captchaToken);
     if (!identifier.includes("@")) {
       const url = String(env.SUPABASE_URL || "").trim().replace(/\/$/, "");
       if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return sendJson(response, 503, { error: "La autenticación no está configurada." });
-      const upstream = await fetch(`${url}/functions/v1/login-by-alias`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ identifier, password }) });
+      const upstream = await fetch(`${url}/functions/v1/login-by-alias`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ identifier, password, captchaToken }) });
       const payload = await upstream.text();
       response.writeHead(upstream.status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" });
       return response.end(payload);
     }
     const { url, key } = supabaseConfig(env);
     const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-    const { data, error } = await client.auth.signInWithPassword({ email: identifier, password });
+    const options = captchaToken ? { captchaToken } : undefined;
+    const { data, error } = await client.auth.signInWithPassword({ email: identifier, password, ...(options ? { options } : {}) });
     if (error || !data.session || !data.user) return sendJson(response, 401, { error: "El correo o alias no coincide con la contraseña." });
     return sendJson(response, 200, { session: publicSession(data.session) });
   } catch (error) {

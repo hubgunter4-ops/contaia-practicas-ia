@@ -28,6 +28,12 @@ function normalizedPassword(value: unknown): string {
   return value;
 }
 
+function normalizedCaptchaToken(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (typeof value !== "string" || value.length > 8192 || /[\u0000-\u001f\u007f]/.test(value)) throw new Error("invalid_captcha");
+  return value;
+}
+
 function clientIp(request: Request): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
@@ -80,6 +86,7 @@ Deno.serve(async (request) => {
     const body = await readBody(request);
     const identifier = normalizedIdentifier(body.identifier);
     const password = normalizedPassword(body.password);
+    const captchaToken = normalizedCaptchaToken(body.captchaToken);
     const url = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
@@ -94,12 +101,13 @@ Deno.serve(async (request) => {
     }
 
     const authClient = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-    const { data, error } = await authClient.auth.signInWithPassword({ email, password });
+    const options = captchaToken ? { captchaToken } : undefined;
+    const { data, error } = await authClient.auth.signInWithPassword({ email, password, ...(options ? { options } : {}) });
     if (error || !data.session || !data.user) return json(401, { error: "Correo, usuario o contraseña incorrectos." });
     return json(200, { session: publicSession(data.session) });
   } catch (error) {
     const code = error instanceof Error ? error.message : "unknown";
-    if (["invalid_identifier", "invalid_password", "invalid_json"].includes(code)) return json(400, { error: "Correo o usuario y contraseña no válidos." });
+    if (["invalid_identifier", "invalid_password", "invalid_json", "invalid_captcha"].includes(code)) return json(400, { error: "Correo o usuario y contraseña no válidos." });
     if (code === "body_too_large") return json(413, { error: "La solicitud supera el límite permitido." });
     return json(500, { error: "No se pudo iniciar sesión." });
   }

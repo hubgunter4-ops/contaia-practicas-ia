@@ -28,9 +28,12 @@ export async function handleCfdiConfig(request, response, env = process.env) {
   if (request.method !== "GET") return sendJson(response, 405, { error: "Método no permitido." });
   const url = typeof env.SUPABASE_URL === "string" ? env.SUPABASE_URL.trim().replace(/\/$/, "") : "";
   const publishableKey = typeof env.SUPABASE_PUBLISHABLE_KEY === "string" ? env.SUPABASE_PUBLISHABLE_KEY.trim() : "";
+  const hcaptchaSitekey = typeof env.HCAPTCHA_SITEKEY === "string" && /^[A-Za-z0-9_-]{20,200}$/.test(env.HCAPTCHA_SITEKEY.trim())
+    ? env.HCAPTCHA_SITEKEY.trim()
+    : "";
   let validUrl = false;
   try { validUrl = new URL(url).protocol === "https:" && /^[a-z0-9-]+\.supabase\.co$/i.test(new URL(url).hostname); } catch { /* valor omitido */ }
   const validKey = /^sb_publishable_[A-Za-z0-9_-]{12,200}$/.test(publishableKey);
-  if (!validUrl || !validKey) return sendJson(response, 200, { enabled: false });
-  sendJson(response, 200, { enabled: true, url, publishableKey });
+  if (!validUrl || !validKey) return sendJson(response, 200, { enabled: false, hcaptchaSitekey });
+  sendJson(response, 200, { enabled: true, url, publishableKey, hcaptchaSitekey });
 }
