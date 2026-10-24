@@ -188,3 +188,167 @@
   .app-shell--fiscal:has(.tools-page) *::before,
   .app-shell--fiscal:has(.tools-page) *::after { animation: none !important; transition: none !important; }
 }
+
+/* Extensión del tema de plataforma a las vistas individuales de herramientas. */
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) {
+  --tools-navy: #0b2a55;
+  --tools-navy-deep: #071d3d;
+  --tools-navy-soft: #123f78;
+  --tools-blue: #1266c9;
+  --tools-blue-strong: #0c52a8;
+  --tools-sky: #eaf3ff;
+  --tools-canvas: #f3f6fb;
+  --tools-panel: #ffffff;
+  --tools-ink: #14213d;
+  --tools-muted: #60718a;
+  --tools-line: #d8e2ef;
+  --tools-success: #198f68;
+  --tools-success-soft: #e7f5ef;
+  --tools-warning: #d59c27;
+  --tools-warning-soft: #fff6df;
+  --tools-danger: #bf5a57;
+  --tools-danger-soft: #fff0ef;
+  --fiscal-petroleum: var(--tools-navy);
+  --fiscal-jade: var(--tools-success);
+  --fiscal-jade-ink: #0e6d53;
+  --fiscal-ivory: var(--tools-canvas);
+  --fiscal-sand: #e7eef7;
+  --fiscal-coral: var(--tools-danger);
+  --fiscal-validation: var(--tools-warning);
+  --fiscal-text-secondary: #435a76;
+  --fiscal-muted: var(--tools-muted);
+  --fiscal-line: var(--tools-line);
+  --fiscal-primary: var(--tools-blue);
+  --fiscal-primary-strong: var(--tools-blue-strong);
+  --island-focus-color: var(--tools-navy);
+  --island-focus-accent: var(--tools-blue);
+  --island-focus-ring: 0 0 0 3px #ffffff, 0 0 0 6px var(--tools-blue);
+}
+
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)),
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell {
+  background: var(--tools-canvas);
+  color: var(--tools-ink);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar {
+  width: 244px;
+  padding: 18px 12px 16px;
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  background: linear-gradient(180deg, var(--tools-navy) 0%, var(--tools-navy-deep) 100%);
+  color: #f4f8ff;
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 244px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .topbar {
+  min-height: 64px;
+  height: 64px;
+  padding-inline: clamp(18px, 3vw, 42px);
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+  background: var(--tools-navy);
+  color: #eef6ff;
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .brand-button { padding: 4px 8px 18px; color: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .brand-mark { color: #24a0f4; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .brand-copy strong { color: #bfd8f5; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .brand-copy b { color: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .brand-copy b span { color: #56b9ff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar-divider { background: rgba(210, 230, 255, .18); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-item { min-height: 46px; border-radius: 8px; color: #dceafd; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-item:hover { background: rgba(58, 137, 224, .22); color: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-item.is-active { background: linear-gradient(135deg, #145da8, #1a71cf); color: #fff; box-shadow: 0 8px 18px rgba(2, 19, 46, .28); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-label { color: #9ec2e8; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-index { color: #84a9d2; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .is-active .nav-index { color: #cfe9ff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .nav-done { color: #6ee0b2; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .folio-stamp { border-color: rgba(210, 230, 255, .2); background: rgba(4, 22, 49, .32); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .folio-stamp b { color: #9ed3ff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .folio-stamp small,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .data-link { color: #b8cce5; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .stamp-dot { background: #49c997; box-shadow: 0 0 0 3px rgba(73, 201, 151, .18); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .breadcrumb,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .topbar-right { color: #b9cde6; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .breadcrumb i { color: #6f9bd0; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .breadcrumb strong { color: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .edition-dot { background: #4dd49b; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .section-tab { color: #c4d9f2; border-radius: 7px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .section-tab b { color: #8fb9e7; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .section-tab:hover { border-color: rgba(145, 199, 255, .35); background: rgba(53, 127, 211, .25); color: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .section-tab.is-active { border-color: #2f82dc; background: var(--tools-blue); color: #fff; box-shadow: 0 5px 12px rgba(2, 19, 46, .2); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .section-tab.is-active b { color: #cce8ff; }
+
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content:is(.cfdi-page, .diot-page, .journal-page, .recon-page, .workpapers-page) {
+  width: min(100%, 1380px);
+  color: var(--tools-ink);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-header {
+  margin-bottom: 14px;
+  border-color: var(--tools-line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(9, 34, 70, .07);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-header::before { background: var(--tools-blue); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-eyebrow { color: var(--tools-blue-strong); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-header h1 { color: var(--tools-navy); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-description { color: #536982; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-status { border-color: var(--tools-line); background: #eef4fb; color: var(--tools-navy); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-action { border-color: #b7d1ee; color: var(--tools-blue-strong); background: #fff; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .tool-shell-action:hover:not(:disabled) { border-color: var(--tools-blue); background: var(--tools-sky); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .button-primary,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .button-primary,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .island-frame-action.button-primary {
+  border-color: var(--tools-blue) !important;
+  background: var(--tools-blue) !important;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(18, 102, 201, .18);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .button-primary:hover:not(:disabled),
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .button-primary:hover:not(:disabled),
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .island-frame-action.button-primary:hover:not(:disabled) { border-color: var(--tools-blue-strong) !important; background: var(--tools-blue-strong) !important; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(button, input, select, textarea):focus-visible { border-color: var(--tools-blue); outline: 2px solid var(--tools-blue); outline-offset: 3px; box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--tools-blue); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-stage, .diot-review-stage, .diot-download-stage, .journal-source-stage, .journal-rule-stage, .journal-review-stage, .journal-config-stage, .recon-step-card, .recon-results-empty, .workpapers-dashboard, .workpapers-flow-stage, .workpapers-sheet-card, .workpapers-provenance, .workpapers-plans) {
+  border-color: var(--tools-line);
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 7px 20px rgba(9, 34, 70, .045);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-privacy-banner, .journal-privacy-banner, .recon-privacy-banner, .workpapers-privacy-banner) {
+  border-color: #c5dbf2;
+  border-left-color: var(--tools-blue);
+  background: linear-gradient(110deg, #edf5ff, #fff);
+  color: #435a76;
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-disclaimer, .journal-disclaimer, .recon-disclaimer, .workpapers-disclaimer) {
+  border-color: var(--tools-line);
+  background: #eef4fb;
+  color: #536982;
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-section-heading .eyebrow, .journal-section-heading .eyebrow, .recon-section-title .eyebrow, .recon-results-heading .eyebrow) { color: var(--tools-blue-strong); }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-stepper button.is-active, .journal-tabs button.is-active, .workpapers-tabs button[aria-selected="true"]) {
+  border-color: #b8d4f1;
+  border-bottom-color: var(--tools-blue);
+  background: var(--tools-sky);
+  color: var(--tools-navy);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-field input, .diot-field select, .diot-row textarea, .diot-assistant textarea, .journal-field input, .journal-field select, .journal-assistant textarea, .recon-field input, .recon-field select, .recon-filter select, .workpapers-period-control select) {
+  border-color: #c8d9eb;
+  background: #fff;
+  color: var(--tools-ink);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .recon-results-empty) { border-color: var(--tools-line); background: #f8fafd; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-row, .diot-issues, .diot-aggregates, .diot-preview, .journal-source-card, .journal-draft-item, .journal-draft-detail, .journal-rule-card, .recon-summary-card, .workpapers-source-card) { border-color: #d8e2ef; }
+
+@media (max-width: 1000px) {
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 226px; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 226px; }
+}
+@media (max-width: 760px) {
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 100%; padding: 8px 14px; border-bottom-color: rgba(255, 255, 255, .12); background: var(--tools-navy); }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 0; }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .topbar { min-height: 50px; height: auto; background: var(--tools-navy-deep); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) *,
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) *::before,
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) *::after { animation: none !important; transition: none !important; }
+}

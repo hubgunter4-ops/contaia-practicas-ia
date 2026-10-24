@@ -14,13 +14,17 @@ test("el tema de plataforma se carga después de las hojas específicas", () => 
   assert.ok(auth >= 0 && platform > auth);
 });
 
-test("la paleta nueva queda limitada al shell de Herramientas", () => {
+test("la paleta de plataforma cubre Herramientas y las vistas individuales", () => {
   assert.match(theme, /\.app-shell--fiscal:has\(\.tools-page\)/);
   assert.match(theme, /--tools-navy:\s*#0b2a55/);
   assert.match(theme, /--tools-blue:\s*#1266c9/);
   assert.match(theme, /--tools-canvas:\s*#f3f6fb/);
   assert.match(theme, /\.tools-card/);
   assert.match(theme, /\.tools-connection-status\.is-connected/);
+  assert.match(theme, /:has\(\.tool-shell-header\):not\(:has\(\.tools-page\)\)/);
+  for (const page of ["cfdi-page", "diot-page", "journal-page", "recon-page", "workpapers-page"]) {
+    assert.match(theme, new RegExp(`\\.${page}`));
+  }
   assert.doesNotMatch(theme, /\.public-|\.auth-|\.classroom-content/);
 });
 
