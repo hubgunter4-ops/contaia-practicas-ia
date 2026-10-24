@@ -1,7 +1,7 @@
 import { createWorkerBridge, SessionExpiredError } from "../app/worker-bridge.js";
 import { MAX_BANK_ROWS, MAX_HEADER_SCAN_ROWS } from "./parser.js";
 import { buildReconciliationRows, normalizeBankRows, summarizeReconciliationRows } from "./matching.js";
-import { renderNoraContextCard, renderToolHeader } from "../tools/tool-shell.js";
+import { renderNoraContextCard, renderToolGuidance, renderToolHeader } from "../tools/tool-shell.js";
 
 const DEFAULT_MAPPING = Object.freeze({ date: "", amount: "", reference: "", currency: "", description: "", direction: "" });
 const DEFAULT_SETTINGS = Object.freeze({ dateFormat: "", decimalMark: ".", amountConvention: "", defaultCurrency: "", sourceType: "", dateToleranceDays: 3 });
@@ -174,13 +174,17 @@ export function renderReconciliationWorkspace({ analysis = null } = {}) {
   const { headers, rows } = selectedRows();
   const startRows = reconciliationState.rawRows.length ? rows : [];
   const canAnalyze = canGenerate(availableSource);
+  const statusLabel = reconciliationState.loading ? "Leyendo archivo local" : reconciliationState.error ? "Requiere corregir el archivo" : reconciliationState.analyzed ? "Sugerencias listas · revisión humana" : !reconciliationState.fileName ? "Archivo pendiente" : !availableSource ? "Falta análisis CFDI" : canAnalyze ? "Lista para comparar" : "Mapeo pendiente";
+  const nextStep = reconciliationState.loading ? "Espera a que termine la lectura local del extracto." : reconciliationState.error ? "Corrige el archivo o el formato indicado y vuelve a cargarlo." : reconciliationState.analyzed ? "Revisa cada candidata y valida dirección, importes parciales, comisiones y reversas." : !reconciliationState.fileName ? "Selecciona un archivo CSV o Excel y revisa sus encabezados." : !availableSource ? "Analiza CFDI en esta pestaña para habilitar candidatos de conciliación." : canAnalyze ? "Genera sugerencias locales y verifica cada vínculo propuesto." : "Completa el mapeo de fecha e importe y define formato, signo, fuente CFDI y moneda.";
+  const pendingItems = reconciliationState.loading ? ["Lectura del archivo en curso."] : reconciliationState.error ? ["Resolver el error de lectura antes de continuar."] : reconciliationState.analyzed ? ["Confirmar manualmente cada candidata; ninguna relación queda conciliada automáticamente."] : !reconciliationState.fileName ? ["Seleccionar un extracto CSV/XLSX/XLS."] : !availableSource ? ["Cargar un análisis CFDI local en esta pestaña."] : canAnalyze ? ["Ejecutar la comparación; después revisar los resultados."] : ["Completar los campos requeridos de mapeo y convención."];
+  const guidance = renderToolGuidance({ state: statusLabel, nextStep, pending: pendingItems, boundary: "El archivo se procesa en esta pestaña; no se conecta a bancos ni guarda o confirma conciliaciones." });
   const header = renderToolHeader({
     id: "bank-reconciliation",
     eyebrow: "CONTAIA HERRAMIENTAS · MOVIMIENTOS LOCALES",
     title: "Conciliación bancaria",
     description: "Carga un extracto, mapea sus columnas y revisa posibles relaciones con facturas o pagos CFDI. El archivo no se envía ni conecta una cuenta bancaria.",
-    statusLabel: "En preparación · sin conexión bancaria",
-    statusKind: "info",
+    statusLabel,
+    statusKind: reconciliationState.error || reconciliationState.analyzed ? "attention" : canAnalyze ? "ready" : "info",
     className: "recon-header",
     actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }, { label: "Abrir CFDI", section: "cfdi", arrow: false }],
   });
@@ -193,6 +197,7 @@ export function renderReconciliationWorkspace({ analysis = null } = {}) {
   const oversizeRows = startRows.length > MAX_BANK_ROWS;
   return `<main id="contenido" class="content recon-page" data-reconciliation-page tabindex="-1">
     ${header}
+    ${guidance}
     <section class="recon-privacy-banner" aria-label="Privacidad de la conciliación"><span aria-hidden="true">◉</span><p><b>Procesamiento local.</b> Hasta 8 MiB y ${MAX_BANK_ROWS.toLocaleString("es-MX")} movimientos por archivo. No se sube el extracto, no se guarda en la cuenta ni se envía a Nora. Quitar el archivo o cambiar/cerrar sesión limpia los datos temporales.</p></section>
     <section class="recon-step-card" aria-labelledby="recon-upload-title"><div class="recon-section-title"><div><p class="eyebrow">01 · CARGA CONTROLADA</p><h2 id="recon-upload-title">Importa un extracto</h2></div><span class="recon-formats">.CSV · .XLSX · .XLS</span></div>
       <div class="recon-dropzone ${reconciliationState.dropActive ? "is-dragging" : ""}" data-recon-drop><input id="recon-file" type="file" data-recon-file accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" ${reconciliationState.loading ? "disabled" : ""}/><label for="recon-file"><span class="recon-upload-icon" aria-hidden="true">↑</span><b>${reconciliationState.loading ? "Leyendo en este navegador…" : reconciliationState.fileName ? "Cambiar archivo" : "Selecciona o arrastra CSV / Excel"}</b><small>El contenido se procesa aquí, sin carga a un servidor. ${escapeHtml(fileStatus)}</small></label>${reconciliationState.fileName ? `<button type="button" class="recon-remove-file" data-recon-clear-file ${reconciliationState.loading ? "disabled" : ""}>Quitar archivo</button>` : ""}</div>

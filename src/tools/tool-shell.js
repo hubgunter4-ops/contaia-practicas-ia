@@ -48,6 +48,16 @@ export function renderToolHeader({
   </header>`;
 }
 
+export function renderToolGuidance({ state, nextStep, pending = [], boundary }) {
+  const pendingItems = Array.isArray(pending) ? pending.filter(Boolean) : [];
+  return `<aside class="tool-guidance" role="status" aria-live="polite" aria-atomic="true" aria-label="Estado y siguiente paso">
+    <div class="tool-guidance-item"><span>Estado actual</span><b>${escapeHtml(state)}</b></div>
+    <div class="tool-guidance-item"><span>Siguiente paso</span><p>${escapeHtml(nextStep)}</p></div>
+    <div class="tool-guidance-item"><span>Pendiente</span>${pendingItems.length ? `<ul>${pendingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>Sin bloqueos conocidos para continuar; conserva la revisión humana.</p>`}</div>
+    <div class="tool-guidance-item tool-guidance-boundary"><span>Alcance</span><p>${escapeHtml(boundary)}</p></div>
+  </aside>`;
+}
+
 export function renderNoraContextCard({
   eyebrow = "NORA · AYUDA CONTEXTUAL",
   title,

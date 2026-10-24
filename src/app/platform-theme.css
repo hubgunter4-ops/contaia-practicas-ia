@@ -336,6 +336,25 @@
 }
 .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-empty, .journal-empty-source, .journal-empty-drafts, .journal-detail-empty, .recon-results-empty) { border-color: var(--tools-line); background: #f8fafd; }
 .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content :is(.diot-row, .diot-issues, .diot-aggregates, .diot-preview, .journal-source-card, .journal-draft-item, .journal-draft-detail, .journal-rule-card, .recon-summary-card, .workpapers-source-card) { border-color: #d8e2ef; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance {
+  display: grid;
+  grid-template-columns: minmax(135px, .8fr) minmax(190px, 1.2fr) minmax(190px, 1.2fr) minmax(220px, 1.6fr);
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--tools-line);
+  border-radius: 10px;
+  background: linear-gradient(110deg, #f4f8fe, #fff 72%);
+  color: var(--tools-ink);
+  box-shadow: 0 5px 16px rgba(9, 34, 70, .035);
+}
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item { min-width: 0; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > span { display: block; margin-bottom: 5px; color: var(--tools-blue-strong); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > b { color: var(--tools-navy); font-size: .92rem; line-height: 1.45; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > p,
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > ul { margin: 0; color: #536982; font-size: .82rem; line-height: 1.5; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-item > ul { padding-left: 17px; }
+.app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary { padding-left: 13px; border-left: 2px solid #b8d4f1; }
 
 @media (max-width: 1000px) {
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 226px; }
@@ -345,6 +364,11 @@
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .sidebar { width: 100%; padding: 8px 14px; border-bottom-color: rgba(255, 255, 255, .12); background: var(--tools-navy); }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .main-shell { margin-left: 0; }
   .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .topbar { min-height: 50px; height: auto; background: var(--tools-navy-deep); }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance-boundary { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 520px) {
+  .app-shell--fiscal:has(.tool-shell-header):not(:has(.tools-page)) .content .tool-guidance { grid-template-columns: minmax(0, 1fr); gap: 11px; padding: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

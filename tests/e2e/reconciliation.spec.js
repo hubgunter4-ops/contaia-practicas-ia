@@ -24,13 +24,14 @@ test.describe("Conciliación bancaria · frontend local", () => {
     const requests = [];
     page.on("request", (request) => requests.push(request.url()));
 
-    await expect(page.getByText("En preparación · sin conexión bancaria")).toBeVisible();
+    await expect(page.locator(".tool-guidance")).toContainText("Archivo pendiente");
     await page.locator("[data-recon-file]").setInputFiles({
       name: "extracto-prueba.csv",
       mimeType: "text/csv",
       buffer: Buffer.from("Fecha;Importe;Referencia;Moneda;Descripción\n10/03/2025;1250.00;A-100;MXN;Pago de prueba", "utf8"),
     });
     await expect(page.getByText(/Archivo leído en memoria/)).toBeVisible();
+    await expect(page.locator(".tool-guidance")).toContainText("Mapeo pendiente");
 
     await page.locator('[data-recon-map="date"]').selectOption("0");
     await page.locator('[data-recon-map="amount"]').selectOption("1");
@@ -40,6 +41,7 @@ test.describe("Conciliación bancaria · frontend local", () => {
     await page.locator('[data-recon-setting="amountConvention"]').selectOption("signed");
     await page.locator('[data-recon-setting="sourceType"]').selectOption("invoices");
     await page.locator('[data-recon-run]').click();
+    await expect(page.locator(".tool-guidance")).toContainText("Sugerencias listas · revisión humana");
 
     const row = page.locator(".recon-table tbody tr").first();
     await expect(row).toContainText("A-100");

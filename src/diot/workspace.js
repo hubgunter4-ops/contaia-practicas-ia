@@ -1,4 +1,4 @@
-import { renderToolHeader } from "../tools/tool-shell.js";
+import { renderToolGuidance, renderToolHeader } from "../tools/tool-shell.js";
 import { formatMinor, normalizeMoney } from "../journal/money.js";
 import { buildDiotReviewCsv, buildDiotReviewJson, downloadLocalArtifact, minorToDecimal } from "./exporter.js";
 import { DIOT_REVIEW_SCHEMA, schemaLabel } from "./schema.js";
@@ -216,9 +216,18 @@ export function renderDiotWorkspace({ analysis = null } = {}) {
   syncSources(diotState.handoffAnalysis || analysis);
   const result = validation();
   const label = diotStatusLabel(result, diotState.downloadedAt);
+  const step = STEPS.find(({ id }) => id === diotState.activeStep) || STEPS[0];
+  const guidanceByStep = {
+    context: { nextStep: "Completa periodo, tipo de contribuyente y papel de la empresa antes de clasificar.", pending: [!diotState.context.period && "Indicar periodo fiscal.", !diotState.context.taxpayerType && "Indicar tipo de contribuyente.", diotState.context.companyRole === "unknown" && "Confirmar el papel de la empresa en las operaciones."].filter(Boolean) },
+    sources: { nextStep: "Selecciona las fuentes que formarían parte de esta preparación y continúa a su clasificación.", pending: diotState.selectedSourceIds.length ? [] : ["Seleccionar al menos una fuente CFDI."] },
+    classify: { nextStep: "Revisa tercero, operación, categoría e importes de cada fila; después abre la revisión humana.", pending: result.errors.length ? [`Resolver ${result.errors.length} bloqueo(s) de validación.`] : [] },
+    review: { nextStep: result.errors.length ? "Resuelve los bloqueos y vuelve a revisar los totales trazables." : "Coteja las incidencias y advertencias antes de abrir la vista previa.", pending: [...(result.errors.length ? [`${result.errors.length} bloqueo(s) pendiente(s).`] : []), ...(result.warnings.length && !diotState.warningsAcknowledged ? [`Reconocer ${result.warnings.length} advertencia(s) tras cotejarlas.`] : [])] },
+    download: { nextStep: result.canDownload ? "Descarga el CSV o JSON de trabajo y verifica el archivo fuera de ContaIA." : "Vuelve a Revisión y resuelve los bloqueos antes de descargar.", pending: result.canDownload ? [] : [`${result.errors.length} bloqueo(s) de descarga pendiente(s).`] },
+  }[step.id];
+  const guidance = renderToolGuidance({ state: `${label} · paso ${step.number} de ${STEPS.length}`, ...guidanceByStep, boundary: "El CSV/JSON es un archivo de trabajo local, no un formato oficial ni una presentación ante el SAT; requiere revisión profesional." });
   const header = renderToolHeader({ id: "diot", eyebrow: "CONTAIA HERRAMIENTAS · IVA Y TERCEROS", title: "DIOT asistida", description: "Prepara, revisa y descarga; no presenta declaraciones. Revisa operaciones con terceros e IVA sin validar ante el SAT.", statusLabel: label, statusKind: label.includes("Lista") || label.includes("Descargada") ? "ready" : label === "Requiere revisión" ? "attention" : "info", className: "diot-header", actions: [{ label: "Volver a Herramientas", section: "tools", arrow: false }] });
   const content = diotState.activeStep === "context" ? renderContextStep() : diotState.activeStep === "sources" ? renderSourcesStep() : diotState.activeStep === "classify" ? renderClassifyStep() : diotState.activeStep === "review" ? renderReviewStep() : renderDownloadStep();
-  return `<main id="contenido" class="content diot-page" data-diot-page tabindex="-1">${header}<section class="diot-privacy-banner" aria-label="Privacidad de DIOT"><span aria-hidden="true">◉</span><p><b>Preparación local de esta sesión.</b> CFDI, terceros, importes y descargas permanecen en este navegador. La herramienta produce archivos de trabajo; no presenta declaraciones ni contacta al SAT.</p></section>${renderStepper()}${content}${renderAssistantPanel()}<footer class="diot-disclaimer"><b>Alcance de esta entrega</b><p>El esquema local está versionado para revisión y no es un formato oficial compatible. Confirma obligación, datos, categoría, importes y aplicación de facilidades con fuentes vigentes y revisión profesional.</p></footer></main>`;
+  return `<main id="contenido" class="content diot-page" data-diot-page tabindex="-1">${header}${guidance}<section class="diot-privacy-banner" aria-label="Privacidad de DIOT"><span aria-hidden="true">◉</span><p><b>Preparación local de esta sesión.</b> CFDI, terceros, importes y descargas permanecen en este navegador. La herramienta produce archivos de trabajo; no presenta declaraciones ni contacta al SAT.</p></section>${renderStepper()}${content}${renderAssistantPanel()}<footer class="diot-disclaimer"><b>Alcance de esta entrega</b><p>El esquema local está versionado para revisión y no es un formato oficial compatible. Confirma obligación, datos, categoría, importes y aplicación de facilidades con fuentes vigentes y revisión profesional.</p></footer></main>`;
 }
 
 function updateField(event, { render = true, onUpdate }) {
