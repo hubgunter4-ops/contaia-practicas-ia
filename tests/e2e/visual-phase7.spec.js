@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const captureRoot = process.env.VISUAL_CAPTURE_DIR || "/home/ubuntu/contaia-visual7-evidencia";
 const viewports = [
   { name: "desktop", width: 1280, height: 900 },
   { name: "tablet", width: 820, height: 900 },
@@ -96,7 +95,8 @@ async function measureLayout(page, root) {
   }, await root.getAttribute("id"));
 }
 
-test("la matriz responsive conserva jerarquía, acciones y ancho visible en las cuatro islas", async ({ page }) => {
+test("la matriz responsive conserva jerarquía, acciones y ancho visible en las cuatro islas", async ({ page }, testInfo) => {
+  const captureRoot = testInfo.outputPath("visual-phase7-evidencia");
   const evidence = [];
   await mkdir(captureRoot, { recursive: true });
   for (const viewport of viewports) await mkdir(path.join(captureRoot, viewport.name), { recursive: true });
