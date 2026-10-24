@@ -1,5 +1,5 @@
 export const MAX_BATCH_FILES = 5000;
-export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export function validateCfdiUploadFile(file) {
   const name = String(file?.name ?? "");
@@ -12,7 +12,7 @@ export function validateCfdiUploadFile(file) {
     return { valid: false, format: extension.toUpperCase(), reason: "No se pudo leer el tamaño del archivo." };
   }
   if (size > MAX_UPLOAD_BYTES) {
-    return { valid: false, format: extension.toUpperCase(), reason: "Supera el máximo de 20 MB por archivo." };
+    return { valid: false, format: extension.toUpperCase(), reason: "Supera el máximo de 100 MB por archivo." };
   }
   return { valid: true, format: extension.toUpperCase(), reason: "" };
 }

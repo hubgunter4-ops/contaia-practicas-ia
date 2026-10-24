@@ -279,7 +279,7 @@ export async function parseFiles(files) {
   const selected = Array.from(files || []);
   if (!selected.length) throw new Error("Selecciona al menos un archivo XML o ZIP.");
   if (selected.length > MAX_XML_FILES) throw new Error(`Puedes cargar hasta ${MAX_XML_FILES.toLocaleString("es-MX")} archivos por análisis.`);
-  if (selected.some((file) => file.size > MAX_UPLOAD_BYTES)) throw new Error("Cada archivo debe pesar 20 MB o menos.");
+  if (selected.some((file) => file.size > MAX_UPLOAD_BYTES)) throw new Error("Cada archivo debe pesar 100 MB o menos.");
   const result = { pagos: [], facturas: [], conceptos: [] };
   let xmlCount = 0; let totalInflated = 0;
   const addXml = (text, name) => {

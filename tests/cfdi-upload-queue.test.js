@@ -31,9 +31,10 @@ function resetCfdiState() {
 
 test("valida extensión y tamaño antes de iniciar el análisis", () => {
   assert.equal(validateCfdiUploadFile(makeFile("factura.XML")).valid, true);
+  assert.equal(MAX_UPLOAD_BYTES, 100 * 1024 * 1024);
   assert.equal(validateCfdiUploadFile(makeFile("lote.zip", MAX_UPLOAD_BYTES)).valid, true);
   assert.match(validateCfdiUploadFile(makeFile("notas.pdf")).reason, /XML o ZIP/);
-  assert.match(validateCfdiUploadFile(makeFile("lote.zip", MAX_UPLOAD_BYTES + 1)).reason, /20 MB/);
+  assert.match(validateCfdiUploadFile(makeFile("lote.zip", MAX_UPLOAD_BYTES + 1)).reason, /100 MB/);
 });
 
 test("limita el lote a 5,000 archivos y reporta cuántos quedaron fuera", () => {
