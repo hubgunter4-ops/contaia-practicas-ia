@@ -1620,7 +1620,7 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   background: #ffffff;
   box-shadow: 0 14px 32px rgba(18, 59, 67, .12);
 }
-.app-shell:has(.classroom-content) .tools-menu-popover .section-tab { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .tools-menu-popover .section-tab { color: #000000; }
 .app-shell:has(.classroom-content) .tools-menu-popover .section-tab:hover,
 .app-shell:has(.classroom-content) .tools-menu-popover .section-tab.is-active {
   border-color: #a4bdb2;
@@ -1628,7 +1628,7 @@ td { padding: 8px 9px; border-top: 1px solid #eee8dd; color: #57514a; }
   color: var(--classroom-action);
 }
 .app-shell:has(.classroom-content) .tools-menu-group + .tools-menu-group { border-color: #a4bdb2; }
-.app-shell:has(.classroom-content) .tools-menu-label { color: var(--fiscal-muted); }
+.app-shell:has(.classroom-content) .tools-menu-label { color: #000000; }
 .app-shell:has(.classroom-content) .tools-menu-popover .advisor-tab { border-color: #a4bdb2; }
 @media (max-width: 1000px) {
   .classroom-course-progress .classroom-primary-route { grid-column: 1 / -1; }
