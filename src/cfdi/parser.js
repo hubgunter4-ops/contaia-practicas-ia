@@ -299,7 +299,11 @@ export async function parseFiles(files) {
     if (lower.endsWith(".xml")) {
       addXml(await file.text(), file.name);
     } else if (lower.endsWith(".zip")) {
-      const zip = await JSZip.loadAsync(file, { checkCRC32: false });
+      // JSZip no acepta objetos File-like que solo exponen arrayBuffer();
+      // el Worker CFDI usa precisamente esa representación para no transferir
+      // File/Blob. Entregar el ArrayBuffer también funciona con File nativos.
+      const zipInput = typeof file.arrayBuffer === "function" ? await file.arrayBuffer() : file;
+      const zip = await JSZip.loadAsync(zipInput, { checkCRC32: false });
       const xmlEntries = Object.entries(zip.files).filter(([name, entry]) => !entry.dir && name.toLowerCase().endsWith(".xml"));
       if (xmlEntries.length + xmlCount > MAX_XML_FILES) throw new Error(`El ZIP y los archivos seleccionados superan el límite de ${MAX_XML_FILES.toLocaleString("es-MX")} XML.`);
       for (const [entryName, entry] of xmlEntries) {
