@@ -506,6 +506,12 @@ try { progressStorage = window.localStorage; } catch { /* El navegador puede blo
 let activeStorageScope = "anonymous";
 const VIEW_STATE_KEY = "active-view.v1";
 const RESTORABLE_SECTIONS = new Set(["course", "lab", "study", "advisor", "cfdi", "reconciliation", "journal", "diot", "workpapers", "tools"]);
+const VIEW_HASHES = new Map([
+  ["course", "clases"], ["lab", "practicas"], ["study", "estudio"], ["advisor", "nora"],
+  ["cfdi", "cfdi"], ["reconciliation", "conciliacion"], ["journal", "polizas"],
+  ["diot", "diot"], ["workpapers", "papeles-trabajo"], ["tools", "herramientas"],
+]);
+const SECTION_BY_VIEW_HASH = new Map([...VIEW_HASHES].map(([section, hash]) => [hash, section]));
 let accountProgressReady = false;
 let accountProgressQueue = Promise.resolve();
 let pendingAnonymousProgress = null;
@@ -535,6 +541,24 @@ function restoreViewState(scope = activeStorageScope) {
   } catch { return false; }
 }
 
+function restoreViewFromUrl() {
+  if (location.pathname !== "/") return false;
+  const hash = decodeURIComponent(location.hash.replace(/^#/, "")).trim().toLowerCase();
+  const section = SECTION_BY_VIEW_HASH.get(hash);
+  if (!section) return false;
+  state.section = section;
+  if (section !== "lab") state.current = "home";
+  return true;
+}
+
+function persistViewInUrl() {
+  if (!currentUser() || location.pathname !== "/" || getAuthDestination()) return;
+  const hash = VIEW_HASHES.get(state.section);
+  if (!hash) return;
+  const nextUrl = `${location.pathname}${location.search}#${hash}`;
+  if (`${location.pathname}${location.search}${location.hash}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
+}
+
 function persistViewState() {
   try {
     viewStorage().setItem(VIEW_STATE_KEY, JSON.stringify({ section: state.section, current: state.current, updatedAt: new Date().toISOString() }));
@@ -542,6 +566,7 @@ function persistViewState() {
 }
 
 restoreViewState("anonymous");
+restoreViewFromUrl();
 const restoredProgress = loadProgress(scopedStorage);
 state.completedModules = new Set(restoredProgress.completedModules);
 state.completed = new Set(restoredProgress.completedExercises);
@@ -1905,6 +1930,7 @@ function render() {
   const pageChanged = Boolean(lastPageTransitionKey && pageKey !== lastPageTransitionKey);
   lastPageTransitionKey = pageKey;
   persistViewState();
+  persistViewInUrl();
   const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   renderView();
   void syncLearningIsland();
