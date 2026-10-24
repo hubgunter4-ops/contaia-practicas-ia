@@ -11,7 +11,9 @@ export class CapabilityExpiredError extends Error {
 }
 
 function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
+  if (value == null) return value;
+  if (typeof globalThis.structuredClone === "function") return globalThis.structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
 }
 
 function opaqueId(prefix) {
