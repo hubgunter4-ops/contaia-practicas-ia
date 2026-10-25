@@ -18,7 +18,8 @@ import { resetWorkpapersWorkspace } from "./workpapers/workspace.js";
 import { renderToolsPanel } from "./tools/panel.js";
 import { closeToolsForms, loadProfileConnections, loadToolsWorkspace, openFiscalProfileForm, openToolConnectionForm, resetToolsWorkspace, saveFiscalProfile, saveToolConnection, toolsWorkspace } from "./tools/workspace.js";
 import { downloadDocumentArtifact, processDocumentFile } from "./documents/client.js";
-import { authState, currentUser, getAuthDestinationTarget, initializeAuthClient, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, updatePassword, signIn, signUp, signInWithGoogle, signOut, syncAuthCaptchaWidgets } from "./auth/client.js";
+import { authState, currentUser, getAuthDestination, getAuthDestinationTarget, initializeAuthClient, renderAuthControls, renderRegistrationGate, renderEmailConfirmationGate, renderAuthPanel, resetPassword, updatePassword, signIn, signUp, signInWithGoogle, signOut, syncAuthCaptchaWidgets } from "./auth/client.js";
+import { captchaMarkup } from "./auth/captcha.js";
 import { createIslandManager } from "./app/island-manager.js";
 import { createIslandRegistry } from "./app/island-registry.js";
 import { CapabilityExpiredError, createSourceCapabilityBroker } from "./app/source-capabilities.js";
@@ -1744,7 +1745,7 @@ function renderPublicInfoPage(pageId) {
       ? `<div class="public-recovery-complete">${recoveryMessage}<a class="public-primary-cta" href="${recoveryTarget}">Continuar a ContaIA <span aria-hidden="true">→</span></a></div>`
       : authState.recoveryMode
         ? `<form class="public-recovery-form" data-recovery-update-form><p class="public-recovery-kicker">ENLACE VERIFICADO</p><label for="recovery-new-password">Nueva contraseña</label><div><input id="recovery-new-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" ${recoveryDisabled ? "disabled" : ""}/><span aria-hidden="true"></span></div><label for="recovery-confirm-password">Confirma tu nueva contraseña</label><div><input id="recovery-confirm-password" name="passwordConfirmation" type="password" autocomplete="new-password" required minlength="8" maxlength="128" ${recoveryDisabled ? "disabled" : ""}/><button class="public-primary-cta" type="submit" ${recoveryDisabled ? "disabled" : ""}>${authState.busy ? "Guardando…" : "Actualizar contraseña"}<span aria-hidden="true">→</span></button></div><small>Usa al menos 8 caracteres. Esta contraseña reemplazará la anterior.</small>${recoveryMessage}</form>`
-        : `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label><div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}" ${recoveryDisabled ? "disabled" : ""}/><button class="public-primary-cta" type="submit" ${recoveryDisabled ? "disabled" : ""}>${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${recoveryMessage}</form>`
+        : `<form class="public-recovery-form" data-recovery-form><label for="recovery-email">Correo electrónico</label>${captchaMarkup()}<div><input id="recovery-email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" required maxlength="254" value="${escapeHtml(authState.identifier)}" ${recoveryDisabled ? "disabled" : ""}/><button class="public-primary-cta" type="submit" ${recoveryDisabled ? "disabled" : ""}>${authState.busy ? "Enviando…" : "Enviar enlace"}<span aria-hidden="true">→</span></button></div>${recoveryMessage}</form>`
     : "";
   return `<div class="public-landing public-info-page public-info-${escapeHtml(pageId)}"><header class="public-header"><a class="public-brand" href="/" aria-label="ContaIA, inicio"><img src="/brand/contaia-logo.png" alt=""/><span>Conta<span>IA</span></span></a><nav class="public-nav" aria-label="Productos de ContaIA"><a href="/descripcion/curso">Aprende</a><a href="/descripcion/cfdi">Herramientas</a><a href="/descripcion/asistente">Nora</a></nav><button class="public-login" type="button" data-action="auth-toggle">Iniciar sesión</button></header><main id="contenido" class="public-main public-info-main" tabindex="-1"><a class="public-back-link" href="/">← Volver a ContaIA</a><section class="public-info-hero"><div class="public-info-icon" aria-hidden="true">${uiIcon(page.icon)}</div><p class="public-kicker">${escapeHtml(page.eyebrow)}</p><h1>${escapeHtml(page.title)}</h1><p class="public-lede">${escapeHtml(page.summary)}</p>${recovery}<div class="public-info-actions"><a class="public-primary-cta" href="${page.primary[1]}">${escapeHtml(page.primary[0])}<span aria-hidden="true">→</span></a><a class="public-secondary-cta" href="${page.secondary[1]}">${escapeHtml(page.secondary[0])}</a></div></section><section class="public-info-grid" aria-label="Información de ContaIA">${cards}</section></main><footer class="public-footer"><span>© 2026 ContaIA</span><a href="/privacidad">Privacidad</a><a href="/ayuda">Ayuda</a></footer>${renderAuthPanel()}</div>`;
 }
@@ -1988,7 +1989,7 @@ function renderView() {
     const destination = routeDestination || (Object.prototype.hasOwnProperty.call(PUBLIC_FEATURES, queryDestination) ? queryDestination : "");
     if (destination) state.section = destination === "cfdi" ? "cfdi" : destination === "asistente" ? "advisor" : "course";
     if (destination) window.history.replaceState(null, "", "/");
-    state.publicDestinationApplied = true;
+    state.publicDestinationApplied = destination || true;
   }
   const exercise = state.section === "lab" ? exercises.find((item) => item.id === state.current) : null;
   const content = isLearningSection() ? '<div data-learning-island-host aria-live="polite"></div>'
@@ -2664,6 +2665,7 @@ document.addEventListener("contaia:tools-updated", () => {
 document.addEventListener("contaia:auth-updated", (event) => {
   const userId = event.detail?.user?.id;
   const nextStorageScope = userId && /^[0-9a-f-]{20,}$/i.test(userId) ? userId : "anonymous";
+  const sameStorageScope = nextStorageScope === activeStorageScope;
   if (userId && activeStorageScope === "anonymous") pendingAnonymousProgress = loadProgress(scopedStorage);
   accountProgressReady = false;
   sourceCapabilityBroker.advanceSessionEpoch("auth-updated");
@@ -2678,7 +2680,11 @@ document.addEventListener("contaia:auth-updated", (event) => {
     resetWorkpapersWorkspace();
   }
   activeStorageScope = nextStorageScope;
-  if (!getAuthDestination()) restoreViewState(activeStorageScope);
+  const appliedDestinationSection = state.publicDestinationApplied === "cfdi" ? "cfdi"
+    : state.publicDestinationApplied === "asistente" ? "advisor"
+      : state.publicDestinationApplied === "curso" ? "course" : "";
+  const preserveAppliedDestination = sameStorageScope && appliedDestinationSection && state.section === appliedDestinationSection;
+  if (!getAuthDestination() && !preserveAppliedDestination) restoreViewState(activeStorageScope);
   if (!userId) resetToolsWorkspace();
   else if (state.section === "tools") void loadToolsWorkspace();
   const restored = loadProgress(scopedStorage);

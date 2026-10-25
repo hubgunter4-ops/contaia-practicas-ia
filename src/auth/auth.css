@@ -56,6 +56,9 @@
 .auth-captcha { display: grid; justify-items: center; gap: .35rem; margin: .45rem 0 .15rem; min-height: 82px; }
 .auth-captcha small, .auth-captcha-missing { color: #6f8388; font-size: .68rem; text-align: center; }
 .auth-captcha-missing { margin: .55rem 0 .2rem; }
+.auth-captcha [data-hcaptcha-widget] { width: min(303px, 100%); min-height: 78px; }
+.public-recovery-form > .auth-captcha { display: grid; justify-items: center; align-items: center; gap: .35rem; margin: .85rem 0; }
+.public-recovery-form .auth-captcha small, .public-recovery-form .auth-captcha-missing { color: #d9d9e8; }
 .auth-register-gate .auth-sso-button { margin-top: 0; }
 
 .auth-confirmation-icon { display: grid; width: 3.4rem; height: 3.4rem; place-items: center; margin-bottom: 1.35rem; border: 1px solid #dbe6e7; border-radius: 50%; color: #155e75; background: #eef8f7; font-size: 1.35rem; font-weight: 800; }

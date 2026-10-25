@@ -289,19 +289,31 @@ export async function signInWithGoogle() {
 export async function resetPassword() {
   const client = window.__contaiaAuth?.client;
   if (!client || authState.busy) return;
+  if (authState.captchaSitekey && !authState.captchaToken) {
+    authState.error = true;
+    authState.message = "Completa la verificación de seguridad para continuar.";
+    notify();
+    return;
+  }
+  const captchaToken = authState.captchaToken;
   authState.busy = true; authState.message = ""; authState.error = false;
   authState.recoveryMode = false;
   authState.recoveryComplete = false;
   notify();
   try {
-    const { error } = await client.auth.resetPasswordForEmail(authState.identifier, { redirectTo: passwordRecoveryRedirectUrl() });
+    const { error } = await client.auth.resetPasswordForEmail(authState.identifier, { redirectTo: passwordRecoveryRedirectUrl(), ...(captchaToken ? { captchaToken } : {}) });
     if (error) throw error;
     authState.message = "Si existe una cuenta con ese correo, recibirás un enlace para continuar.";
     authState.status = "success";
   } catch (error) {
     authState.error = true; authState.status = "error";
     authState.message = error instanceof Error ? error.message : "No se pudo enviar el enlace. Revisa el correo e inténtalo de nuevo.";
-  } finally { authState.busy = false; notify(); }
+  } finally {
+    authState.captchaToken = "";
+    resetCaptchaWidgets();
+    authState.busy = false;
+    notify();
+  }
 }
 
 export async function updatePassword() {
