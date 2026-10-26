@@ -19,6 +19,20 @@ function originAllowed(request, env) {
   return sameOrigin || allowed || (parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname));
 }
 
+function publicCaptchaConfig(env) {
+  const validSitekey = (value) => typeof value === "string" && /^[A-Za-z0-9_-]{20,200}$/.test(value.trim())
+    ? value.trim()
+    : "";
+  const turnstileSitekey = validSitekey(env.TURNSTILE_SITEKEY);
+  const hcaptchaSitekey = validSitekey(env.HCAPTCHA_SITEKEY);
+  const configuredProvider = typeof env.CAPTCHA_PROVIDER === "string" ? env.CAPTCHA_PROVIDER.trim().toLowerCase() : "";
+  const provider = configuredProvider
+    ? (Object.hasOwn({ turnstile: true, hcaptcha: true }, configuredProvider) ? configuredProvider : "")
+    : "";
+  const captchaSitekey = provider === "turnstile" ? turnstileSitekey : provider === "hcaptcha" ? hcaptchaSitekey : "";
+  return captchaSitekey ? { captchaProvider: provider, captchaSitekey } : { captchaProvider: "", captchaSitekey: "" };
+}
+
 export async function handleCfdiConfig(request, response, env = process.env) {
   if (!originAllowed(request, env)) return sendJson(response, 403, { error: "Origen no autorizado." });
   if (request.method === "OPTIONS") {
@@ -28,12 +42,10 @@ export async function handleCfdiConfig(request, response, env = process.env) {
   if (request.method !== "GET") return sendJson(response, 405, { error: "Método no permitido." });
   const url = typeof env.SUPABASE_URL === "string" ? env.SUPABASE_URL.trim().replace(/\/$/, "") : "";
   const publishableKey = typeof env.SUPABASE_PUBLISHABLE_KEY === "string" ? env.SUPABASE_PUBLISHABLE_KEY.trim() : "";
-  const hcaptchaSitekey = typeof env.HCAPTCHA_SITEKEY === "string" && /^[A-Za-z0-9_-]{20,200}$/.test(env.HCAPTCHA_SITEKEY.trim())
-    ? env.HCAPTCHA_SITEKEY.trim()
-    : "";
+  const captcha = publicCaptchaConfig(env);
   let validUrl = false;
   try { validUrl = new URL(url).protocol === "https:" && /^[a-z0-9-]+\.supabase\.co$/i.test(new URL(url).hostname); } catch { /* valor omitido */ }
   const validKey = /^sb_publishable_[A-Za-z0-9_-]{12,200}$/.test(publishableKey);
-  if (!validUrl || !validKey) return sendJson(response, 200, { enabled: false, hcaptchaSitekey });
-  sendJson(response, 200, { enabled: true, url, publishableKey, hcaptchaSitekey });
+  if (!validUrl || !validKey) return sendJson(response, 200, { enabled: false, ...captcha });
+  sendJson(response, 200, { enabled: true, url, publishableKey, ...captcha });
 }

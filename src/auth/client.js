@@ -1,4 +1,4 @@
-import { captchaMarkup, resetCaptchaWidgets, setCaptchaSitekey, syncCaptchaWidgets } from "./captcha.js";
+import { captchaMarkup, resetCaptchaWidgets, setCaptchaConfig, syncCaptchaWidgets } from "./captcha.js";
 
 export const authState = {
   open: false,
@@ -82,8 +82,10 @@ export function initializeAuthClient({ signal } = {}) {
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(config.url || "") || typeof config.publishableKey !== "string" || !config.publishableKey.startsWith("sb_publishable_")) {
       throw new Error("La configuración pública de Supabase no tiene el formato esperado.");
     }
-    setCaptchaSitekey(config.hcaptchaSitekey);
-    authState.captchaSitekey = config.hcaptchaSitekey || "";
+    const captchaProvider = config.captchaProvider || "";
+    const captchaSitekey = config.captchaSitekey || "";
+    setCaptchaConfig(captchaProvider, captchaSitekey);
+    authState.captchaSitekey = captchaSitekey;
     const { createClient } = await import("/vendor/supabase.js");
     const client = createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     // El cliente queda disponible de inmediato; getSession no debe dejar bloqueados

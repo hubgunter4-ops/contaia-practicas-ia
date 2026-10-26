@@ -1850,3 +1850,36 @@ Se añadió una capa CSS independiente en `src/app/platform-theme.css`, cargada 
 La distribución sigue la referencia entregada: navegación lateral azul marino, barra superior azul profundo, lienzo frío `#F3F6FB`, cabecera blanca, tarjetas blancas con bordes suaves, acciones primarias azules y estados semánticos separados —verde conectado/listo, amarillo pendiente/revisión, coral error y gris sin configurar—. El breakpoint móvil reinicia el margen del shell, hace que la navegación ocupe el ancho disponible y elimina el desborde del bloque de perfil.
 
 La implementación incluye el contrato unitario `tests/platform-theme.test.js` y la E2E `tests/e2e/tools-palette.spec.js`. La validación local quedó en 324/324 unitarias, build estático correcto, 4/4 E2E focalizadas de paleta y `git diff --check`. La regresión completa produjo 115/116 por un timeout conocido de la matriz visual Fase 7 en mobile; el caso aislado aprobó 1/1 con timeout de 120 segundos. El refresh visual queda pendiente de preview, autorización de checkpoint, commit firmado, push y despliegue.
+
+
+---
+## Migración de hCaptcha a Cloudflare Turnstile
+
+La migración conserva el modelo actual de Supabase Auth y solo cambia el proveedor CAPTCHA. La documentación de Supabase confirma soporte nativo para hCaptcha y Cloudflare Turnstile en inicio de sesión, registro y recuperación; la aplicación entrega el token en `captchaToken` y Supabase valida el proveedor configurado en Auth. No se añadirá un endpoint propio de verificación Turnstile ni se enviarán datos fiscales a Cloudflare. El token de desafío es efímero y no se persiste.
+
+`src/auth/captcha.js` implementa un adaptador explícito por proveedor: carga la API de Turnstile (`https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit`) y renderiza el widget con callbacks de éxito, expiración y error. Se mantiene compatibilidad temporal con hCaptcha solo como reversión explícita; el proveedor y la sitekey se leen de `/api/cfdi/config`. El endpoint expone únicamente `captchaProvider` y `captchaSitekey` validados junto con las claves públicas de Supabase. El corte de producción deberá seleccionar `turnstile` explícitamente y usar `TURNSTILE_SITEKEY`; cualquier secret de Turnstile pertenece solo a Supabase Auth.
+
+El scope cubre acceso por correo/alias, registro y solicitud de recuperación; el cambio de contraseña posterior al enlace verificado no requiere otro desafío. `/api/auth` y la Edge Function `login-by-alias` conservan el transporte transitorio de `captchaToken`. Se actualizaron los estilos, `.env.example`, `docs/auth-api.md`, unitarias y E2E, incluyendo carga del script, expiración, limpieza y los tres flujos; también se añadió una prueba del puente alias. Se comprobó que `vercel.json` y `public/index.html` no definen una CSP, así que no se introduce una política nueva solo por CAPTCHA. Si se incorpora CSP en el futuro, debe permitir `https://challenges.cloudflare.com`. Las pruebas usan claves y tokens ficticios; no requieren credenciales reales ni envían datos de usuarios.
+
+La operación externa está pendiente: la cuenta Cloudflare autorizada no contiene todavía un widget Turnstile para ContaIA y no hay un Management API token de Supabase en la sesión. El cambio del proveedor/secret de Auth es un corte de producción con impacto directo sobre acceso; antes de aplicarlo hay que crear el widget restringido a `contaia.site`, guardar su secret en Supabase Auth por un canal seguro y coordinar el sitekey público en Vercel. La sitekey no debe agregarse a un despliegue activo hasta que el código que la consume esté listo. La validación final cubrirá los tres flujos y el login por alias, sin cuentas reales ni datos fiscales.
+
+La reversión de código se conserva mediante la selección explícita del proveedor. No se presume que volver a hCaptcha restaure el acceso: los logs previos mostraron errores `invalid-input-secret`, por lo que cualquier rollback a ese proveedor requiere primero verificar/configurar una secret key hCaptcha válida. El commit, push y despliegue de esta implementación quedan sujetos a autorización independiente.
+
+### Estado de implementación y validación local — 2026-10-26
+La revisión de código detectó y corrigió un riesgo P2: ni la API de configuración ni el cliente infieren hCaptcha a partir de `HCAPTCHA_SITEKEY` o del campo heredado `hcaptchaSitekey`. Un CAPTCHA solo se activa con `CAPTCHA_PROVIDER` válido y sitekey coincidente. La reversión a hCaptcha sigue disponible únicamente al declarar `CAPTCHA_PROVIDER=hcaptcha`; si se despliega el adaptador antes del corte, Vercel debe declarar explícitamente el proveedor activo para conservar el flujo.
+
+La validación completa previa al ajuste final aprobó `npm test` (334/334), build estático y E2E completo (130/130). Después del cambio de fail-closed se volvieron a ejecutar `npm test` (334/334), `npm run build:vercel`, chequeos de sintaxis JS, `git diff --check` y el E2E focalizado de CAPTCHA (5/5). La auditoría independiente no reportó otros defectos concretos.
+
+La creación del widget seguirá usando modo administrado y hostname `contaia.site`; Cloudflare indica que agregar el dominio raíz también autoriza sus subdominios, por lo que debe mantenerse control de DNS de esos hostnames [6]. Supabase Auth valida el token del proveedor configurado al recibir `captchaToken`; no se agregará un endpoint propio ni una llamada directa de la aplicación a Siteverify [1] [8]. La API de lectura de Auth puede devolver secretos, así que cualquier comprobación debe filtrar los campos permitidos antes de imprimir [3]. La API de actualización es `PATCH /v1/projects/{ref}/config/auth` y el token fine-grained necesita `auth_config_write` y `project_admin_write`; la lectura requiere `auth_config_read` [2] [3].
+
+### Referencias oficiales consultadas
+[1]: https://supabase.com/docs/guides/auth/auth-captcha "Supabase Auth CAPTCHA"
+[2]: https://supabase.com/docs/reference/api/v1-update-auth-service-config "Supabase Update Auth Service Config"
+[3]: https://supabase.com/docs/reference/api/v1-get-auth-service-config "Supabase Get Auth Service Config"
+[4]: https://developers.cloudflare.com/turnstile/get-started/widget-management/api/ "Cloudflare Turnstile Widget Management API"
+[5]: https://developers.cloudflare.com/api/resources/turnstile/subresources/widgets/methods/create/ "Cloudflare Create Turnstile Widget"
+[6]: https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/ "Cloudflare Turnstile Hostname Management"
+[7]: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/ "Cloudflare Turnstile Client-Side Rendering"
+[8]: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ "Cloudflare Turnstile Server-Side Validation"
+[9]: https://developers.cloudflare.com/turnstile/troubleshooting/testing/ "Cloudflare Turnstile Testing"
+[10]: https://developers.cloudflare.com/cloudflare-challenges/challenge-types/turnstile/ "Cloudflare Turnstile Widget Types"

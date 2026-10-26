@@ -788,3 +788,19 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 - [ ] Mantener pendiente la revisión visual de producción y la autorización de checkpoint.
 **Archivos:** `src/app/platform-theme.css`, `tests/platform-theme.test.js`, `tests/e2e/tools-palette.spec.js`.
 **Siguiente paso propuesto:** generar preview/capturas de Herramientas para revisión visual; después, con autorización, crear commit firmado y hacer push.
+
+
+---
+## Migración de CAPTCHA — hCaptcha a Cloudflare Turnstile
+**Estado:** implementación local completa y validada; falta la configuración externa de producción. No se han creado widgets ni cambiado Vercel/Supabase; el acceso Management API requiere que se complete la tarjeta segura de credenciales. El commit, push y despliegue requieren autorización separada.
+- [x] Integrar el widget seleccionable Turnstile en inicio de sesión, registro y solicitud de recuperación; conservar los destinos de autenticación y no mostrar CAPTCHA en el cambio de contraseña posterior al enlace verificado.
+- [x] Entregar `captchaToken` de un solo uso a Supabase Auth en esos flujos y reenviarlo en login por alias; no persistirlo, devolverlo ni registrarlo. Las pruebas de los tres flujos y del puente alias usan tokens ficticios.
+- [x] Publicar desde `/api/cfdi/config` solo el proveedor seleccionado y la sitekey pública; las pruebas confirman que la respuesta no expone secretos ni la clave de servicio Supabase.
+- [ ] Crear en Cloudflare un widget administrado restringido al hostname de producción autorizado; no habilitar `localhost` en el widget de producción. Usar claves de prueba/mocks para pruebas locales.
+- [x] Revisar CSP: `vercel.json` y `public/index.html` no definen política CSP, por lo que no se añadirá una política nueva solo para Turnstile. El adaptador permite seleccionar Turnstile y conserva hCaptcha únicamente como fallback explícito temporal.
+- [x] Actualizar `.env.example`, `docs/auth-api.md`, pruebas unitarias y E2E para el widget, su ciclo de vida, expiración y envío del token en los tres flujos; comprobar también login por alias y ausencia del token en la respuesta.
+- [ ] Configurar de forma coordinada el sitekey público de Turnstile en Vercel y el proveedor/secret de Turnstile en Supabase Auth; realizar una prueba sintética controlada de los flujos antes de considerar la migración operativa.
+- [x] Mantener sin cambios otras fases backend, pagos, planes Free/Premium, reglas fiscales y datos de usuario; no hacer commit, push ni desplegar sin autorización expresa.
+
+
+**Validación local:** 334/334 unitarias, build estático, 130/130 E2E completos; tras corregir la inferencia implícita de proveedor, 334/334 unitarias y 5/5 E2E CAPTCHA focalizados volvieron a pasar. Sigue pendiente crear el widget Cloudflare y coordinar la configuración de Vercel/Supabase Auth; no se ha cambiado producción.
