@@ -804,3 +804,28 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 
 **Validación local:** 334/334 unitarias, build estático, 130/130 E2E completos; tras corregir la inferencia implícita de proveedor, 334/334 unitarias y 5/5 E2E CAPTCHA focalizados volvieron a pasar. Sigue pendiente crear el widget Cloudflare y coordinar la configuración de Vercel/Supabase Auth; no se ha cambiado producción.
+
+
+---
+## Revisión semanal de vulnerabilidades y actualización Node.js — 2026-10-27
+**Estado:** actualización Node y pruebas locales de regresión completadas. El E2E móvil que fallaba pasó aislado después del ajuste puntual; no se repitió la suite E2E completa. No se hicieron commits, push ni despliegues.
+- [x] Registrar hallazgos de la ventana 2026-10-20 a 2026-10-27, separando advisories del runtime Node.js de vulnerabilidades de dependencias npm.
+- [x] Alinear el repositorio con Node.js 24 LTS y la versión local parcheada 24.22.1; fijar CI a esa versión para que los tests no usen una línea anterior.
+- [x] Confirmar `npm audit` (0), build estático y unitarias (343/343); registrar que Vercel administra parches de Node 24 y que un redeploy activa sus protecciones de runtime.
+- [x] Diagnosticar el timeout: la traza muestra que DIOT llega a revisión, pero el test visual móvil agota su límite global de 15 s durante el recorrido/capturas. Se amplió a 30 s solo para `mobile-chromium`; el caso aislado pasó 1/1 en 16.8 s.
+- [x] No actualizar paquetes npm sin un advisory aplicable ni cambiar configuración remota de Vercel en esta fase.
+
+
+## Resultado de validación — 2026-10-27
+Con Node 24.22.1, `npm ci`, build estático y `npm audit` terminaron correctamente; las unitarias aprobaron 343/343 y npm audit reportó 0 vulnerabilidades. La suite E2E completa previa al ajuste fue 131/132; después, el único caso fallido pasó aislado en 16.8 s al darle 30 s solo en móvil. No se volvió a correr la suite completa. El smoke HTTP local del commit `9c2896c` pasó 9/9 y `tests/server-paths.test.js` añade ocho escenarios de regresión.
+
+
+---
+## Fortalecimiento de pruebas locales: rutas estáticas y DIOT móvil — 2026-10-27
+**Autorización:** el usuario autorizó ambas tareas locales. Sin commit, push ni despliegue.
+- [x] Las rutas `/src/` y `/data/` sirven recursos dentro de su raíz autorizada y responden 404 ante traversal codificado hacia otros archivos del repositorio.
+- [x] La captura visual móvil monta DIOT y completa la secuencia de revisión sin timeout ni desbordamiento horizontal; se ajustó únicamente el timeout de esa evidencia, no el flujo de la aplicación.
+- [x] Validar ambos resultados localmente y conservar intacto el código de producción; los cambios de esta fase afectan pruebas/documentación solamente.
+
+
+**Evidencia de cierre:** `npm test` 343/343 con ocho pruebas HTTP del guard; el E2E móvil corregido pasó aislado en 16.8 s. Solo se modificaron archivos de pruebas y documentación en esta fase; no se alteró código de producción.

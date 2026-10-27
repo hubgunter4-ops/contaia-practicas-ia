@@ -117,6 +117,8 @@ async function mountDiot(page) {
 }
 
 test("capturas comparativas de densidad por isla", async ({ page }, testInfo) => {
+  // Esta evidencia móvil recorre cuatro workspaces y captura páginas completas; el resto de E2E conserva el timeout global.
+  if (testInfo.project.name === "mobile-chromium") test.setTimeout(30_000);
   await mkdir(path.join(captureRoot, testInfo.project.name), { recursive: true });
   const fixtures = [
     ["cfdi", mountCfdi],
