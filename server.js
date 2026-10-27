@@ -67,7 +67,14 @@ function resolvePublicPath(pathname) {
     if (!withinVideos || withinVideos === ".." || withinVideos.startsWith(`..${path.sep}`) || path.isAbsolute(withinVideos)) return null;
     relative = path.relative(root, candidate);
   }
-  else if (/^\/(src|data)\//.test(decoded)) relative = decoded.slice(1);
+  else if (/^\/(src|data)\//.test(decoded)) {
+    const area = decoded.split("/")[1];
+    const areaRoot = path.resolve(root, area);
+    const candidate = path.resolve(root, decoded.slice(1));
+    const withinArea = path.relative(areaRoot, candidate);
+    if (withinArea === ".." || withinArea.startsWith(`..${path.sep}`) || path.isAbsolute(withinArea)) return null;
+    relative = path.relative(root, candidate);
+  }
   else if (decoded.startsWith("/docs/curso/") && path.extname(decoded) === ".md") {
     const courseRoot = path.resolve(root, "docs/curso");
     const candidate = path.resolve(root, decoded.slice(1));
