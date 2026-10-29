@@ -155,11 +155,12 @@ select extensions.lives_ok(
     where profile_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'$$,
   'profile member can perform the operations allowed by the tool-connection policy'
 );
+with changed as (
+  update public.fiscal_profiles set phone = '5550000000'
+   where id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1' returning 1
+)
 select extensions.is(
-  (with changed as (
-     update public.fiscal_profiles set phone = '5550000000'
-      where id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1' returning 1
-   ) select count(*)::integer from changed),
+  (select count(*)::integer from changed),
   0,
   'a member who is not the owner cannot update the fiscal profile'
 );
@@ -169,11 +170,12 @@ select extensions.is(
   0,
   'a different mapped identity cannot read the first identity progress row'
 );
+with changed as (
+  update public.learning_progress set progress_data = '{"source":"cross-user"}'::jsonb
+   where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1' returning 1
+)
 select extensions.is(
-  (with changed as (
-     update public.learning_progress set progress_data = '{"source":"cross-user"}'::jsonb
-      where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1' returning 1
-   ) select count(*)::integer from changed),
+  (select count(*)::integer from changed),
   0,
   'a different mapped identity cannot update the first identity progress row'
 );
@@ -181,6 +183,7 @@ select extensions.throws_ok(
   $$insert into public.learning_progress (user_id, progress_data)
     values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', '{}'::jsonb)$$,
   '42501',
+  'new row violates row-level security policy for table "learning_progress"',
   'a mapped identity cannot spoof another owner on insert'
 );
 
