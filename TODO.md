@@ -807,6 +807,17 @@ La evidencia está limitada a fuentes expresamente seleccionadas. Cambiar RFC li
 
 
 ---
+## Google Identity Platform + RLS — borrador local, sin aplicar
+**Estado:** se preparó una migración de esquema y una prueba pgTAP aislada para diseñar una identidad interna estable. No se modificaron flujos Auth, configuración de Google/Supabase ni servicios remotos; la configuración actual de CAPTCHA permanece sin cambios.
+- [x] Preparar `private.app_users` y el mapa privado Firebase `(issuer, audience, subject)`, conservando los UUID existentes y sin asociar cuentas por correo.
+- [x] Cambiar en el borrador local las FK/defaults y políticas de propiedad a un resolvedor fail-closed; limitar el provisioning de identidades a `service_role`.
+- [x] Añadir prueba pgTAP con claims sintéticos para identidad mapeada, usuario/tenant cruzado, miembros fiscales y permisos de provisioning. El parser PostgreSQL aceptó el SQL exterior; esto no valida cuerpos PL/pgSQL ni tokens reales.
+- [ ] Ejecutar la migración y pgTAP en una base local Supabase aislada; luego verificar issuer, audience, `role: authenticated` y RLS con ID token real en staging autorizado.
+- [ ] Diseñar e implementar aparte SDK/API de Identity Platform, alias, registro, confirmación, recuperación, bloqueo de rutas Auth antiguas y pruebas de Storage/Realtime antes de proponer cualquier corte.
+- [ ] No aplicar a staging/producción, retirar Turnstile/hCaptcha, crear commit ni hacer push sin autorización específica.
+
+
+---
 ## Revisión semanal de vulnerabilidades y actualización Node.js — 2026-10-27
 **Estado:** actualización Node y pruebas locales de regresión completadas. El E2E móvil que fallaba pasó aislado después del ajuste puntual; no se repitió la suite E2E completa. No se hicieron commits, push ni despliegues.
 - [x] Registrar hallazgos de la ventana 2026-10-20 a 2026-10-27, separando advisories del runtime Node.js de vulnerabilidades de dependencias npm.

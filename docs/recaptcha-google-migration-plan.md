@@ -1,6 +1,6 @@
 # Diseño de arquitectura: Google reCAPTCHA como único CAPTCHA de Auth
 
-**Estado:** diseño técnico; no se ha modificado código ni configuración de servicios.
+**Estado:** arquitectura documentada; se preparó un borrador local de migración de identidad/RLS y una prueba con claims sintéticos. Nada se ha aplicado a servicios y todavía no se verificaron tokens reales ni se migraron los flujos de Auth.
 
 ## Arquitectura recomendada
 
@@ -61,6 +61,12 @@ También hay que probar cómo se bloquean las rutas de email/password de Supabas
 4. **Plan de corte reversible.** Solo tras aprobar las pruebas, diseñar el cambio de la isla de Auth, migrar RLS/foreign keys y bloquear la autenticación local antigua. Mantener el mecanismo de rollback hasta confirmar sesiones, confirmaciones de correo, recuperación, alias y acceso a datos. Esta fase requiere autorización separada antes de implementar.
 
 La arquitectura se acepta únicamente si registro, login y recuperación rechazan solicitudes sin evaluación Google válida; los endpoints antiguos no ofrecen una vía alternativa; la identidad interna no cambia la propiedad de los datos; y la matriz E2E demuestra aislamiento entre dos usuarios. No se eliminarán referencias ni configuración de los proveedores actuales antes de validar el corte y su rollback.
+
+## Estado del borrador local de esquema
+
+Se preparó [`20261028150000_external_identity_app_users.sql`](../supabase/migrations/20261028150000_external_identity_app_users.sql) para crear un UUID interno estable, mapear Firebase por `(issuer, audience, subject)`, conservar las identidades UUID existentes de Supabase Auth y cambiar las políticas/FK/defaults de las tablas fiscales y educativas. El registro de identidades permanece privado; el provisioning queda restringido a `service_role` y requiere que un backend verifique el ID token con Firebase Admin antes de llamarlo. No hay asociación automática por email.
+
+La prueba [`external_auth_identity_rls.test.sql`](../supabase/tests/external_auth_identity_rls.test.sql) simula el contexto JWT de Postgres y cubre aislamiento de usuario, membresía fiscal y lectura de tablas relacionadas. Es una prueba de RLS, **no** una prueba criptográfica del token ni de la integración Supabase third-party. No se ejecutó en este entorno: faltan `psql` y Supabase CLI. El SDK/servidor de Auth, el claim `role: authenticated`, reCAPTCHA Enterprise, las rutas antiguas, alias, recuperación, Storage y Realtime siguen sin cambiar. Antes de aplicar el borrador se necesita revisar drift en staging, configurar el issuer del proyecto correcto y ejecutar una prueba aislada con un ID token real.
 
 ## Referencias
 
